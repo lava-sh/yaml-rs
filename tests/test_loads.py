@@ -1,6 +1,8 @@
+# ruff: noqa: E501
 import json
 import sys
 from datetime import date, datetime, timedelta, timezone
+from typing import Any
 
 import pytest
 import yaml_rs
@@ -52,25 +54,50 @@ def test_loads_errors(bad_yaml: str, exc_msg: str) -> None:
 @pytest.mark.parametrize(
     ("yaml", "parsed"),
     [
+        ("2002-12-14", date(2002, 12, 14)),
+        ("2001-12-14 21:59:43.10 -5", dt),
+        ("2001-12-14 21:59:43.10 -05", dt),
+        ("2001-12-14 21:59:43.10  -05", dt),
+        ("2001-12-14 21:59:43.10   -05", dt),
+        ("2001-12-14 21:59:43.10    -05", dt),
+        ("2001-12-14 21:59:43.10     -05", dt),
+        ("2001-12-14 21:59:43.10                        -05", dt),
+        ("2001-12-14t21:59:43.10-05:00", dt),
+        ("2001-12-14t21:59:43.10-05", dt),
+        ("2001-12-15T02:59:43.1Z", datetime(2001, 12, 15, 2, 59, 43, 100000, tzinfo=UTC)),
+        ("2001-12-15T02:59:43. 1   Z", "2001-12-15T02:59:43. 1   Z"),
         (
-            "canonical: 2001-12-15T02:59:43.1Z",
-            {"canonical": datetime(2001, 12, 15, 2, 59, 43, 100000, tzinfo=UTC)},
+            "2001-12-14T21:59:43+05:30",
+            datetime(2001, 12, 14, 21, 59, 43, tzinfo=timezone(timedelta(seconds=19800))),
         ),
-        (
-            "date: 2002-12-14",
-            {"date": date(2002, 12, 14)},
-        ),
-        ("spaced: 2001-12-14 21:59:43.10 -5", {"spaced": dt}),
-        ("iso8601: 2001-12-14t21:59:43.10-05:00", {"iso8601": dt}),
-        ("not-date: !!str 2002-04-28", {"not-date": "2002-04-28"}),
+        ("!!str 2002-04-28", "2002-04-28"),
+        # https://github.com/yaml/yaml-spec/blob/1b1a1be4/spec/1.2/docbook/timestamp.dbk#L139
+        # ([Tt]|[ \t]+)[0-9][0-9]? <lineannotation># (hour)</lineannotation>
+        # `T` and `t` are allowed
+        ("2001-12-15t02:59:43Z", datetime(2001, 12, 15, 2, 59, 43, tzinfo=UTC)),
+        ("2001-12-15T02:59:43Z", datetime(2001, 12, 15, 2, 59, 43, tzinfo=UTC)),
+        # https://github.com/yaml/yaml-spec/blob/1b1a1be4/spec/1.2/docbook/timestamp.dbk#L143
+        # ([ \t]*(Z|[-+][0-9][0-9]?(:[0-9][0-9])?))? <lineannotation># (time zone)</lineannotation>
+        # only `Z` allowed
+        ("2001-12-15T02:59:43z", "2001-12-15T02:59:43z"),
     ],
 )
-def test_parse_datetime(yaml: str, parsed) -> None:
+def test_parse_datetime(yaml: str, parsed: Any) -> None:
+    assert yaml_rs.loads(yaml, parse_datetime=True) == parsed
+
+
+@pytest.mark.parametrize(
+    ("yaml", "parsed"),
+    [
+        ("", None),
+    ],
+)
+def test_parse(yaml: str, parsed: Any) -> None:
     assert yaml_rs.loads(yaml) == parsed
 
 
 @pytest.mark.parametrize("yaml", VALID_YAMLS)
-def test_yaml_test_suite(yaml):
+def test_yaml_test_suite(yaml) -> None:
     load_from_str = yaml_rs.loads(yaml.read_text(encoding="utf-8"), parse_datetime=False)
     if isinstance(load_from_str, dict):
         docs = [load_from_str]

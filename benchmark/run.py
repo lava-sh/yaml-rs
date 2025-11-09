@@ -8,6 +8,7 @@ import cpuinfo
 import oyaml
 import polars as pl
 import ruamel.yaml
+import strictyaml
 import yaml as pyyaml
 import yaml_rs
 
@@ -90,9 +91,11 @@ data = bench_yaml.read_text(encoding="utf-8")
 def run(run_count: int) -> None:
     loads = {
         "yaml_rs": lambda: yaml_rs.loads(data),
+        "yaml_rs (parse_dt=False)": lambda: yaml_rs.loads(data, parse_datetime=False),
         "PyYAML": lambda: pyyaml.safe_load(data),
         "ruamel.yaml": lambda: ruamel.yaml.YAML(typ="safe").load(data),
         "oyaml": lambda: oyaml.safe_load(data),
+        "strictyaml": lambda: strictyaml.load(data),
     }
     results = {name: benchmark(func, run_count) for name, func in loads.items()}
     plot_benchmark(results, save_path=file / "loads.svg")

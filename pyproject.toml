@@ -49,6 +49,7 @@ bench = [
     "oyaml",
     "pyyaml",
     "ruamel-yaml",
+    "strictyaml",
     "polars == 1.35.2",
     "altair == 5.5.0",
     "py-cpuinfo == 9.0.0",

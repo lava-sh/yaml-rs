@@ -16,7 +16,7 @@ pub(crate) fn yaml_to_python<'py>(
     parse_datetime: bool,
 ) -> PyResult<Bound<'py, PyAny>> {
     if docs.is_empty() {
-        return Ok(PyDict::new(py).into_any());
+        return Ok(py.None().into_bound(py));
     }
     _yaml_to_python(py, &docs[0], parse_datetime, false)
 }
@@ -35,11 +35,12 @@ fn _yaml_to_python<'py>(
             Scalar::FloatingPoint(float) => float.into_inner().into_bound_py_any(py),
             Scalar::String(str) => {
                 let _str = str.as_ref();
-                if parse_datetime
-                    && !_tagged_string
-                    && let Ok(Some(dt)) = _parse_datetime(py, _str)
-                {
-                    return Ok(dt);
+                if parse_datetime && !_tagged_string {
+                    match _parse_datetime(py, _str) {
+                        Ok(Some(dt)) => return Ok(dt),
+                        Err(e) if e.is_instance_of::<PyValueError>(py) => return Err(e),
+                        Err(_) | Ok(None) => {}
+                    }
                 }
                 _str.into_bound_py_any(py)
             }
@@ -113,10 +114,26 @@ fn yaml_key_to_string(key: &Yaml) -> PyResult<String> {
     }
 }
 
+static _TABLE: [u8; 256] = {
+    let mut table = [255u8; 256];
+    let mut i = 0;
+    while i < 10 {
+        table[(b'0' + i) as usize] = i;
+        i += 1;
+    }
+    table
+};
+
 fn _parse_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py, PyAny>>> {
     let bytes = s.as_bytes();
 
-    if bytes.len() == 10 && bytes[4] == b'-' && bytes[7] == b'-' {
+    // SAFETY
+    // bytes: [Y][Y][Y][Y][-][M][M][-][D][D]
+    // index:  0  1  2  3  4  5  6  7  8  9
+    if bytes.len() == 10
+        && unsafe { *bytes.get_unchecked(4) } == b'-'
+        && unsafe { *bytes.get_unchecked(7) } == b'-'
+    {
         unsafe {
             let year = _parse_digits(bytes, 0, 4) as i32;
             let month = _parse_digits(bytes, 5, 2) as u8;
@@ -125,37 +142,7 @@ fn _parse_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py, 
         }
     }
 
-    let mut spaces = 0;
-    let mut last_space = 0;
-    let mut dt_end = bytes.len();
-    let mut tz_start = None;
-
-    for (i, &b) in bytes.iter().enumerate() {
-        if b == b' ' {
-            spaces += 1;
-            last_space = i;
-        }
-    }
-
-    if spaces == 2 {
-        dt_end = last_space;
-        tz_start = Some(last_space + 1);
-    } else if let Some(pos) = bytes.iter().rposition(|&b| b == b'+') {
-        dt_end = pos;
-        tz_start = Some(pos);
-    } else if bytes.last() == Some(&b'Z') {
-        dt_end = bytes.len() - 1;
-        tz_start = Some(bytes.len() - 1);
-    } else if let Some(pos) = bytes.iter().rposition(|&b| b == b'-')
-        && pos > 10
-        && pos > 0
-        && bytes[pos - 1].is_ascii_digit()
-    {
-        dt_end = pos;
-        tz_start = Some(pos);
-    }
-
-    let sep_pos = bytes[..dt_end]
+    let sep_pos = bytes
         .iter()
         .position(|&b| b == b'T' || b == b't' || b == b' ');
     if sep_pos.is_none() || sep_pos.unwrap() < 10 {
@@ -163,34 +150,106 @@ fn _parse_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py, 
     }
     let sep_pos = sep_pos.unwrap();
 
-    if bytes[4] != b'-' || bytes[7] != b'-' {
+    // SAFETY: Already verified sep_pos >= 10, so indices 4 and 7 are valid
+    if unsafe { *bytes.get_unchecked(4) } != b'-' || unsafe { *bytes.get_unchecked(7) } != b'-' {
         return Ok(None);
     }
 
+    let mut dt_end = bytes.len();
+    let mut tz_start = None;
+
+    // SAFETY: Range (sep_pos + 1..bytes.len()) guarantees valid indices
+    // Pattern: "2001-12-14 21:59:43.10  -05"
+    //                                ^  ^
+    //                                |  timezone indicator (-)
+    //                                spaces (skip backward)
+    for i in (sep_pos + 1..bytes.len()).rev() {
+        let b = unsafe { *bytes.get_unchecked(i) };
+
+        if b == b'Z' {
+            // SAFETY: actual_dt_end always >= sep_pos + 1, so actual_dt_end - 1 is valid
+            let mut actual_dt_end = i;
+            while actual_dt_end > sep_pos + 1
+                && unsafe { *bytes.get_unchecked(actual_dt_end - 1) } == b' '
+            {
+                actual_dt_end -= 1;
+            }
+            dt_end = actual_dt_end;
+            tz_start = Some(i);
+            break;
+        } else if b == b'z' {
+            return Ok(None);
+        } else if b == b'+' {
+            let mut actual_dt_end = i;
+            while actual_dt_end > sep_pos + 1
+                && unsafe { *bytes.get_unchecked(actual_dt_end - 1) } == b' '
+            {
+                actual_dt_end -= 1;
+            }
+            dt_end = actual_dt_end;
+            tz_start = Some(i);
+            break;
+        } else if b == b'-' && i > 10 {
+            // Check that '-' is timezone offset, not part of date
+            // Skip spaces backward to find last digit of time
+            let mut check_pos = i - 1;
+            while check_pos > sep_pos && unsafe { *bytes.get_unchecked(check_pos) } == b' ' {
+                check_pos -= 1;
+            }
+
+            if check_pos > sep_pos && unsafe { *bytes.get_unchecked(check_pos) }.is_ascii_digit() {
+                let mut actual_dt_end = i;
+                while actual_dt_end > sep_pos + 1
+                    && unsafe { *bytes.get_unchecked(actual_dt_end - 1) } == b' '
+                {
+                    actual_dt_end -= 1;
+                }
+                dt_end = actual_dt_end;
+                tz_start = Some(i);
+                break;
+            }
+        }
+    }
+
+    let time_start = sep_pos + 1;
+    // SAFETY: time_start + 2 must be < dt_end for valid access
+    if time_start + 5 > dt_end || unsafe { *bytes.get_unchecked(time_start + 2) } != b':' {
+        return Ok(None);
+    }
+
+    // SAFETY: All indices verified above, access to bytes is safe
     unsafe {
         let year = _parse_digits(bytes, 0, 4) as i32;
         let month = _parse_digits(bytes, 5, 2) as u8;
         let day = _parse_digits(bytes, 8, 2) as u8;
 
-        let time_start = sep_pos + 1;
-        if time_start + 5 > dt_end || bytes[time_start + 2] != b':' {
-            return Ok(None);
-        }
-
         let hour = _parse_digits(bytes, time_start, 2) as u8;
         let minute = _parse_digits(bytes, time_start + 3, 2) as u8;
 
-        let (second, microsecond) = if time_start + 5 < dt_end && bytes[time_start + 5] == b':' {
+        // Parse seconds and microseconds if present
+        // Pattern: "HH:MM:SS.ffffff"
+        //               ^  ^
+        //               |  fractional part
+        //               seconds
+        let (second, microsecond) = if time_start + 5 < dt_end
+            && *bytes.get_unchecked(time_start + 5) == b':'
+        {
             let sec = _parse_digits(bytes, time_start + 6, 2) as u8;
-            let micro = if time_start + 8 < dt_end && bytes[time_start + 8] == b'.' {
+            let micro = if time_start + 8 < dt_end && *bytes.get_unchecked(time_start + 8) == b'.' {
                 let frac_start = time_start + 9;
                 let frac_end = dt_end.min(frac_start + 6);
+
+                // SAFETY: frac_start..frac_end guaranteed within bytes bounds
                 let mut result = 0u32;
                 let mut multiplier = 100_000u32;
 
-                for &byte in bytes.iter().skip(frac_start).take(frac_end - frac_start) {
-                    let digit = byte.wrapping_sub(b'0');
-                    if digit > 9 {
+                for i in frac_start..frac_end {
+                    let byte = *bytes.get_unchecked(i);
+                    if byte == b' ' {
+                        return Ok(None);
+                    }
+                    let digit = _TABLE[byte as usize];
+                    if digit >= 10 {
                         break;
                     }
                     result += (digit as u32) * multiplier;
@@ -205,13 +264,30 @@ fn _parse_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py, 
             (0, 0)
         };
 
-        let tzinfo = if let Some(tz_start) = tz_start {
-            let tz_bytes = &bytes[tz_start..];
+        // Parse timezone if found
+        // Pattern: "...43.10  -05:00"
+        //                ^  ^
+        //                |  timezone offset
+        //                spaces (skip)
+        let tzinfo = if let Some(tz_pos) = tz_start {
+            let mut tz_actual_start = tz_pos;
+            while tz_actual_start < bytes.len() && *bytes.get_unchecked(tz_actual_start) == b' ' {
+                tz_actual_start += 1;
+            }
 
-            if tz_bytes[0] == b'Z' {
+            if tz_actual_start >= bytes.len() {
+                return Ok(None);
+            }
+
+            let tz_bytes = &bytes[tz_actual_start..];
+
+            // SAFETY: tz_bytes is non-empty (verified above)
+            if *tz_bytes.get_unchecked(0) == b'Z' {
                 Some(PyTzInfo::utc(py)?.to_owned())
+            } else if *tz_bytes.get_unchecked(0) == b'z' {
+                return Ok(None);
             } else {
-                let (sign, offset_bytes) = match tz_bytes[0] {
+                let (sign, offset_bytes) = match *tz_bytes.get_unchecked(0) {
                     b'+' => (1, &tz_bytes[1..]),
                     b'-' => (-1, &tz_bytes[1..]),
                     _ => return Ok(None),
@@ -279,7 +355,7 @@ fn _parse_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py, 
 // https://github.com/rust-lang/rust/blob/1.91.0/library/core/src/num/dec2flt/parse.rs#L9-L26
 //
 // This is based off the algorithm described in "Fast numeric string to int",
-// available here: <https://johnnylee-sde.github.io/Fast-numeric-string-to-int/>.
+// available here: https://johnnylee-sde.github.io/Fast-numeric-string-to-int/
 #[inline]
 unsafe fn _parse_digits(bytes: &[u8], start: usize, count: usize) -> u32 {
     const MASK: u64 = 0x0000_00FF_0000_00FF;
@@ -290,6 +366,8 @@ unsafe fn _parse_digits(bytes: &[u8], start: usize, count: usize) -> u32 {
     let mut i = 0;
 
     while i + 8 <= count {
+        // SAFETY: `i + 8 <= count` ensures we have at least 8 bytes available.
+        // `start + i` is within bounds since caller guarantees `start + count <= bytes.len()`.
         unsafe {
             let ptr = bytes.as_ptr().add(start + i);
             let mut tmp = [0u8; 8];
@@ -307,7 +385,12 @@ unsafe fn _parse_digits(bytes: &[u8], start: usize, count: usize) -> u32 {
     }
 
     while i < count {
-        d = d * 10 + unsafe { bytes.get_unchecked(start + i).wrapping_sub(b'0') as u32 };
+        d = d * 10
+            + unsafe {
+                // SAFETY: `i < count` and `start + count <= bytes.len()`
+                // ensures `start + i` is a valid index.
+                bytes.get_unchecked(start + i).wrapping_sub(b'0') as u32
+            };
         i += 1;
     }
     d
@@ -344,6 +427,8 @@ pub(crate) fn format_error(source: &str, error: &ScanError) -> String {
 
     if let Some(error_line) = source.lines().nth(line - 1) {
         unsafe {
+            // SAFETY: We only push valid ASCII bytes (spaces, '|', '\n') to the Vec<u8>.
+            // String's UTF-8 invariant is maintained because all bytes are valid UTF-8.
             let bytes = err.as_mut_vec();
             bytes.reserve(gutter + 3);
             for _ in 0..gutter {
@@ -358,6 +443,8 @@ pub(crate) fn format_error(source: &str, error: &ScanError) -> String {
         err.push_str(error_line);
         err.push('\n');
         unsafe {
+            // SAFETY: We only push valid ASCII bytes (spaces, '|', '^', '\n') to the Vec<u8>.
+            // All ASCII bytes are valid UTF-8, so String's invariant is preserved.
             let bytes = err.as_mut_vec();
             let spaces = gutter + 2 + marker.col();
             bytes.reserve(spaces + 3);
