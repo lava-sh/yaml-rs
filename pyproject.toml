@@ -46,6 +46,13 @@ dev = [
     "rumdl == 0.0.173",
 ]
 bench = [
+    "oyaml",
+    "pyyaml",
+    "ruamel-yaml",
+    "polars == 1.35.2",
+    "altair == 5.5.0",
+    "py-cpuinfo == 9.0.0",
+    "vl-convert-python == 1.8.0",
 ]
 
 [project.urls]
