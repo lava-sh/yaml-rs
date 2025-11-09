@@ -74,17 +74,15 @@ fn _yaml_to_python<'py>(
                 if let Some(scalar) = Scalar::parse_from_cow_and_metadata(
                     Cow::Borrowed(cow.as_ref()),
                     *style,
-                    Some(tag_ref)
+                    Some(tag_ref),
                 ) {
                     let is_str_tag = tag.handle == "tag:yaml.org,2002:" && tag.suffix == "str";
                     return _yaml_to_python(py, &Yaml::Value(scalar), parse_datetime, is_str_tag);
                 }
             } else {
-                if let Some(scalar) = Scalar::parse_from_cow_and_metadata(
-                    Cow::Borrowed(cow.as_ref()),
-                    *style,
-                    None
-                ) {
+                if let Some(scalar) =
+                    Scalar::parse_from_cow_and_metadata(Cow::Borrowed(cow.as_ref()), *style, None)
+                {
                     return _yaml_to_python(py, &Yaml::Value(scalar), parse_datetime, false);
                 }
             }
