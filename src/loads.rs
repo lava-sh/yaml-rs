@@ -2,10 +2,10 @@ use std::borrow::Cow;
 
 use atoi::atoi;
 use pyo3::{
-    IntoPyObjectExt,
     exceptions::PyValueError,
     prelude::*,
     types::{PyDate, PyDateTime, PyDelta, PyDict, PyList, PyTzInfo},
+    IntoPyObjectExt,
 };
 use saphyr::{Scalar, ScanError, Yaml};
 use saphyr_parser::ScalarStyle;
@@ -35,10 +35,11 @@ fn _yaml_to_python<'py>(
             Scalar::FloatingPoint(float) => float.into_inner().into_bound_py_any(py),
             Scalar::String(str) => {
                 let _str = str.as_ref();
-                if parse_datetime && !_tagged_string {
-                    if let Ok(Some(dt)) = _parse_datetime(py, _str) {
-                        return Ok(dt);
-                    }
+                if parse_datetime
+                    && !_tagged_string
+                    && let Ok(Some(dt)) = _parse_datetime(py, _str)
+                {
+                    return Ok(dt);
                 }
                 _str.into_bound_py_any(py)
             }
@@ -79,12 +80,10 @@ fn _yaml_to_python<'py>(
                     let is_str_tag = tag.handle == "tag:yaml.org,2002:" && tag.suffix == "str";
                     return _yaml_to_python(py, &Yaml::Value(scalar), parse_datetime, is_str_tag);
                 }
-            } else {
-                if let Some(scalar) =
-                    Scalar::parse_from_cow_and_metadata(Cow::Borrowed(cow.as_ref()), *style, None)
-                {
-                    return _yaml_to_python(py, &Yaml::Value(scalar), parse_datetime, false);
-                }
+            } else if let Some(scalar) =
+                Scalar::parse_from_cow_and_metadata(Cow::Borrowed(cow.as_ref()), *style, None)
+            {
+                return _yaml_to_python(py, &Yaml::Value(scalar), parse_datetime, false);
             }
             cow.as_ref().into_bound_py_any(py)
         }
@@ -147,11 +146,13 @@ fn _parse_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py, 
     } else if bytes.last() == Some(&b'Z') {
         dt_end = bytes.len() - 1;
         tz_start = Some(bytes.len() - 1);
-    } else if let Some(pos) = bytes.iter().rposition(|&b| b == b'-') {
-        if pos > 10 && pos > 0 && bytes[pos - 1].is_ascii_digit() {
-            dt_end = pos;
-            tz_start = Some(pos);
-        }
+    } else if let Some(pos) = bytes.iter().rposition(|&b| b == b'-')
+        && pos > 10
+        && pos > 0
+        && bytes[pos - 1].is_ascii_digit()
+    {
+        dt_end = pos;
+        tz_start = Some(pos);
     }
 
     let sep_pos = bytes[..dt_end]
@@ -187,8 +188,8 @@ fn _parse_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py, 
                 let mut result = 0u32;
                 let mut multiplier = 100_000u32;
 
-                for i in frac_start..frac_end {
-                    let digit = bytes[i].wrapping_sub(b'0');
+                for &byte in bytes.iter().skip(frac_start).take(frac_end - frac_start) {
+                    let digit = byte.wrapping_sub(b'0');
                     if digit > 9 {
                         break;
                     }
