@@ -1,0 +1,54 @@
+[build-system]
+requires = ["maturin ~= 1.9"]
+build-backend = "maturin"
+
+[tool.maturin]
+python-source = "python"
+module-name = "yaml_rs._yaml_rs"
+
+[project]
+name = "yaml-rs"
+dynamic = ["version"]
+requires-python = ">=3.10"
+description = "A High-Performance YAML Parser for Python written in Rust"
+readme = "README.md"
+license = "UNLICENSE"
+license-files = ["UNLICENSE"]
+authors = [
+    { name = "chirizxc", email = "chirizxc@proton.me" }
+]
+maintainers = [
+    { name = "chirizxc", email = "chirizxc@proton.me" }
+]
+classifiers = [
+    "Typing :: Typed",
+    "Programming Language :: Rust",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: Implementation :: PyPy",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Topic :: Software Development :: Libraries",
+    "License :: OSI Approved :: The Unlicense (Unlicense)",
+]
+
+[dependency-groups]
+dev = [
+    "pytest == 9.0.0",
+    "maturin == 1.9.6",
+    "ruff == 0.14.4",
+    "zizmor == 1.16.3",
+    "typos == 1.39.0",
+    "rumdl == 0.0.173",
+]
+bench = [
+]
+
+[project.urls]
+Source = "https://github.com/lava-sh/yaml-rs"
+Homepage = "https://github.com/lava-sh/yaml-rs"
+"Bug Tracker" = "https://github.com/lava-sh/yaml-rs/issues"

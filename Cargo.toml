@@ -1,0 +1,30 @@
+[package]
+name = "yaml-rs"
+version = "0.0.1"
+edition = "2024"
+license = "Unlicense"
+repository = "https://github.com/lava-sh/yaml-rs"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "_yaml_rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.27.1", features = [
+    "generate-import-lib",
+    "extension-module",
+] }
+atoi = "2.0.0"
+itoa = "1.0.15"
+saphyr = "0.0.6"
+saphyr-parser = "0.0.6"
+mimalloc = { version = "*", features = ["v3"], optional = true }
+
+[features]
+default = ["dep:mimalloc"]
+
+[profile.release]
+lto = "fat"
+strip = "symbols"
+codegen-units = 1

@@ -1,0 +1,31 @@
+target-version = "py310"
+
+line-length = 90
+
+include = [
+    "src/**.py",
+    "src/**.pyi",
+    "tests/**.py",
+]
+
+[lint.isort]
+force-wrap-aliases = true
+combine-as-imports = true
+no-lines-before = ["local-folder"]
+
+[lint]
+preview = true
+
+select = ["ALL"]
+ignore = [
+    "D",
+    "TD",
+    "FIX",
+    "DOC",
+    "ANN",
+    "CPY001",
+    "S101",
+    "ARG001",
+    "PLR6201",
+    "PLR2004",
+]
