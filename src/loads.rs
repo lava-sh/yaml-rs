@@ -2,10 +2,10 @@ use std::borrow::Cow;
 
 use atoi::atoi;
 use pyo3::{
+    IntoPyObjectExt,
     exceptions::PyValueError,
     prelude::*,
     types::{PyDate, PyDateTime, PyDelta, PyDict, PyList, PyTzInfo},
-    IntoPyObjectExt,
 };
 use saphyr::{Scalar, ScanError, Yaml};
 use saphyr_parser::ScalarStyle;
