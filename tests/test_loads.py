@@ -1,10 +1,16 @@
 import json
-from datetime import UTC, date, datetime, timedelta, timezone
+import sys
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 import yaml_rs
 
 from tests import VALID_YAMLS
+
+if sys.version_info >= (3, 11):
+    from datetime import UTC
+else:
+    UTC = timezone.utc
 
 dt = datetime(
     2001,
