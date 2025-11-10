@@ -508,31 +508,39 @@ def test_parse(yaml: str, parsed: Any) -> None:
 @pytest.mark.parametrize("yaml", VALID_YAMLS)
 def test_yaml_test_suite(yaml) -> None:
     load_from_str = yaml_rs.loads(yaml.read_text(encoding="utf-8"), parse_datetime=False)
-    if isinstance(load_from_str, dict):
-        docs = [load_from_str]
-    elif isinstance(load_from_str, list):
-        docs = load_from_str
-    else:
-        pytest.skip("")
-    d = docs[0]
-    normalize_yaml = (
-        d.get("yaml")
-        # https://github.com/yaml/yaml-test-suite#special-characters
-        # https://github.com/saphyr-rs/saphyr/blob/v0.0.6/parser/tests/yaml-test-suite.rs#L312-L318
-        .replace("␣", " ")
-        .replace("»", "\t")
-        .replace("—", "")  # Tab line continuation ——»
-        .replace("←", "\r")
-        .replace("⇔", "\ufeff")  # BOM character
-        .replace("↵", "")  # Trailing newline marker
-        .replace("∎\n", "")
-    )
-    parsed_yaml = yaml_rs.loads(normalize_yaml, parse_datetime=False)
-    # FIXME
-    try:
+
+    docs = [load_from_str] if isinstance(load_from_str, dict) else load_from_str
+
+    for doc in docs:
+        normalize_yaml = (
+            doc.get("yaml")
+            .replace("␣", " ")
+            .replace("»", "\t")
+            .replace("—", "")  # Tab line continuation ——»
+            .replace("←", "\r")
+            .replace("⇔", "\ufeff")  # BOM character
+            .replace("↵", "")  # Trailing newline marker
+            .replace("∎\n", "")
+        )
+
+        parsed_yaml = yaml_rs.loads(normalize_yaml, parse_datetime=False)
         if isinstance(parsed_yaml, set):
             parsed_yaml = dict.fromkeys(parsed_yaml)
-        parsed_json = json.loads(d.get("json"))
-    except json.decoder.JSONDecodeError:
-        pytest.skip(f"Skipping {yaml.name}")
-    assert parsed_yaml == parsed_json
+
+        get_json_key = doc.get("json")
+        try:
+            parsed_json = json.loads(get_json_key)
+        except json.decoder.JSONDecodeError:
+            json_decoder = json.JSONDecoder()
+            parsed_json = []
+            pos = 0
+            while pos < len(get_json_key):
+                obj, pos = json_decoder.raw_decode(get_json_key, pos)
+                parsed_json.append(obj)
+                while pos < len(get_json_key) and get_json_key[pos] in " \t\n\r":
+                    pos += 1
+
+            if len(parsed_json) == 1:
+                parsed_json = parsed_json[0]
+
+        assert parsed_yaml == parsed_json
