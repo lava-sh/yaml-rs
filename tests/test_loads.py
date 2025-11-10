@@ -2,12 +2,13 @@
 import json
 import sys
 from datetime import date, datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any
 
 import pytest
 import yaml_rs
 
-from tests import VALID_YAMLS, _isnan
+from tests import INVALID_YAMLS, VALID_YAMLS, _is_nan
 
 if sys.version_info >= (3, 11):
     from datetime import UTC
@@ -502,11 +503,11 @@ def test_parse_datetime(yaml: str, parsed: Any) -> None:
 )
 # fmt off
 def test_parse(yaml: str, parsed: Any) -> None:
-    assert yaml_rs.loads(yaml) == _isnan(parsed)
+    assert yaml_rs.loads(yaml) == _is_nan(parsed)
 
 
 @pytest.mark.parametrize("yaml", VALID_YAMLS)
-def test_yaml_test_suite(yaml) -> None:
+def test_valid_yamls_from_test_suite(yaml: Path) -> None:
     load_from_str = yaml_rs.loads(yaml.read_text(encoding="utf-8"), parse_datetime=False)
 
     docs = [load_from_str] if isinstance(load_from_str, dict) else load_from_str
@@ -528,6 +529,15 @@ def test_yaml_test_suite(yaml) -> None:
             parsed_yaml = dict.fromkeys(parsed_yaml)
 
         get_json_key = doc.get("json")
+
+        if get_json_key is None:
+            assert parsed_yaml is not None
+            continue
+
+        if get_json_key == "":  # noqa: PLC1901
+            get_json_key = None
+            continue
+
         try:
             parsed_json = json.loads(get_json_key)
         except json.decoder.JSONDecodeError:
@@ -544,3 +554,22 @@ def test_yaml_test_suite(yaml) -> None:
                 parsed_json = parsed_json[0]
 
         assert parsed_yaml == parsed_json
+
+
+@pytest.mark.parametrize("yaml", INVALID_YAMLS)
+def test_invalid_yamls_from_test_suite(yaml: Path) -> None:
+    load_from_str = yaml_rs.loads(yaml.read_text(encoding="utf-8"), parse_datetime=False)
+    docs = load_from_str if isinstance(load_from_str, list) else [load_from_str]
+    doc = next((d for d in docs if d.get("fail") is True), None)
+    normalize_yaml = (
+        doc.get("yaml")
+        .replace("␣", " ")
+        .replace("»", "\t")
+        .replace("—", "")
+        .replace("←", "\r")
+        .replace("⇔", "\ufeff")
+        .replace("↵", "")
+        .replace("∎\n", "")
+    )
+    with pytest.raises(yaml_rs.YAMLDecodeError):
+        yaml_rs.loads(normalize_yaml, parse_datetime=False)

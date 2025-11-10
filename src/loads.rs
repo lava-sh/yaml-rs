@@ -5,7 +5,7 @@ use pyo3::{
     IntoPyObjectExt,
     exceptions::PyValueError,
     prelude::*,
-    types::{PyDate, PyDateTime, PyDelta, PyDict, PyList, PySet, PyTzInfo},
+    types::{PyDate, PyDateTime, PyDelta, PyDict, PyFrozenSet, PyList, PySet, PyTuple, PyTzInfo},
 };
 use saphyr::{Scalar, ScanError, Yaml};
 use saphyr_parser::ScalarStyle;
@@ -37,36 +37,7 @@ fn _yaml_to_python<'py>(
     _tagged_string: bool,
 ) -> PyResult<Bound<'py, PyAny>> {
     match value {
-        // Core Schema: https://yaml.org/spec/1.2.2/#103-core-schema
-        Yaml::Value(scalar) => match scalar {
-            // Regular expression: null | Null | NULL | ~
-            Scalar::Null => Ok(py.None().into_bound(py)),
-            // Regular expression: true | True | TRUE | false | False | FALSE
-            Scalar::Boolean(bool) => bool.into_bound_py_any(py),
-            // i64
-            Scalar::Integer(int) => int.into_bound_py_any(py),
-            // f64
-            Scalar::FloatingPoint(float) => float.into_inner().into_bound_py_any(py),
-            Scalar::String(str) => {
-                let _str = str.as_ref();
-                // FIXME
-                match _str {
-                    "Null" => return Ok(py.None().into_bound(py)),
-                    "True" | "TRUE" => return true.into_bound_py_any(py),
-                    "False" | "FALSE" => return false.into_bound_py_any(py),
-                    _ => {}
-                }
-
-                if parse_datetime && !_tagged_string {
-                    match _parse_datetime(py, _str) {
-                        Ok(Some(dt)) => return Ok(dt),
-                        Err(e) if e.is_instance_of::<PyValueError>(py) => return Err(e),
-                        Err(_) | Ok(None) => {}
-                    }
-                }
-                _str.into_bound_py_any(py)
-            }
-        },
+        Yaml::Value(scalar) => _scalar(py, scalar, parse_datetime, _tagged_string),
         Yaml::Sequence(sequence) => {
             let py_list = PyList::empty(py);
             for item in sequence {
@@ -74,12 +45,12 @@ fn _yaml_to_python<'py>(
             }
             Ok(py_list.into_any())
         }
-        Yaml::Mapping(map) => {
-            if map.is_empty() {
+        Yaml::Mapping(mapping) => {
+            if mapping.is_empty() {
                 return Ok(PyDict::new(py).into_any());
             }
 
-            let is_set = map.values().all(|v| match v {
+            let is_set = mapping.values().all(|v| match v {
                 Yaml::Value(Scalar::Null) => true,
                 Yaml::Representation(cow, _, _) => cow.as_ref() == "~",
                 _ => false,
@@ -87,15 +58,15 @@ fn _yaml_to_python<'py>(
 
             if is_set {
                 let py_set = PySet::empty(py)?;
-                for (k, _) in map {
-                    py_set.add(_yaml_to_python(py, k, parse_datetime, false)?)?;
+                for (k, _) in mapping {
+                    py_set.add(_yaml_key(py, k, parse_datetime)?)?;
                 }
                 Ok(py_set.into_any())
             } else {
                 let py_dict = PyDict::new(py);
-                for (k, v) in map {
+                for (k, v) in mapping {
                     py_dict.set_item(
-                        _yaml_key(py, k)?,
+                        _yaml_key(py, k, parse_datetime)?,
                         _yaml_to_python(py, v, parse_datetime, false)?,
                     )?;
                 }
@@ -138,7 +109,49 @@ fn _yaml_to_python<'py>(
     }
 }
 
-fn _yaml_key<'py>(py: Python<'py>, key: &Yaml) -> PyResult<Bound<'py, PyAny>> {
+fn _scalar<'py>(
+    py: Python<'py>,
+    scalar: &Scalar<'_>,
+    parse_datetime: bool,
+    _tagged_string: bool,
+) -> PyResult<Bound<'py, PyAny>> {
+    // Core Schema: https://yaml.org/spec/1.2.2/#103-core-schema
+    match scalar {
+        // Regular expression: null | Null | NULL | ~
+        Scalar::Null => Ok(py.None().into_bound(py)),
+        // Regular expression: true | True | TRUE | false | False | FALSE
+        Scalar::Boolean(bool) => bool.into_bound_py_any(py),
+        // i64
+        Scalar::Integer(int) => int.into_bound_py_any(py),
+        // f64
+        Scalar::FloatingPoint(float) => float.into_inner().into_bound_py_any(py),
+        Scalar::String(str) => {
+            let str_ref = str.as_ref();
+            // FIXME
+            match str_ref {
+                "Null" => return Ok(py.None().into_bound(py)),
+                "True" | "TRUE" => return true.into_bound_py_any(py),
+                "False" | "FALSE" => return false.into_bound_py_any(py),
+                _ => {}
+            }
+
+            if parse_datetime && !_tagged_string {
+                match _parse_datetime(py, str_ref) {
+                    Ok(Some(dt)) => return Ok(dt),
+                    Err(e) if e.is_instance_of::<PyValueError>(py) => return Err(e),
+                    Err(_) | Ok(None) => {}
+                }
+            }
+            str_ref.into_bound_py_any(py)
+        }
+    }
+}
+
+fn _yaml_key<'py>(
+    py: Python<'py>,
+    key: &Yaml,
+    parse_datetime: bool,
+) -> PyResult<Bound<'py, PyAny>> {
     match key {
         Yaml::Value(scalar) => match scalar {
             Scalar::String(str) => str.as_ref().into_bound_py_any(py),
@@ -153,20 +166,34 @@ fn _yaml_key<'py>(py: Python<'py>, key: &Yaml) -> PyResult<Bound<'py, PyAny>> {
                 *style,
                 tag.as_ref(),
             ) {
-                match scalar {
-                    Scalar::Null => Ok(py.None().into_bound(py)),
-                    Scalar::String(str) => str.as_ref().into_bound_py_any(py),
-                    Scalar::Integer(int) => int.into_bound_py_any(py),
-                    Scalar::FloatingPoint(float) => float.into_inner().into_bound_py_any(py),
-                    Scalar::Boolean(bool) => bool.into_bound_py_any(py),
-                }
+                _scalar(py, &scalar, parse_datetime, false)
             } else {
                 cow.as_ref().into_bound_py_any(py)
             }
         }
-        _ => Err(crate::YAMLDecodeError::new_err(
-            "Complex YAML keys (sequences/mappings) are not supported",
-        )),
+        Yaml::Sequence(sequence) => {
+            let mut items = Vec::with_capacity(sequence.len());
+            for item in sequence {
+                items.push(_yaml_key(py, item, parse_datetime)?);
+            }
+            PyTuple::new(py, &items)?.into_bound_py_any(py)
+        }
+        Yaml::Mapping(mapping) => {
+            let items = PyList::empty(py);
+            for (k, v) in mapping {
+                let tuple = PyTuple::new(
+                    py,
+                    &[
+                        _yaml_key(py, k, parse_datetime)?,
+                        _yaml_to_python(py, v, parse_datetime, false)?,
+                    ],
+                )?;
+                items.append(tuple)?;
+            }
+            PyFrozenSet::new(py, items)?.into_bound_py_any(py)
+        }
+        Yaml::Tagged(_, node) => _yaml_key(py, node, parse_datetime),
+        Yaml::Alias(_) | Yaml::BadValue => Ok(py.None().into_bound(py)),
     }
 }
 

@@ -2,11 +2,12 @@ __all__ = (
     "INVALID_YAMLS",
     "VALID_YAMLS",
     "YAML_FILES",
-    "_isnan",
+    "_is_nan",
 )
 
 import math
 from pathlib import Path
+from typing import Any
 
 import yaml_rs
 from dirty_equals import IsFloatNan
@@ -15,47 +16,49 @@ from dirty_equals import IsFloatNan
 YAML_TEST_SUITE = Path(__file__).resolve().parent / "data" / "yaml-test-suite"
 YAML_FILES = list(YAML_TEST_SUITE.glob("*.yaml"))
 
+ALL_YAMLS = 351
+
 
 def _get_yamls():
     valid = []
     invalid = []
+    skipped = []
 
     for yaml_file in YAML_FILES:
-        load_from_str = yaml_rs.loads(
-            yaml_file.read_text(encoding="utf-8"),
-            parse_datetime=False,
-        )
+        docs = yaml_rs.loads(yaml_file.read_text(encoding="utf-8"), parse_datetime=False)
+        docs = [docs] if isinstance(docs, dict) else docs
 
-        if isinstance(load_from_str, dict):
-            docs = [load_from_str]
-        elif isinstance(load_from_str, list):
-            docs = load_from_str
-        else:
-            continue
+        has_fail = any(doc.get("fail", False) for doc in docs)
+        has_skip = any(doc.get("skip", False) for doc in docs)
 
-        if any(
-            doc.get("fail") or
-            "Invalid" in doc.get("name", "") or
-            not doc.get("json")
-            for doc in docs
-            if isinstance(doc, dict)
-        ):
+        if has_skip:
+            skipped.append(yaml_file)
+        elif has_fail:
             invalid.append(yaml_file)
         else:
             valid.append(yaml_file)
 
-    return valid, invalid
+    return valid, invalid, skipped
 
 
-VALID_YAMLS, INVALID_YAMLS = _get_yamls()
-assert len(YAML_FILES) == len(VALID_YAMLS) + len(INVALID_YAMLS)
+VALID_YAMLS, INVALID_YAMLS, SKIPPED_YAMLS = _get_yamls()
+assert (
+    len(YAML_FILES) ==
+    len(VALID_YAMLS) + len(INVALID_YAMLS) + len(SKIPPED_YAMLS) ==
+    ALL_YAMLS
+)
+print(  # noqa: T201
+    f"valid: {len(VALID_YAMLS)}\n"
+    f"invalid: {len(INVALID_YAMLS)}\n"
+    f"skipped: {len(SKIPPED_YAMLS)}\n",
+)
 
 
-def _isnan(obj):
+def _is_nan(obj: Any) -> Any | dict[Any, Any] | list[Any] | IsFloatNan:
     if isinstance(obj, dict):
-        return {k: _isnan(v) for k, v in obj.items()}
+        return {k: _is_nan(v) for k, v in obj.items()}
     if isinstance(obj, list):
-        return [_isnan(v) for v in obj]
+        return [_is_nan(v) for v in obj]
     if isinstance(obj, float) and math.isnan(obj):
         return IsFloatNan
     return obj
