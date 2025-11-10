@@ -1,5 +1,5 @@
 [build-system]
-requires = ["maturin ~= 1.9"]
+requires = ["maturin == 1.10.0"]
 build-backend = "maturin"
 
 [tool.maturin]
@@ -40,11 +40,11 @@ classifiers = [
 dev = [
     "pytest == 9.0.0",
     "dirty-equals == 0.10.0",
-    "maturin == 1.9.6",
+    "maturin == 1.10.0",
     "ruff == 0.14.4",
     "zizmor == 1.16.3",
     "typos == 1.39.0",
-    "rumdl == 0.0.173",
+    "rumdl == 0.0.174",
 ]
 bench = [
     "oyaml",
