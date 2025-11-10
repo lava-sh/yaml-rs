@@ -16,6 +16,7 @@ no-lines-before = ["local-folder"]
 [lint]
 preview = true
 
+allowed-confusables = ["’"]
 select = ["ALL"]
 ignore = [
     "D",

@@ -2,11 +2,14 @@ __all__ = (
     "INVALID_YAMLS",
     "VALID_YAMLS",
     "YAML_FILES",
+    "_isnan",
 )
 
+import math
 from pathlib import Path
 
 import yaml_rs
+from dirty_equals import IsFloatNan
 
 # https://github.com/yaml/yaml-test-suite
 YAML_TEST_SUITE = Path(__file__).resolve().parent / "data" / "yaml-test-suite"
@@ -46,3 +49,13 @@ def _get_yamls():
 
 VALID_YAMLS, INVALID_YAMLS = _get_yamls()
 assert len(YAML_FILES) == len(VALID_YAMLS) + len(INVALID_YAMLS)
+
+
+def _isnan(obj):
+    if isinstance(obj, dict):
+        return {k: _isnan(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_isnan(v) for v in obj]
+    if isinstance(obj, float) and math.isnan(obj):
+        return IsFloatNan
+    return obj

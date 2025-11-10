@@ -16,7 +16,12 @@ from ._yaml_rs import (
 __version__: str = _version
 
 
-def load(fp: BinaryIO, /, *, parse_datetime: bool = True) -> dict[str, Any]:
+def load(
+        fp: BinaryIO,
+        /,
+        *,
+        parse_datetime: bool = True,
+) -> dict[str, Any] | list[dict[str, Any]]:
     _bytes = fp.read()
     try:
         _str = _bytes.decode()
@@ -26,7 +31,12 @@ def load(fp: BinaryIO, /, *, parse_datetime: bool = True) -> dict[str, Any]:
     return loads(_str, parse_datetime=parse_datetime)
 
 
-def loads(s: str, /, *, parse_datetime: bool = True) -> dict[str, Any]:
+def loads(
+        s: str,
+        /,
+        *,
+        parse_datetime: bool = True,
+) -> dict[str, Any] | list[dict[str, Any]]:
     if not isinstance(s, str):
         raise TypeError(f"Expected str object, not '{type(s).__name__}'")
     return _loads(s, parse_datetime=parse_datetime)

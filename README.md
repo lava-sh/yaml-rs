@@ -16,6 +16,7 @@
 ## Features
 
 * The fastest YAML parser in Python (see [benchmarks](https://github.com/lava-sh/yaml-rs/tree/main/benchmark))
+* Full spec support
 
 ## Installation
 
@@ -63,4 +64,43 @@ app:
     updated_at: 2025-11-09T10:30:00Z
 """
 pprint(yaml_rs.loads(yaml))
+```
+
+## Why not X?
+
+### Why not [pyyaml](https://pypi.org/project/PyYAML)?
+
+PyYAML сan't parse example 2.23, 2.24, 2.27, 2.28, etc. from [YAML spec](https://yaml.org/spec/1.2.2/)
+
+```python
+import yaml as pyyaml
+
+example_2_23 = """\
+---
+not-date: !!str 2002-04-28
+
+picture: !!binary |
+ R0lGODlhDAAMAIQAAP//9/X
+ 17unp5WZmZgAAAOfn515eXv
+ Pz7Y6OjuDg4J+fn5OTk6enp
+ 56enmleECcgggoBADs=
+
+application specific tag: !something |
+ The semantics of the tag
+ above may be different for
+ different documents.
+"""
+print(pyyaml.safe_load(example_2_23))  # yaml.constructor.ConstructorError
+```
+
+Also, PyYAML incorrect parsing of some values
+
+```python
+import yaml as pyyaml
+
+yaml = "! 15"  # must be str
+
+load = pyyaml.safe_load(yaml)
+print(load)  # 15
+print(type(load))  # <class 'int'>
 ```
