@@ -476,7 +476,7 @@ def test_parse_datetime(yaml: str, parsed: Any) -> None:
           "Booleans": [True, False],
           "Floats": [0.0, -0.0, 12000.0, -200000.0],
           "Integers": [0, 0, 3, -19],
-          "Invalid": ["True", "Null", 7, 58, 12.3]}),
+          "Invalid": [True, None, 7, 58, 12.3]}),
         # Example 10.9 Core Tag Resolution
         ("A null: null\n"
          "Also a null: # Empty\n"
@@ -490,10 +490,14 @@ def test_parse_datetime(yaml: str, parsed: Any) -> None:
          {"A null": None,
           "Also a null": None,
           "Also floats": [float("inf"), float("-inf"), float("inf"), float("nan")],
-          "Booleans": [True, "True", False, "FALSE"],
+          "Booleans": [True, True, False, False],
           "Floats": [0.0, -0.0, 0.5, 12000.0, -200000.0],
           "Integers": [0, 7, 58, -19],
           "Not a null": ""}),
+        ("all_bools: [ true , True , TRUE , false , False , FALSE ]",
+         {"all_bools": [True, True, True, False, False, False]}),
+        ("all_nulls: [ null , Null , NULL , ~ ]",
+         {"all_nulls": [None, None, None, None]}),
     ],
 )
 # fmt off

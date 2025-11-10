@@ -37,13 +37,26 @@ fn _yaml_to_python<'py>(
     _tagged_string: bool,
 ) -> PyResult<Bound<'py, PyAny>> {
     match value {
+        // Core Schema: https://yaml.org/spec/1.2.2/#103-core-schema
         Yaml::Value(scalar) => match scalar {
+            // Regular expression: null | Null | NULL | ~
             Scalar::Null => Ok(py.None().into_bound(py)),
+            // Regular expression: true | True | TRUE | false | False | FALSE
             Scalar::Boolean(bool) => bool.into_bound_py_any(py),
+            // i64
             Scalar::Integer(int) => int.into_bound_py_any(py),
+            // f64
             Scalar::FloatingPoint(float) => float.into_inner().into_bound_py_any(py),
             Scalar::String(str) => {
                 let _str = str.as_ref();
+                // FIXME
+                match _str {
+                    "Null" => return Ok(py.None().into_bound(py)),
+                    "True" | "TRUE" => return Ok(true.into_bound_py_any(py)?),
+                    "False" | "FALSE" => return Ok(false.into_bound_py_any(py)?),
+                    _ => {}
+                }
+
                 if parse_datetime && !_tagged_string {
                     match _parse_datetime(py, _str) {
                         Ok(Some(dt)) => return Ok(dt),
