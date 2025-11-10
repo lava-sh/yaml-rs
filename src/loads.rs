@@ -52,8 +52,8 @@ fn _yaml_to_python<'py>(
                 // FIXME
                 match _str {
                     "Null" => return Ok(py.None().into_bound(py)),
-                    "True" | "TRUE" => return Ok(true.into_bound_py_any(py)?),
-                    "False" | "FALSE" => return Ok(false.into_bound_py_any(py)?),
+                    "True" | "TRUE" => return true.into_bound_py_any(py),
+                    "False" | "FALSE" => return false.into_bound_py_any(py),
                     _ => {}
                 }
 
@@ -75,28 +75,32 @@ fn _yaml_to_python<'py>(
             Ok(py_list.into_any())
         }
         Yaml::Mapping(map) => {
+            if map.is_empty() {
+                return Ok(PyDict::new(py).into_any());
+            }
+
             let is_set = map.values().all(|v| match v {
                 Yaml::Value(Scalar::Null) => true,
                 Yaml::Representation(cow, _, _) => cow.as_ref() == "~",
                 _ => false,
             });
 
-            if is_set && !map.is_empty() {
+            if is_set {
                 let py_set = PySet::empty(py)?;
                 for (k, _) in map {
                     py_set.add(_yaml_to_python(py, k, parse_datetime, false)?)?;
                 }
-                return Ok(py_set.into_any());
+                Ok(py_set.into_any())
+            } else {
+                let py_dict = PyDict::new(py);
+                for (k, v) in map {
+                    py_dict.set_item(
+                        _yaml_key(py, k)?,
+                        _yaml_to_python(py, v, parse_datetime, false)?,
+                    )?;
+                }
+                Ok(py_dict.into_any())
             }
-
-            let py_dict = PyDict::new(py);
-            for (k, v) in map {
-                py_dict.set_item(
-                    _yaml_key(py, k)?,
-                    _yaml_to_python(py, v, parse_datetime, false)?,
-                )?;
-            }
-            Ok(py_dict.into_any())
         }
         Yaml::Representation(cow, style, tag) => {
             if cow.is_empty() && tag.is_none() && *style == ScalarStyle::Plain {
@@ -104,9 +108,7 @@ fn _yaml_to_python<'py>(
             }
 
             if let Some(tag_ref) = tag.as_ref() {
-                let tag = tag_ref.as_ref();
-
-                if tag.handle.is_empty() && tag.suffix == "!" {
+                if tag_ref.handle.is_empty() && tag_ref.suffix == "!" {
                     return cow.as_ref().into_bound_py_any(py);
                 }
                 if let Some(scalar) = Scalar::parse_from_cow_and_metadata(
@@ -114,13 +116,15 @@ fn _yaml_to_python<'py>(
                     *style,
                     Some(tag_ref),
                 ) {
-                    let is_str_tag = tag.handle == "tag:yaml.org,2002:" && tag.suffix == "str";
+                    let is_str_tag =
+                        tag_ref.handle == "tag:yaml.org,2002:" && tag_ref.suffix == "str";
                     return _yaml_to_python(py, &Yaml::Value(scalar), parse_datetime, is_str_tag);
                 }
-            } else if let Some(scalar) =
-                Scalar::parse_from_cow_and_metadata(Cow::Borrowed(cow.as_ref()), *style, None)
-            {
+            } else if *style == ScalarStyle::Plain {
+                let scalar = Scalar::parse_from_cow(Cow::Borrowed(cow.as_ref()));
                 return _yaml_to_python(py, &Yaml::Value(scalar), parse_datetime, false);
+            } else {
+                return cow.as_ref().into_bound_py_any(py);
             }
             cow.as_ref().into_bound_py_any(py)
         }
