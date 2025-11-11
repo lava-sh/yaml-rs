@@ -18,7 +18,7 @@ fn _loads(py: Python, s: &str, parse_datetime: bool) -> PyResult<Py<PyAny>> {
             loader.early_parse(false);
             let mut parser = saphyr_parser::Parser::new_from_str(s);
             parser.load(&mut loader, true)?;
-            Ok::<_, saphyr::ScanError>(loader.into_documents())
+            Ok::<_, saphyr_parser::ScanError>(loader.into_documents())
         })
         .map_err(|err| YAMLDecodeError::new_err(format_error(s, &err)))?;
     Ok(yaml_to_python(py, yaml, parse_datetime)?.unbind())

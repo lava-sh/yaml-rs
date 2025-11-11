@@ -44,6 +44,15 @@ YAML parse error at line 1, column 7
   |       ^
 while scanning a quoted scalar, found unexpected end of stream""",
         ),
+        (
+            "*",
+            """\
+YAML parse error at line 1, column 1
+  |
+1 | *
+  | ^
+while scanning an anchor or alias, did not find expected alphabetic or numeric character""",
+        ),
     ],
 )
 def test_loads_errors(bad_yaml: str, exc_msg: str) -> None:
@@ -499,6 +508,17 @@ def test_parse_datetime(yaml: str, parsed: Any) -> None:
          {"all_bools": [True, True, True, False, False, False]}),
         ("all_nulls: [ null , Null , NULL , ~ ]",
          {"all_nulls": [None, None, None, None]}),
+        ("~: null", {None: None}),
+        ("null: ~", {None: None}),
+        ("null: null", {None: None}),
+        ("~: ~", {None: None}),
+        ("NULL: ~", {None: None}),
+        ("~: ~\n"
+         "--- !!set\n"
+         "? Mark McGwire\n"
+         "? Sammy Sosa\n"
+         "? Ken Griffey",
+         [{None: None}, {"Mark McGwire", "Sammy Sosa", "Ken Griffey"}]),
     ],
 )
 # fmt off

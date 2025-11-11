@@ -15,19 +15,17 @@ pub(crate) fn yaml_to_python<'py>(
     docs: Vec<Yaml<'_>>,
     parse_datetime: bool,
 ) -> PyResult<Bound<'py, PyAny>> {
-    if docs.is_empty() {
-        return Ok(py.None().into_bound(py));
+    match docs.len() {
+        0 => Ok(py.None().into_bound(py)),
+        1 => _yaml_to_python(py, &docs[0], parse_datetime, false),
+        _ => {
+            let py_list = PyList::empty(py);
+            for doc in &docs {
+                py_list.append(_yaml_to_python(py, doc, parse_datetime, false)?)?;
+            }
+            Ok(py_list.into_any())
+        }
     }
-
-    if docs.len() == 1 {
-        return _yaml_to_python(py, &docs[0], parse_datetime, false);
-    }
-
-    let py_list = PyList::empty(py);
-    for doc in &docs {
-        py_list.append(_yaml_to_python(py, doc, parse_datetime, false)?)?;
-    }
-    Ok(py_list.into_any())
 }
 
 fn _yaml_to_python<'py>(
@@ -50,13 +48,18 @@ fn _yaml_to_python<'py>(
                 return Ok(PyDict::new(py).into_any());
             }
 
-            let is_set = mapping.values().all(|v| match v {
-                Yaml::Value(Scalar::Null) => true,
-                Yaml::Representation(cow, _, _) => cow.as_ref() == "~",
-                _ => false,
-            });
+            let (all_nulls, has_null_key) =
+                mapping.iter().fold((true, false), |(_a, _h), (k, v)| {
+                    (
+                        _a && (matches!(v, Yaml::Value(Scalar::Null))
+                            || matches!(v, Yaml::Representation(cow, _, _) if cow.as_ref() == "~")),
+                        _h || (matches!(k, Yaml::Value(Scalar::Null))
+                            || matches!(k, Yaml::Representation(cow, _, _)
+                   if matches!(cow.as_ref(), "~" | "null" | "NULL" | "Null"))),
+                    )
+                });
 
-            if is_set {
+            if all_nulls && !has_null_key {
                 let py_set = PySet::empty(py)?;
                 for (k, _) in mapping {
                     py_set.add(_yaml_key(py, k, parse_datetime)?)?;
@@ -87,22 +90,17 @@ fn _yaml_to_python<'py>(
                     *style,
                     Some(tag_ref),
                 ) {
-                    let is_str_tag =
-                        tag_ref.handle == "tag:yaml.org,2002:" && tag_ref.suffix == "str";
+                    let is_str_tag = tag_ref.is_yaml_core_schema() && tag_ref.suffix == "str";
                     return _yaml_to_python(py, &Yaml::Value(scalar), parse_datetime, is_str_tag);
                 }
             } else if *style == ScalarStyle::Plain {
                 let scalar = Scalar::parse_from_cow(Cow::Borrowed(cow.as_ref()));
                 return _yaml_to_python(py, &Yaml::Value(scalar), parse_datetime, false);
-            } else {
-                return cow.as_ref().into_bound_py_any(py);
             }
             cow.as_ref().into_bound_py_any(py)
         }
         Yaml::Tagged(tag, node) => {
-            let is_str_tag =
-                tag.as_ref().handle == "tag:yaml.org,2002:" && tag.as_ref().suffix == "str";
-
+            let is_str_tag = tag.as_ref().is_yaml_core_schema() && tag.as_ref().suffix == "str";
             _yaml_to_python(py, node, parse_datetime, is_str_tag)
         }
         Yaml::Alias(_) | Yaml::BadValue => Ok(py.None().into_bound(py)),
