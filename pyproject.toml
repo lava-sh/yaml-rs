@@ -38,13 +38,13 @@ classifiers = [
 
 [dependency-groups]
 dev = [
-    "pytest == 9.0.0",
+    "pytest == 9.0.1",
     "dirty-equals == 0.10.0",
     "maturin == 1.10.1",
     "ruff == 0.14.4",
     "zizmor == 1.16.3",
     "typos == 1.39.0",
-    "rumdl == 0.0.174",
+    "rumdl == 0.0.175",
 ]
 bench = [
     "oyaml",
