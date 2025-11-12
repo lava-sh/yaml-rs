@@ -7,8 +7,7 @@ use pyo3::{
     prelude::*,
     types::{PyDate, PyDateTime, PyDelta, PyDict, PyFrozenSet, PyList, PySet, PyTuple, PyTzInfo},
 };
-use saphyr::{Scalar, ScanError, Yaml};
-use saphyr_parser::ScalarStyle;
+use saphyr::{Scalar, ScalarStyle, ScanError, Yaml};
 
 pub(crate) fn yaml_to_python<'py>(
     py: Python<'py>,
@@ -208,78 +207,43 @@ static _TABLE: [u8; 256] = {
 fn _parse_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py, PyAny>>> {
     let bytes = s.as_bytes();
 
-    // SAFETY
+    if bytes.len() < 10 {
+        return Ok(None);
+    }
     // bytes: [Y][Y][Y][Y][-][M][M][-][D][D]
-    // index:  0  1  2  3  4  5  6  7  8  9
-    if bytes.len() == 10
-        && unsafe { *bytes.get_unchecked(4) } == b'-'
-        && unsafe { *bytes.get_unchecked(7) } == b'-'
-    {
-        unsafe {
-            let year = _parse_digits(bytes, 0, 4) as i32;
-            let month = _parse_digits(bytes, 5, 2) as u8;
-            let day = _parse_digits(bytes, 8, 2) as u8;
-            return Ok(Some(PyDate::new(py, year, month, day)?.into_any()));
-        }
-    }
-
-    let sep_pos = bytes
-        .iter()
-        .position(|&b| b == b'T' || b == b't' || b == b' ');
-    if sep_pos.is_none() || sep_pos.unwrap() < 10 {
+    //                     ^        ^
+    // index:              4        7
+    // SAFETY: `bytes.len()` >= 10 verified above, so indices 4 and 7 are valid.
+    if unsafe { !(*bytes.get_unchecked(4) == b'-' && *bytes.get_unchecked(7) == b'-') } {
         return Ok(None);
     }
-    let sep_pos = sep_pos.unwrap();
+    // SAFETY: `bytes.len()` >= 10 and date format verified above.
+    // Indices 0..4, 5..7, and 8..10 are all within bounds.
+    let day = unsafe { _parse_digits(bytes, 8, 2) as u8 };
+    let month = unsafe { _parse_digits(bytes, 5, 2) as u8 };
+    let year = unsafe { _parse_digits(bytes, 0, 4) as i32 };
 
-    // SAFETY: Already verified sep_pos >= 10, so indices 4 and 7 are valid
-    if unsafe { *bytes.get_unchecked(4) } != b'-' || unsafe { *bytes.get_unchecked(7) } != b'-' {
-        return Ok(None);
+    if bytes.len() == 10 {
+        return Ok(Some(PyDate::new(py, year, month, day)?.into_any()));
     }
+
+    let sep_pos = match memchr::memchr3(b'T', b't', b' ', &bytes[10..]).map(|pos| pos + 10) {
+        Some(pos) => pos,
+        None => return Ok(None),
+    };
 
     let mut dt_end = bytes.len();
     let mut tz_start = None;
 
-    // SAFETY: Range (sep_pos + 1..bytes.len()) guarantees valid indices
-    // Pattern: "2001-12-14 21:59:43.10  -05"
-    //                                ^  ^
-    //                                |  timezone indicator (-)
-    //                                spaces (skip backward)
     for i in (sep_pos + 1..bytes.len()).rev() {
+        // SAFETY: i from range (`sep_pos + 1..bytes.len()`), so it's a valid index.
         let b = unsafe { *bytes.get_unchecked(i) };
 
-        if b == b'Z' {
-            // SAFETY: actual_dt_end always >= sep_pos + 1, so actual_dt_end - 1 is valid
-            let mut actual_dt_end = i;
-            while actual_dt_end > sep_pos + 1
-                && unsafe { *bytes.get_unchecked(actual_dt_end - 1) } == b' '
-            {
-                actual_dt_end -= 1;
-            }
-            dt_end = actual_dt_end;
-            tz_start = Some(i);
-            break;
-        } else if b == b'z' {
-            return Ok(None);
-        } else if b == b'+' {
-            let mut actual_dt_end = i;
-            while actual_dt_end > sep_pos + 1
-                && unsafe { *bytes.get_unchecked(actual_dt_end - 1) } == b' '
-            {
-                actual_dt_end -= 1;
-            }
-            dt_end = actual_dt_end;
-            tz_start = Some(i);
-            break;
-        } else if b == b'-' && i > 10 {
-            // Check that '-' is timezone offset, not part of date
-            // Skip spaces backward to find last digit of time
-            let mut check_pos = i - 1;
-            while check_pos > sep_pos && unsafe { *bytes.get_unchecked(check_pos) } == b' ' {
-                check_pos -= 1;
-            }
-
-            if check_pos > sep_pos && unsafe { *bytes.get_unchecked(check_pos) }.is_ascii_digit() {
+        match b {
+            b'Z' => {
                 let mut actual_dt_end = i;
+                // SAFETY: Loop condition ensures actual_dt_end > sep_pos + 1,
+                // so actual_dt_end - 1 >= sep_pos + 1 > 0, making it a valid index.
                 while actual_dt_end > sep_pos + 1
                     && unsafe { *bytes.get_unchecked(actual_dt_end - 1) } == b' '
                 {
@@ -289,69 +253,110 @@ fn _parse_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py, 
                 tz_start = Some(i);
                 break;
             }
+            b'z' => return Ok(None),
+            b'+' => {
+                let mut actual_dt_end = i;
+                // SAFETY: Loop condition ensures actual_dt_end > sep_pos + 1,
+                // so actual_dt_end - 1 is a valid index.
+                while actual_dt_end > sep_pos + 1
+                    && unsafe { *bytes.get_unchecked(actual_dt_end - 1) } == b' '
+                {
+                    actual_dt_end -= 1;
+                }
+                dt_end = actual_dt_end;
+                tz_start = Some(i);
+                break;
+            }
+            b'-' if i > 10 => {
+                let mut check_pos = i - 1;
+                // SAFETY: Loop condition ensures check_pos > sep_pos >= 0,
+                // making check_pos a valid index.
+                while check_pos > sep_pos && unsafe { *bytes.get_unchecked(check_pos) } == b' ' {
+                    check_pos -= 1;
+                }
+                // SAFETY: check_pos > sep_pos verified by loop condition above,
+                // so check_pos is a valid index.
+                if check_pos > sep_pos
+                    && unsafe { *bytes.get_unchecked(check_pos) }.is_ascii_digit()
+                {
+                    let mut actual_dt_end = i;
+                    // SAFETY: Loop condition ensures actual_dt_end > sep_pos + 1,
+                    // so actual_dt_end - 1 is a valid index.
+                    while actual_dt_end > sep_pos + 1
+                        && unsafe { *bytes.get_unchecked(actual_dt_end - 1) } == b' '
+                    {
+                        actual_dt_end -= 1;
+                    }
+                    dt_end = actual_dt_end;
+                    tz_start = Some(i);
+                    break;
+                }
+            }
+            _ => {}
         }
     }
 
     let time_start = sep_pos + 1;
-    // SAFETY: time_start + 2 must be < dt_end for valid access
+    // SAFETY: time_start + 2 < dt_end verified by the condition,
+    // and dt_end <= `bytes.len()`, so time_start + 2 is a valid index.
     if time_start + 5 > dt_end || unsafe { *bytes.get_unchecked(time_start + 2) } != b':' {
         return Ok(None);
     }
 
-    // SAFETY: All indices verified above, access to bytes is safe
+    // SAFETY: All operations within this block are safe because:
+    // 1. Date indices (0..4, 5..7, 8..10) verified at function start
+    // 2. time_start derived from sep_pos which is a valid index
+    // 3. All subsequent indices are bounds-checked before use
     unsafe {
-        let year = _parse_digits(bytes, 0, 4) as i32;
-        let month = _parse_digits(bytes, 5, 2) as u8;
-        let day = _parse_digits(bytes, 8, 2) as u8;
-
         let hour = _parse_digits(bytes, time_start, 2) as u8;
         let minute = _parse_digits(bytes, time_start + 3, 2) as u8;
 
-        // Parse seconds and microseconds if present
-        // Pattern: "HH:MM:SS.ffffff"
-        //               ^  ^
-        //               |  fractional part
-        //               seconds
-        let (second, microsecond) = if time_start + 5 < dt_end
-            && *bytes.get_unchecked(time_start + 5) == b':'
-        {
-            let sec = _parse_digits(bytes, time_start + 6, 2) as u8;
-            let micro = if time_start + 8 < dt_end && *bytes.get_unchecked(time_start + 8) == b'.' {
-                let frac_start = time_start + 9;
-                let frac_end = dt_end.min(frac_start + 6);
+        let (second, microsecond) =
+            // SAFETY: time_start + 5 < dt_end verified by condition,
+            // and dt_end <= `bytes.len()`, so time_start + 5 is valid.
+            if time_start + 5 < dt_end && *bytes.get_unchecked(time_start + 5) == b':' {
+                let _second = _parse_digits(bytes, time_start + 6, 2) as u8;
+                // SAFETY: time_start + 8 < dt_end verified by condition,
+                // so time_start + 8 is a valid index.
+                let _microsecond =
+                    if time_start + 8 < dt_end && *bytes.get_unchecked(time_start + 8) == b'.' {
+                        let frac_start = time_start + 9;
+                        let frac_len = (dt_end - frac_start).min(6);
 
-                // SAFETY: frac_start..frac_end guaranteed within bytes bounds
-                let mut result = 0u32;
-                let mut multiplier = 100_000u32;
+                        if frac_len == 6 {
+                            _parse_digits(bytes, frac_start, 6)
+                        } else {
+                            let mut result = 0u32;
+                            let mut multiplier = 100_000u32;
 
-                for i in frac_start..frac_end {
-                    let byte = *bytes.get_unchecked(i);
-                    if byte == b' ' {
-                        return Ok(None);
-                    }
-                    let digit = _TABLE[byte as usize];
-                    if digit >= 10 {
-                        break;
-                    }
-                    result += (digit as u32) * multiplier;
-                    multiplier /= 10;
-                }
-                result
+                            for i in 0..frac_len {
+                                // SAFETY: i < frac_len and frac_len <= dt_end - frac_start,
+                                // so frac_start + i < dt_end <= `bytes.len()`.
+                                let byte = *bytes.get_unchecked(frac_start + i);
+                                if byte == b' ' {
+                                    return Ok(None);
+                                }
+                                let digit = _TABLE[byte as usize];
+                                if digit >= 10 {
+                                    break;
+                                }
+                                result += (digit as u32) * multiplier;
+                                multiplier /= 10;
+                            }
+                            result
+                        }
+                    } else {
+                        0
+                    };
+                (_second, _microsecond)
             } else {
-                0
+                (0, 0)
             };
-            (sec, micro)
-        } else {
-            (0, 0)
-        };
 
-        // Parse timezone if found
-        // Pattern: "...43.10  -05:00"
-        //                ^  ^
-        //                |  timezone offset
-        //                spaces (skip)
-        let tzinfo = if let Some(tz_pos) = tz_start {
+        let tz_info = if let Some(tz_pos) = tz_start {
             let mut tz_actual_start = tz_pos;
+            // SAFETY: Loop increments tz_actual_start while checking it's < `bytes.len()`,
+            // ensuring all accesses are within bounds.
             while tz_actual_start < bytes.len() && *bytes.get_unchecked(tz_actual_start) == b' ' {
                 tz_actual_start += 1;
             }
@@ -361,56 +366,59 @@ fn _parse_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py, 
             }
 
             let tz_bytes = &bytes[tz_actual_start..];
+            // SAFETY: tz_actual_start < `bytes.len()` verified above,
+            // so tz_bytes is non-empty and index 0 is valid.
+            let first_byte = *tz_bytes.get_unchecked(0);
 
-            // SAFETY: tz_bytes is non-empty (verified above)
-            if *tz_bytes.get_unchecked(0) == b'Z' {
-                Some(PyTzInfo::utc(py)?.to_owned())
-            } else if *tz_bytes.get_unchecked(0) == b'z' {
-                return Ok(None);
-            } else {
-                let (sign, offset_bytes) = match *tz_bytes.get_unchecked(0) {
-                    b'+' => (1, &tz_bytes[1..]),
-                    b'-' => (-1, &tz_bytes[1..]),
-                    _ => return Ok(None),
-                };
+            match first_byte {
+                b'Z' => Some(PyTzInfo::utc(py)?.to_owned()),
+                b'z' => return Ok(None),
+                b'+' | b'-' => {
+                    let sign = if first_byte == b'+' { 1 } else { -1 };
+                    let offset_bytes = &tz_bytes[1..];
 
-                let (hours, minutes) = if let Some(colon_pos) =
-                    offset_bytes.iter().position(|&b| b == b':')
-                {
-                    let h = atoi::<i32>(&offset_bytes[..colon_pos])
-                        .ok_or_else(|| PyErr::new::<PyValueError, _>("Invalid timezone hour"))?;
-                    let m = if colon_pos + 1 < offset_bytes.len() {
-                        atoi::<i32>(&offset_bytes[colon_pos + 1..]).unwrap_or(0)
+                    let (hours, minutes) =
+                        if let Some(colon_pos) = memchr::memchr(b':', offset_bytes) {
+                            let h = atoi::<i32>(&offset_bytes[..colon_pos]).ok_or_else(|| {
+                                PyErr::new::<PyValueError, _>("Invalid timezone hour")
+                            })?;
+                            let m = if colon_pos + 1 < offset_bytes.len() {
+                                atoi::<i32>(&offset_bytes[colon_pos + 1..]).unwrap_or(0)
+                            } else {
+                                0
+                            };
+                            (h, m)
+                        } else if offset_bytes.len() <= 2 {
+                            let h = atoi::<i32>(offset_bytes).ok_or_else(|| {
+                                PyErr::new::<PyValueError, _>("Invalid timezone hour")
+                            })?;
+                            (h, 0)
+                        } else {
+                            // SAFETY: `offset_bytes.len()` > 2 verified by else branch,
+                            // so indices 0..2 and potentially 2..4 are valid.
+                            let h = _parse_digits(offset_bytes, 0, 2) as i32;
+                            let m = if offset_bytes.len() >= 4 {
+                                _parse_digits(offset_bytes, 2, 2) as i32
+                            } else {
+                                0
+                            };
+                            (h, m)
+                        };
+
+                    let total_seconds = sign * (hours * 3600 + minutes * 60);
+                    let (days, seconds) = if total_seconds < 0 {
+                        (
+                            total_seconds.div_euclid(86400),
+                            total_seconds.rem_euclid(86400),
+                        )
                     } else {
-                        0
+                        (0, total_seconds)
                     };
-                    (h, m)
-                } else if offset_bytes.len() <= 2 {
-                    let h = atoi::<i32>(offset_bytes)
-                        .ok_or_else(|| PyErr::new::<PyValueError, _>("Invalid timezone hour"))?;
-                    (h, 0)
-                } else {
-                    let h = _parse_digits(offset_bytes, 0, 2) as i32;
-                    let m = if offset_bytes.len() >= 4 {
-                        _parse_digits(offset_bytes, 2, 2) as i32
-                    } else {
-                        0
-                    };
-                    (h, m)
-                };
 
-                let total_seconds = sign * (hours * 3600 + minutes * 60);
-                let (days, seconds) = if total_seconds < 0 {
-                    (
-                        total_seconds.div_euclid(86400),
-                        total_seconds.rem_euclid(86400),
-                    )
-                } else {
-                    (0, total_seconds)
-                };
-
-                let py_delta = PyDelta::new(py, days, seconds, 0, false)?;
-                Some(PyTzInfo::fixed_offset(py, py_delta)?)
+                    let py_delta = PyDelta::new(py, days, seconds, 0, false)?;
+                    Some(PyTzInfo::fixed_offset(py, py_delta)?)
+                }
+                _ => return Ok(None),
             }
         } else {
             None
@@ -426,7 +434,7 @@ fn _parse_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py, 
                 minute,
                 second,
                 microsecond,
-                tzinfo.as_ref(),
+                tz_info.as_ref(),
             )?
             .into_any(),
         ))
@@ -488,11 +496,13 @@ pub(crate) fn format_error(source: &str, error: &ScanError) -> String {
     let line_len = itoa::Buffer::new().format(line).len();
     let col_len = itoa::Buffer::new().format(col).len();
 
+    let error_line = source.lines().nth(line - 1);
+
     let total_len = base_len
         + line_len
         + col_len
         + error_len
-        + if let Some(error_line) = source.lines().nth(line - 1) {
+        + if let Some(error_line) = error_line {
             gutter + 3 + line_len + 3 + error_line.len() + 1 + gutter + 2 + marker.col() + 3 + 1
         } else {
             0
@@ -506,7 +516,7 @@ pub(crate) fn format_error(source: &str, error: &ScanError) -> String {
     err.push_str(itoa::Buffer::new().format(col));
     err.push('\n');
 
-    if let Some(error_line) = source.lines().nth(line - 1) {
+    if let Some(error_line) = error_line {
         unsafe {
             // SAFETY: We only push valid ASCII bytes (spaces, '|', '\n') to the Vec<u8>.
             // String's UTF-8 invariant is maintained because all bytes are valid UTF-8.

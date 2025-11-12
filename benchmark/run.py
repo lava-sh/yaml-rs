@@ -8,6 +8,7 @@ import cpuinfo
 import oyaml
 import polars as pl
 import ruamel.yaml
+import ryaml
 import strictyaml
 import yaml as pyyaml
 import yaml_rs
@@ -92,6 +93,7 @@ def run(run_count: int) -> None:
     loads = {
         "yaml_rs": lambda: yaml_rs.loads(data),
         "yaml_rs (parse_dt=False)": lambda: yaml_rs.loads(data, parse_datetime=False),
+        "ryaml": lambda: ryaml.loads(data),
         "PyYAML": lambda: pyyaml.safe_load(data),
         "ruamel.yaml": lambda: ruamel.yaml.YAML(typ="safe").load(data),
         "oyaml": lambda: oyaml.safe_load(data),

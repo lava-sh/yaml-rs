@@ -49,10 +49,11 @@ dev = [
 bench = [
     "oyaml",
     "pyyaml",
+    "ryaml",
     "ruamel-yaml",
     "strictyaml",
     "polars == 1.35.2",
-    "altair == 5.5.0",
+    "altair == 6.0.0",
     "py-cpuinfo == 9.0.0",
     "vl-convert-python == 1.8.0",
 ]
