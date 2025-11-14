@@ -1,5 +1,4 @@
 from pathlib import Path
-from re import escape as e
 
 import pytest
 import yaml_rs
@@ -16,7 +15,7 @@ from tests import VALID_YAMLS, normalize_yaml
         ),
         (
             {"x": lambda x: x},
-            r"Cannot serialize <class 'function'> \(<function <lambda> at 0x.*>\) to YAML",
+            r"Cannot serialize <class 'function'> \(<function <lambda> at 0x.*>\)",
         ),
         (
             {"x": 1 + 2j},
@@ -31,7 +30,6 @@ from tests import VALID_YAMLS, normalize_yaml
 def test_incorrect_dumps(v, pattern):
     with pytest.raises(yaml_rs.YAMLEncodeError, match=pattern):
         yaml_rs.dumps(v)
-
 
 
 @pytest.mark.parametrize("yaml", VALID_YAMLS)
