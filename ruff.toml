@@ -6,6 +6,7 @@ include = [
     "src/**.py",
     "src/**.pyi",
     "tests/**.py",
+    "examples/**.py",
 ]
 
 [lint.isort]
@@ -29,4 +30,11 @@ ignore = [
     "ARG001",
     "PLR6201",
     "PLR2004",
+]
+
+[lint.extend-per-file-ignores]
+"examples/**.py" = [
+    "INP001",
+    "T201",
+    "T203",
 ]
