@@ -8,7 +8,7 @@ from typing import Any
 import pytest
 import yaml_rs
 
-from tests import INVALID_YAMLS, VALID_YAMLS, _is_nan
+from tests import INVALID_YAMLS, VALID_YAMLS, _is_nan, normalize_yaml
 
 if sys.version_info >= (3, 11):
     from datetime import UTC
@@ -533,18 +533,7 @@ def test_valid_yamls_from_test_suite(yaml: Path) -> None:
     docs = [load_from_str] if isinstance(load_from_str, dict) else load_from_str
 
     for doc in docs:
-        normalize_yaml = (
-            doc.get("yaml")
-            .replace("␣", " ")
-            .replace("»", "\t")
-            .replace("—", "")  # Tab line continuation ——»
-            .replace("←", "\r")
-            .replace("⇔", "\ufeff")  # BOM character
-            .replace("↵", "")  # Trailing newline marker
-            .replace("∎\n", "")
-        )
-
-        parsed_yaml = yaml_rs.loads(normalize_yaml, parse_datetime=False)
+        parsed_yaml = yaml_rs.loads(normalize_yaml(doc), parse_datetime=False)
         if isinstance(parsed_yaml, set):
             parsed_yaml = dict.fromkeys(parsed_yaml)
 
@@ -581,15 +570,5 @@ def test_invalid_yamls_from_test_suite(yaml: Path) -> None:
     load_from_str = yaml_rs.loads(yaml.read_text(encoding="utf-8"), parse_datetime=False)
     docs = load_from_str if isinstance(load_from_str, list) else [load_from_str]
     doc = next((d for d in docs if d.get("fail") is True), None)
-    normalize_yaml = (
-        doc.get("yaml")
-        .replace("␣", " ")
-        .replace("»", "\t")
-        .replace("—", "")
-        .replace("←", "\r")
-        .replace("⇔", "\ufeff")
-        .replace("↵", "")
-        .replace("∎\n", "")
-    )
     with pytest.raises(yaml_rs.YAMLDecodeError):
-        yaml_rs.loads(normalize_yaml, parse_datetime=False)
+        yaml_rs.loads(normalize_yaml(doc), parse_datetime=False)

@@ -54,7 +54,7 @@ fn _yaml_to_python<'py>(
                             || matches!(v, Yaml::Representation(cow, _, _) if cow.as_ref() == "~")),
                         _h || (matches!(k, Yaml::Value(Scalar::Null))
                             || matches!(k, Yaml::Representation(cow, _, _)
-                   if matches!(cow.as_ref(), "~" | "null" | "NULL" | "Null"))),
+                            if matches!(cow.as_ref(), "~" | "null" | "NULL" | "Null"))),
                     )
                 });
 

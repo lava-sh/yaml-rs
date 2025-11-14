@@ -3,6 +3,7 @@ __all__ = (
     "VALID_YAMLS",
     "YAML_FILES",
     "_is_nan",
+    "normalize_yaml",
 )
 
 import math
@@ -43,9 +44,9 @@ def _get_yamls():
 
 VALID_YAMLS, INVALID_YAMLS, SKIPPED_YAMLS = _get_yamls()
 assert (
-    len(YAML_FILES) ==
-    len(VALID_YAMLS) + len(INVALID_YAMLS) + len(SKIPPED_YAMLS) ==
-    ALL_YAMLS
+    len(YAML_FILES)
+    == len(VALID_YAMLS) + len(INVALID_YAMLS) + len(SKIPPED_YAMLS)
+    == ALL_YAMLS
 )
 print(  # noqa: T201
     f"valid: {len(VALID_YAMLS)}\n"
@@ -62,3 +63,16 @@ def _is_nan(obj: Any) -> Any | dict[Any, Any] | list[Any] | IsFloatNan:
     if isinstance(obj, float) and math.isnan(obj):
         return IsFloatNan
     return obj
+
+
+def normalize_yaml(doc: dict) -> Any:
+    return (
+        doc.get("yaml")
+        .replace("␣", " ")
+        .replace("»", "\t")
+        .replace("—", "")  # Tab line continuation ——»
+        .replace("←", "\r")
+        .replace("⇔", "\ufeff")  # BOM character
+        .replace("↵", "")  # Trailing newline marker
+        .replace("∎\n", "")
+    )
