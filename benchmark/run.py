@@ -10,11 +10,10 @@ import oyaml
 import polars as pl
 import ruamel.yaml
 import ryaml
-import strictyaml
 import yaml as pyyaml
 import yaml_rs
 
-N = 2500
+N = 20
 
 
 def benchmark(func: Callable, count: int) -> float:
@@ -100,11 +99,10 @@ def run(run_count: int) -> None:
     loads = {
         "yaml_rs": lambda: yaml_rs.loads(data),
         "yaml_rs (parse_dt=False)": lambda: yaml_rs.loads(data, parse_datetime=False),
-        "ryaml": lambda: ryaml.loads(data),
-        "PyYAML": lambda: pyyaml.safe_load(data),
-        "ruamel.yaml": lambda: ruamel.yaml.YAML(typ="safe").load(data),
-        "oyaml": lambda: oyaml.safe_load(data),
-        "strictyaml": lambda: strictyaml.load(data),
+        "ryaml": lambda: ryaml.loads_all(data),
+        "PyYAML": lambda: list(pyyaml.safe_load_all(data)),
+        "ruamel.yaml": lambda: list(ruamel.yaml.YAML(typ="safe").load_all(data)),
+        "oyaml": lambda: list(oyaml.safe_load_all(data)),
     }
     dumps = {
         "yaml_rs": lambda: yaml_rs.dumps(data),
@@ -117,8 +115,8 @@ def run(run_count: int) -> None:
         ),
         "oyaml": lambda: oyaml.dump(data),
     }
-    loads = {name: benchmark(func, int(run_count / 5)) for name, func in loads.items()}
-    dumps = {name: benchmark(func, int(run_count / 5)) for name, func in dumps.items()}
+    loads = {name: benchmark(func, run_count) for name, func in loads.items()}
+    dumps = {name: benchmark(func, run_count) for name, func in dumps.items()}
     plot_benchmark(loads, file / "loads.svg", "loads")
     plot_benchmark(dumps, file / "dumps.svg", "dumps")
 

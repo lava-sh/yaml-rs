@@ -51,7 +51,6 @@ bench = [
     "pyyaml",
     "ryaml",
     "ruamel-yaml",
-    "strictyaml",
     "polars == 1.35.2",
     "altair == 6.0.0",
     "py-cpuinfo == 9.0.0",
