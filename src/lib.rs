@@ -40,7 +40,7 @@ fn _dumps(obj: &Bound<'_, PyAny>) -> PyResult<String> {
     emitter.multiline_strings(true);
     emitter
         .dump(&python_to_yaml(obj)?)
-        .map_err(|e| YAMLDecodeError::new_err(format!("Failed to emit YAML: {}", e)))?;
+        .map_err(|err| YAMLDecodeError::new_err(err.to_string()))?;
     Ok(yaml)
 }
 
