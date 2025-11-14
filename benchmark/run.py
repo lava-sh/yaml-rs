@@ -1,3 +1,4 @@
+import io
 import platform
 import time
 from collections.abc import Callable
@@ -24,7 +25,11 @@ def benchmark(func: Callable, count: int) -> float:
     return end - start
 
 
-def plot_benchmark(results: dict[str, float], save_path: Path) -> None:
+def plot_benchmark(
+        results: dict[str, float],
+        save_path: Path,
+        run_type: str,
+) -> None:
     df = (
         pl.DataFrame({
             "parser": list(results.keys()),
@@ -78,7 +83,7 @@ def plot_benchmark(results: dict[str, float], save_path: Path) -> None:
         width=600,
         height=400,
         title={
-            "text": "YAML parsers benchmark (loads)",
+            "text": f"YAML parsers benchmark ({run_type})",
             "subtitle": f"Python: {py} ({os}) | CPU: {cpu}",
         },
     ).save(save_path)
@@ -87,6 +92,8 @@ def plot_benchmark(results: dict[str, float], save_path: Path) -> None:
 file = Path(__file__).resolve().parent
 bench_yaml = file.parent / "tests" / "data" / "bench.yaml"
 data = bench_yaml.read_text(encoding="utf-8")
+
+dumps_data = yaml_rs.loads(data, parse_datetime=True)
 
 
 def run(run_count: int) -> None:
@@ -99,8 +106,21 @@ def run(run_count: int) -> None:
         "oyaml": lambda: oyaml.safe_load(data),
         "strictyaml": lambda: strictyaml.load(data),
     }
-    results = {name: benchmark(func, run_count) for name, func in loads.items()}
-    plot_benchmark(results, save_path=file / "loads.svg")
+    dumps = {
+        "yaml_rs": lambda: yaml_rs.dumps(data),
+        "ryaml": lambda: ryaml.dumps(data),
+        "PyYAML": lambda: pyyaml.dump(data),
+        "ruamel.yaml": lambda: (
+            (lambda yaml:
+             (lambda buf: (yaml.dump(data, buf), buf.getvalue())[1])(io.StringIO())
+             )(ruamel.yaml.YAML(typ="safe"))
+        ),
+        "oyaml": lambda: oyaml.dump(data),
+    }
+    loads = {name: benchmark(func, int(run_count / 5)) for name, func in loads.items()}
+    dumps = {name: benchmark(func, int(run_count / 5)) for name, func in dumps.items()}
+    plot_benchmark(loads, file / "loads.svg", "loads")
+    plot_benchmark(dumps, file / "dumps.svg", "dumps")
 
 
 if __name__ == "__main__":

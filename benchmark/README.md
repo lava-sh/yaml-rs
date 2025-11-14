@@ -33,3 +33,7 @@ python benchmark/run.py
 ### loads
 
 ![YAML loads benchmark](loads.svg)
+
+### dumps
+
+![YAML dumps benchmark](dumps.svg)
