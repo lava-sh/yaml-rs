@@ -39,7 +39,7 @@ fn _dumps(obj: &Bound<'_, PyAny>) -> PyResult<String> {
     let mut emitter = saphyr::YamlEmitter::new(&mut yaml);
     emitter.multiline_strings(true);
     emitter
-        .dump(&python_to_yaml(obj)?)
+        .dump(&(&python_to_yaml(obj)?).into())
         .map_err(|err| YAMLDecodeError::new_err(err.to_string()))?;
     Ok(yaml)
 }

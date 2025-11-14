@@ -330,6 +330,7 @@ dependencies = [
  "itoa",
  "memchr",
  "mimalloc",
+ "ordered-float",
  "pyo3",
  "saphyr",
  "saphyr-parser",
