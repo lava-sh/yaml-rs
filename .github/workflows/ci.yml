@@ -96,7 +96,7 @@ jobs:
           ruff check
       - name: "Run typos"
         run: |
-          typos python/ src/ README.md
+          typos --config _typos.toml
       - name: "Run rumdl"
         run: |
           rumdl check .
