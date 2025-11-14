@@ -1,9 +1,37 @@
 from pathlib import Path
+from re import escape as e
 
 import pytest
 import yaml_rs
 
 from tests import VALID_YAMLS, normalize_yaml
+
+
+@pytest.mark.parametrize(
+    ("v", "pattern"),
+    [
+        (
+            type("_Class", (), {}),
+            r"Cannot serialize <class 'type'> \(<class '.*_Class'>\) to YAML",
+        ),
+        (
+            {"x": lambda x: x},
+            r"Cannot serialize <class 'function'> \(<function <lambda> at 0x.*>\) to YAML",
+        ),
+        (
+            {"x": 1 + 2j},
+            r"Cannot serialize <class 'complex'> \(\(1\+2j\)\) to YAML",
+        ),
+        (
+            {"valid": {"invalid": object()}},
+            r"Cannot serialize <class 'object'> \(<object object at 0x.*>\) to YAML",
+        ),
+    ],
+)
+def test_incorrect_dumps(v, pattern):
+    with pytest.raises(yaml_rs.YAMLEncodeError, match=pattern):
+        yaml_rs.dumps(v)
+
 
 
 @pytest.mark.parametrize("yaml", VALID_YAMLS)
