@@ -17,7 +17,9 @@ FILE_2 = YAMLS / "UGM3.yaml"
 FILE_3 = YAMLS / "bench.yaml"
 
 N = 300
-
+import os
+print("CWD:", os.getcwd())
+print("Repo root contents:", os.listdir(os.getcwd()))
 
 def benchmark(func: Callable, count: int) -> float:
     start = time.perf_counter()
