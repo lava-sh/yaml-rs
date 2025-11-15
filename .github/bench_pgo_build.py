@@ -14,7 +14,7 @@ FILE_2 = YAMLS / "UGM3.yaml"
 # file from `https://examplefile.com`
 FILE_3 = YAMLS / "bench.yaml"
 
-N = 250
+N = 300
 
 
 def benchmark(func: Callable, count: int) -> float:
@@ -46,7 +46,7 @@ table.add_column("Iterations", justify="center")
 table.add_column("Time", justify="center")
 
 for name, fn in tests.items():
-    for _ in range(5):
+    for _ in range(30):
         fn()
     t = benchmark(fn, N)
     table.add_row(name, f"{N}", f"{t:.6f}s")
