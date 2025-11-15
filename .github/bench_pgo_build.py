@@ -7,8 +7,10 @@ from rich.console import Console
 from rich.table import Table
 
 YAMLS = Path("benchmark") / "data"
+print(YAMLS)
 # example of a config file for app
 FILE_1 = YAMLS / "config.yaml"
+print(FILE_1)
 # file from https://github.com/yaml/yaml-test-suite
 FILE_2 = YAMLS / "UGM3.yaml"
 # file from `https://examplefile.com`
