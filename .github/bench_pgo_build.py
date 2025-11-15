@@ -6,9 +6,7 @@ import yaml_rs
 from rich.console import Console
 from rich.table import Table
 
-FILE_PATH = Path(__file__).resolve().parent
-ROOT = FILE_PATH.parent
-YAMLS = ROOT / "benchmark" / "data"
+YAMLS = Path("benchmark") / "data"
 # example of a config file for app
 FILE_1 = YAMLS / "config.yaml"
 # file from https://github.com/yaml/yaml-test-suite
