@@ -6,20 +6,20 @@ import yaml_rs
 from rich.console import Console
 from rich.table import Table
 
-YAMLS = Path("benchmark") / "data"
-print(YAMLS)
+import os
+print("CWD:", os.getcwd())
+print("Repo root contents:", os.listdir(os.getcwd()))
+
+ROOT = Path(__file__).resolve().parents[1]
+YAMLS = ROOT / "data"
 # example of a config file for app
 FILE_1 = YAMLS / "config.yaml"
-print(FILE_1)
 # file from https://github.com/yaml/yaml-test-suite
 FILE_2 = YAMLS / "UGM3.yaml"
 # file from `https://examplefile.com`
 FILE_3 = YAMLS / "bench.yaml"
 
 N = 300
-import os
-print("CWD:", os.getcwd())
-print("Repo root contents:", os.listdir(os.getcwd()))
 
 def benchmark(func: Callable, count: int) -> float:
     start = time.perf_counter()
