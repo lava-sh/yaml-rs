@@ -297,18 +297,31 @@ jobs:
   build-pgo:
     name: build pgo-optimized on ${{ matrix.platform.os }} / ${{ matrix.interpreter }}
     needs: [ tests, cargo-fmt, cargo-clippy ]
+    runs-on: ${{ matrix.platform.runner }}
     strategy:
       matrix:
         platform:
-          [
-            { os: linux, runs-on: ubuntu-latest },
-            { os: linux_aarch64, runs-on: ubuntu-latest },
-            { os: windows, runs-on: windows-latest },
-            { os: macos, runs-on: macos-latest },
-          ]
-        interpreter: [ "3.10", "3.11", "3.12", "3.13", "3.13t", "3.14", "3.14t" ]
-
-    runs-on: ${{ matrix.platform.runs-on }}
+          - {
+            os: linux,
+            runner: ubuntu-latest,
+            interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t",
+          }
+          - {
+            os: linux_aarch64,
+            runner: ubuntu-24.04-arm,
+            interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t",
+          }
+          - {
+            os: windows,
+            runner: windows-latest,
+            interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t",
+          }
+          - {
+            os: macos,
+            target: x86_64,
+            runner: macos-latest,
+            interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t",
+          }
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:

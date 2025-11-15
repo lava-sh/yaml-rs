@@ -1,4 +1,5 @@
 # https://github.com/pydantic/pydantic-core/blob/main/.github/actions/build-pgo-wheel/action.yml
+# ignored most zizmor lints
 name: Build PGO wheel
 description: Builds a PGO-optimized wheel
 inputs:
@@ -32,7 +33,7 @@ runs:
         rust-toolchain: ${{ inputs.rust-toolchain }}
         docker-options: -e CI
       env:
-        RUSTFLAGS: '-Cprofile-generate=${{ github.workspace }}/profdata'
+        RUSTFLAGS: "-Cprofile-generate=${{ github.workspace }}/profdata"
 
     - name: detect rust host
       run: echo RUST_HOST=$(rustc -Vv | grep host | cut -d ' ' -f 2) >> "$GITHUB_ENV" # zizmor: ignore[github-env]
@@ -50,7 +51,7 @@ runs:
         RUST_TOOLCHAIN: ${{ inputs.rust-toolchain }}
 
     - name: merge pgo data
-      run: ${{ env.LLVM_PROFDATA }} merge -o ${{ github.workspace }}/merged.profdata ${{ github.workspace }}/profdata # zizmor: ignore[template-injection]
+      run: ${{ env.LLVM_PROFDATA }} merge -o ${{ github.workspace }}/merged.profdata ${{ github.workspace }}/profdata # zizmor: ignore[github-env, template-injection]
       shell: pwsh  # because it handles paths on windows better, and works well enough on unix for this step
 
     - name: build pgo-optimized wheel
@@ -64,7 +65,7 @@ runs:
         rust-toolchain: ${{inputs.rust-toolchain}}
         docker-options: -e CI
       env:
-        RUSTFLAGS: '-Cprofile-use=${{ github.workspace }}/merged.profdata'
+        RUSTFLAGS: "-Cprofile-use=${{ github.workspace }}/merged.profdata"
 
     - name: find built wheel
       id: find_wheel
