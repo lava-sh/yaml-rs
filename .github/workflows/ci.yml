@@ -337,7 +337,7 @@ jobs:
       - run: ${{ (startsWith(matrix.platform.os, 'windows') && 'dir') || 'ls -lh' }} dist/
 
       - name: "Benchmark"
-        run: |
+        run: | # zizmor: ignore[template-injection]
           uv venv _pypi --python ${{ matrix.interpreter }}
           source _pypi/bin/activate
           uv pip install yaml_rs rich==14.2.0 --index pypi
