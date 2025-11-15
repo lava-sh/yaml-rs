@@ -341,7 +341,6 @@ jobs:
           uv venv _pypi --python ${{ matrix.interpreter }}
           source _pypi/bin/activate
           uv pip install yaml_rs rich==14.2.0 --index pypi
-          pwd
           python .github/bench_pgo_build.py
           deactivate
 

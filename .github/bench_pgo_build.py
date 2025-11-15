@@ -1,25 +1,193 @@
 import time
 from collections.abc import Callable
-from pathlib import Path
 
 import yaml_rs
 from rich.console import Console
 from rich.table import Table
 
-import os
-print("CWD:", os.getcwd())
-print("Repo root contents:", os.listdir(os.getcwd()))
+FILE_1 = """\
+app:
+  local: true
+  logging:
+    level: INFO
+  version: 1.7
+  release-date: 2015-07-09
 
-ROOT = Path(__file__).resolve().parents[1]
-YAMLS = ROOT / "benchmark" / "data"
-# example of a config file for app
-FILE_1 = YAMLS / "config.yaml"
-# file from https://github.com/yaml/yaml-test-suite
-FILE_2 = YAMLS / "UGM3.yaml"
-# file from `https://examplefile.com`
-FILE_3 = YAMLS / "bench.yaml"
+  mysql:
+    user: "user"
+    password: "password"
+    host: "127.0.0.1"
+    port: 3306
+    db_name: "database"
+"""
+FILE_2 = """\
+---
+- name: Spec Example 2.27. Invoice
+  from: http://www.yaml.org/spec/1.2/spec.html#id2761823
+  tags: spec tag literal mapping sequence alias unknown-tag
+  yaml: |
+    --- !<tag:clarkevans.com,2002:invoice>
+    invoice: 34843
+    date   : 2001-01-23
+    bill-to: &id001
+        given  : Chris
+        family : Dumars
+        address:
+            lines: |
+                458 Walkman Dr.
+                Suite #292
+            city    : Royal Oak
+            state   : MI
+            postal  : 48046
+    ship-to: *id001
+    product:
+        - sku         : BL394D
+          quantity    : 4
+          description : Basketball
+          price       : 450.00
+        - sku         : BL4438H
+          quantity    : 1
+          description : Super Hoop
+          price       : 2392.00
+    tax  : 251.42
+    total: 4443.52
+    comments:
+        Late afternoon is best.
+        Backup contact is Nancy
+        Billsmer @ 338-4338.
+  tree: |
+    +STR
+     +DOC ---
+      +MAP <tag:clarkevans.com,2002:invoice>
+       =VAL :invoice
+       =VAL :34843
+       =VAL :date
+       =VAL :2001-01-23
+       =VAL :bill-to
+       +MAP &id001
+        =VAL :given
+        =VAL :Chris
+        =VAL :family
+        =VAL :Dumars
+        =VAL :address
+        +MAP
+         =VAL :lines
+         =VAL |458 Walkman Dr.\nSuite #292\n
+         =VAL :city
+         =VAL :Royal Oak
+         =VAL :state
+         =VAL :MI
+         =VAL :postal
+         =VAL :48046
+        -MAP
+       -MAP
+       =VAL :ship-to
+       =ALI *id001
+       =VAL :product
+       +SEQ
+        +MAP
+         =VAL :sku
+         =VAL :BL394D
+         =VAL :quantity
+         =VAL :4
+         =VAL :description
+         =VAL :Basketball
+         =VAL :price
+         =VAL :450.00
+        -MAP
+        +MAP
+         =VAL :sku
+         =VAL :BL4438H
+         =VAL :quantity
+         =VAL :1
+         =VAL :description
+         =VAL :Super Hoop
+         =VAL :price
+         =VAL :2392.00
+        -MAP
+       -SEQ
+       =VAL :tax
+       =VAL :251.42
+       =VAL :total
+       =VAL :4443.52
+       =VAL :comments
+       =VAL :Late afternoon is best. Backup contact is Nancy Billsmer @ 338-4338.
+      -MAP
+     -DOC
+    -STR
+  json: |
+    {
+      "invoice": 34843,
+      "date": "2001-01-23",
+      "bill-to": {
+        "given": "Chris",
+        "family": "Dumars",
+        "address": {
+          "lines": "458 Walkman Dr.\nSuite #292\n",
+          "city": "Royal Oak",
+          "state": "MI",
+          "postal": 48046
+        }
+      },
+      "ship-to": {
+        "given": "Chris",
+        "family": "Dumars",
+        "address": {
+          "lines": "458 Walkman Dr.\nSuite #292\n",
+          "city": "Royal Oak",
+          "state": "MI",
+          "postal": 48046
+        }
+      },
+      "product": [
+        {
+          "sku": "BL394D",
+          "quantity": 4,
+          "description": "Basketball",
+          "price": 450
+        },
+        {
+          "sku": "BL4438H",
+          "quantity": 1,
+          "description": "Super Hoop",
+          "price": 2392
+        }
+      ],
+      "tax": 251.42,
+      "total": 4443.52,
+      "comments": "Late afternoon is best. Backup contact is Nancy Billsmer @ 338-4338."
+    }
+  dump: |
+    --- !<tag:clarkevans.com,2002:invoice>
+    invoice: 34843
+    date: 2001-01-23
+    bill-to: &id001
+      given: Chris
+      family: Dumars
+      address:
+        lines: |
+          458 Walkman Dr.
+          Suite #292
+        city: Royal Oak
+        state: MI
+        postal: 48046
+    ship-to: *id001
+    product:
+    - sku: BL394D
+      quantity: 4
+      description: Basketball
+      price: 450.00
+    - sku: BL4438H
+      quantity: 1
+      description: Super Hoop
+      price: 2392.00
+    tax: 251.42
+    total: 4443.52
+    comments: Late afternoon is best. Backup contact is Nancy Billsmer @ 338-4338.
+"""
 
-N = 300
+N = 5_000
+
 
 def benchmark(func: Callable, count: int) -> float:
     start = time.perf_counter()
@@ -29,14 +197,9 @@ def benchmark(func: Callable, count: int) -> float:
     return end - start
 
 
-def read_yaml(path: Path) -> str:
-    return path.read_text(encoding="utf-8")
-
-
 tests = {
-    "FILE_1 loads": lambda: yaml_rs.loads(read_yaml(FILE_1)),
-    "FILE_2 loads": lambda: yaml_rs.loads(read_yaml(FILE_2)),
-    "FILE_3 loads": lambda: yaml_rs.loads(read_yaml(FILE_3)),
+    "FILE_1 loads": lambda: yaml_rs.loads(FILE_1),
+    "FILE_2 loads": lambda: yaml_rs.loads(FILE_2),
 }
 
 console = Console()
