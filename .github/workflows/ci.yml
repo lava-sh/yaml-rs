@@ -342,7 +342,6 @@ jobs:
           source _pypi/bin/activate
           uv pip install yaml_rs rich==14.2.0 --index pypi
           pwd
-          ls -la benchmark/data/  
           python .github/bench_pgo_build.py
           deactivate
 
