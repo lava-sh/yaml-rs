@@ -299,6 +299,7 @@ jobs:
     needs: [ tests, cargo-fmt, cargo-clippy ]
     runs-on: ${{ matrix.platform.runner }}
     strategy:
+      fail-fast: true
       matrix:
         platform:
           [
