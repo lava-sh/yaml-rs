@@ -5,7 +5,7 @@ import yaml_rs
 from rich.console import Console
 from rich.table import Table
 
-FILE_1 = """\
+YAML_1 = """\
 app:
   local: true
   logging:
@@ -20,173 +20,110 @@ app:
     port: 3306
     db_name: "database"
 """
-FILE_2 = """\
+YAML_2 = """\
 ---
-- name: Spec Example 2.27. Invoice
-  from: http://www.yaml.org/spec/1.2/spec.html#id2761823
-  tags: spec tag literal mapping sequence alias unknown-tag
+- name: Spec Example 2.25. Unordered Sets
+  from: http://www.yaml.org/spec/1.2/spec.html#id2761758
+  tags: spec mapping unknown-tag explicit-key
   yaml: |
-    --- !<tag:clarkevans.com,2002:invoice>
-    invoice: 34843
-    date   : 2001-01-23
-    bill-to: &id001
-        given  : Chris
-        family : Dumars
-        address:
-            lines: |
-                458 Walkman Dr.
-                Suite #292
-            city    : Royal Oak
-            state   : MI
-            postal  : 48046
-    ship-to: *id001
-    product:
-        - sku         : BL394D
-          quantity    : 4
-          description : Basketball
-          price       : 450.00
-        - sku         : BL4438H
-          quantity    : 1
-          description : Super Hoop
-          price       : 2392.00
-    tax  : 251.42
-    total: 4443.52
-    comments:
-        Late afternoon is best.
-        Backup contact is Nancy
-        Billsmer @ 338-4338.
+    # Sets are represented as a
+    # Mapping where each key is
+    # associated with a null value
+    --- !!set
+    ? Mark McGwire
+    ? Sammy Sosa
+    ? Ken Griff
   tree: |
     +STR
      +DOC ---
-      +MAP <tag:clarkevans.com,2002:invoice>
-       =VAL :invoice
-       =VAL :34843
-       =VAL :date
-       =VAL :2001-01-23
-       =VAL :bill-to
-       +MAP &id001
-        =VAL :given
-        =VAL :Chris
-        =VAL :family
-        =VAL :Dumars
-        =VAL :address
-        +MAP
-         =VAL :lines
-         =VAL |458 Walkman Dr.\nSuite #292\n
-         =VAL :city
-         =VAL :Royal Oak
-         =VAL :state
-         =VAL :MI
-         =VAL :postal
-         =VAL :48046
-        -MAP
-       -MAP
-       =VAL :ship-to
-       =ALI *id001
-       =VAL :product
-       +SEQ
-        +MAP
-         =VAL :sku
-         =VAL :BL394D
-         =VAL :quantity
-         =VAL :4
-         =VAL :description
-         =VAL :Basketball
-         =VAL :price
-         =VAL :450.00
-        -MAP
-        +MAP
-         =VAL :sku
-         =VAL :BL4438H
-         =VAL :quantity
-         =VAL :1
-         =VAL :description
-         =VAL :Super Hoop
-         =VAL :price
-         =VAL :2392.00
-        -MAP
-       -SEQ
-       =VAL :tax
-       =VAL :251.42
-       =VAL :total
-       =VAL :4443.52
-       =VAL :comments
-       =VAL :Late afternoon is best. Backup contact is Nancy Billsmer @ 338-4338.
+      +MAP <tag:yaml.org,2002:set>
+       =VAL :Mark McGwire
+       =VAL :
+       =VAL :Sammy Sosa
+       =VAL :
+       =VAL :Ken Griff
+       =VAL :
       -MAP
      -DOC
     -STR
   json: |
     {
-      "invoice": 34843,
-      "date": "2001-01-23",
-      "bill-to": {
-        "given": "Chris",
-        "family": "Dumars",
-        "address": {
-          "lines": "458 Walkman Dr.\nSuite #292\n",
-          "city": "Royal Oak",
-          "state": "MI",
-          "postal": 48046
-        }
-      },
-      "ship-to": {
-        "given": "Chris",
-        "family": "Dumars",
-        "address": {
-          "lines": "458 Walkman Dr.\nSuite #292\n",
-          "city": "Royal Oak",
-          "state": "MI",
-          "postal": 48046
-        }
-      },
-      "product": [
-        {
-          "sku": "BL394D",
-          "quantity": 4,
-          "description": "Basketball",
-          "price": 450
-        },
-        {
-          "sku": "BL4438H",
-          "quantity": 1,
-          "description": "Super Hoop",
-          "price": 2392
-        }
-      ],
-      "tax": 251.42,
-      "total": 4443.52,
-      "comments": "Late afternoon is best. Backup contact is Nancy Billsmer @ 338-4338."
+      "Mark McGwire": null,
+      "Sammy Sosa": null,
+      "Ken Griff": null
     }
   dump: |
-    --- !<tag:clarkevans.com,2002:invoice>
-    invoice: 34843
-    date: 2001-01-23
-    bill-to: &id001
-      given: Chris
-      family: Dumars
-      address:
-        lines: |
-          458 Walkman Dr.
-          Suite #292
-        city: Royal Oak
-        state: MI
-        postal: 48046
-    ship-to: *id001
-    product:
-    - sku: BL394D
-      quantity: 4
-      description: Basketball
-      price: 450.00
-    - sku: BL4438H
-      quantity: 1
-      description: Super Hoop
-      price: 2392.00
-    tax: 251.42
-    total: 4443.52
-    comments: Late afternoon is best. Backup contact is Nancy Billsmer @ 338-4338.
+    --- !!set
+    Mark McGwire:
+    Sammy Sosa:
+    Ken Griff:
+"""
+YAML_3 = """\
+---
+- name: Spec Example 7.10. Plain Characters
+  from: http://www.yaml.org/spec/1.2/spec.html#id2789510
+  tags: spec flow sequence scalar
+  yaml: |
+    # Outside flow collection:
+    - ::vector
+    - ": - ()"
+    - Up, up, and away!
+    - -123
+    - http://example.com/foo#bar
+    # Inside flow collection:
+    - [ ::vector,
+      ": - ()",
+      "Up, up and away!",
+      -123,
+      http://example.com/foo#bar ]
+  tree: |
+    +STR
+     +DOC
+      +SEQ
+       =VAL :::vector
+       =VAL ": - ()
+       =VAL :Up, up, and away!
+       =VAL :-123
+       =VAL :http://example.com/foo#bar
+       +SEQ []
+        =VAL :::vector
+        =VAL ": - ()
+        =VAL "Up, up and away!
+        =VAL :-123
+        =VAL :http://example.com/foo#bar
+       -SEQ
+      -SEQ
+     -DOC
+    -STR
+  json: |
+    [
+      "::vector",
+      ": - ()",
+      "Up, up, and away!",
+      -123,
+      "http://example.com/foo#bar",
+      [
+        "::vector",
+        ": - ()",
+        "Up, up and away!",
+        -123,
+        "http://example.com/foo#bar"
+      ]
+    ]
+  dump: |
+    - ::vector
+    - ": - ()"
+    - Up, up, and away!
+    - -123
+    - http://example.com/foo#bar
+    - - ::vector
+      - ": - ()"
+      - "Up, up and away!"
+      - -123
+      - http://example.com/foo#bar
 """
 
-N = 5_000
+N = 100_000
 
 
 def benchmark(func: Callable, count: int) -> float:
@@ -198,8 +135,9 @@ def benchmark(func: Callable, count: int) -> float:
 
 
 tests = {
-    "FILE_1 loads": lambda: yaml_rs.loads(FILE_1),
-    "FILE_2 loads": lambda: yaml_rs.loads(FILE_2),
+    "YAML_1 loads": lambda: yaml_rs.loads(YAML_1),
+    "YAML_2 loads": lambda: yaml_rs.loads(YAML_2),
+    "YAML_3 loads": lambda: yaml_rs.loads(YAML_3),
 }
 
 console = Console()
