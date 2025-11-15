@@ -295,7 +295,7 @@ jobs:
           path: dist
 
   build-pgo:
-    name: "pgo-optimized (${{ matrix.platform.os }} ${{ matrix.interpreter }})"
+    name: "pgo-optimized (${{ matrix.platform.os }}, python ${{ matrix.interpreter }})"
     needs: [ tests, cargo-fmt, cargo-clippy ]
     runs-on: ${{ matrix.platform.runs-on }}
     strategy:
@@ -308,7 +308,7 @@ jobs:
             { os: windows, runs-on: windows-latest },
             { os: macos, runs-on: macos-latest },
           ]
-        interpreter: [ "3.9", "3.10", "3.11", "3.12", "3.13", "3.14", "3.14t" ]
+        interpreter: [ "3.10", "3.11", "3.12", "3.13", "3.14", "3.14t" ]
 
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
