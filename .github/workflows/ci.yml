@@ -295,7 +295,7 @@ jobs:
           path: dist
 
   build-pgo:
-    name: build pgo-optimized on ${{ matrix.platform.os }} / ${{ matrix.interpreter }}
+    name: "pgo-optimized (${{ matrix.platform.os }} / ${{ matrix.interpreter }})"
     needs: [ tests, cargo-fmt, cargo-clippy ]
     runs-on: ${{ matrix.platform.runner }}
     strategy:
@@ -326,20 +326,20 @@ jobs:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           persist-credentials: false
-      - name: install uv
+      - name: "Install uv"
         uses: astral-sh/setup-uv@5a7eac68fb9809dea845d802897dc5c723910fa3 # v7.1.3
         with:
           enable-cache: false
-          python-version: ${{ matrix.interpreter }}
+          python-version: 3.x
 
-      - name: install rust stable
+      - name: "Install rust stable"
         id: rust-toolchain
         uses: dtolnay/rust-toolchain@master # zizmor: ignore[unpinned-uses]
         with:
           components: llvm-tools
           toolchain: stable
 
-      - name: Build PGO wheel
+      - name: "Build PGO wheel"
         id: pgo-wheel
         uses: ./.github/actions/build-pgo-wheel
         with:
