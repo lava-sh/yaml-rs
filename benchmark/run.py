@@ -1,3 +1,4 @@
+# ruff: noqa: PLC3002, E501
 import io
 import platform
 import time
@@ -13,7 +14,21 @@ import ryaml
 import yaml as pyyaml
 import yaml_rs
 
-N = 20
+N = 50
+
+FILE_PATH = Path(__file__).resolve().parent
+YAMLS = FILE_PATH / "data"
+# example of a config file for app
+FILE_1 = YAMLS / "config.yaml"
+# file from https://github.com/yaml/yaml-test-suite
+FILE_2 = YAMLS / "UGM3.yaml"
+# file from `https://examplefile.com`
+FILE_3 = YAMLS / "bench.yaml"
+
+FILES = [FILE_1, FILE_2, FILE_3]
+
+CPU = cpuinfo.get_cpu_info()["brand_raw"]
+PY_VERSION = f"{platform.python_version()} ({platform.system()} {platform.release()})"
 
 
 def benchmark(func: Callable, count: int) -> float:
@@ -75,50 +90,63 @@ def plot_benchmark(
         .encode(text="label:N")
     )
 
-    os = f"{platform.system()} {platform.release()}"
-    cpu = cpuinfo.get_cpu_info()["brand_raw"]
-    py = platform.python_version()
     (chart + text).properties(
-        width=600,
-        height=400,
+        width=800,
+        height=600,
         title={
             "text": f"YAML parsers benchmark ({run_type})",
-            "subtitle": f"Python: {py} ({os}) | CPU: {cpu}",
+            "subtitle": f"Python: {PY_VERSION} | CPU: {CPU}",
         },
     ).save(save_path)
 
 
-file = Path(__file__).resolve().parent
-bench_yaml = file.parent / "tests" / "data" / "bench.yaml"
-data = bench_yaml.read_text(encoding="utf-8")
-
-dumps_data = yaml_rs.loads(data, parse_datetime=True)
-
-
 def run(run_count: int) -> None:
-    loads = {
-        "yaml_rs": lambda: yaml_rs.loads(data),
-        "yaml_rs (parse_dt=False)": lambda: yaml_rs.loads(data, parse_datetime=False),
-        "ryaml": lambda: ryaml.loads_all(data),
-        "PyYAML": lambda: list(pyyaml.safe_load_all(data)),
-        "ruamel.yaml": lambda: list(ruamel.yaml.YAML(typ="safe").load_all(data)),
-        "oyaml": lambda: list(oyaml.safe_load_all(data)),
-    }
-    dumps = {
-        "yaml_rs": lambda: yaml_rs.dumps(data),
-        "ryaml": lambda: ryaml.dumps(data),
-        "PyYAML": lambda: pyyaml.dump(data),
-        "ruamel.yaml": lambda: (
-            (lambda yaml:
-             (lambda buf: (yaml.dump(data, buf), buf.getvalue())[1])(io.StringIO())
-             )(ruamel.yaml.YAML(typ="safe"))
-        ),
-        "oyaml": lambda: oyaml.dump(data),
-    }
-    loads = {name: benchmark(func, run_count) for name, func in loads.items()}
-    dumps = {name: benchmark(func, run_count) for name, func in dumps.items()}
-    plot_benchmark(loads, file / "loads.svg", "loads")
-    plot_benchmark(dumps, file / "dumps.svg", "dumps")
+    load_total = {}
+    dump_total = {}
+
+    for path in FILES:
+        data = path.read_text(encoding="utf-8")
+
+        loads = {
+            "yaml_rs": lambda d=data: yaml_rs.loads(d),
+            "yaml_rs (parse_dt=False)": lambda d=data: yaml_rs.loads(d, parse_datetime=False),
+            "ryaml": lambda d=data: ryaml.loads_all(d),
+            "PyYAML": lambda d=data: list(pyyaml.safe_load_all(d)),
+            "PyYAML (CLoader)": lambda d=data: list(pyyaml.load_all(d, Loader=pyyaml.CLoader)),
+            "PyYAML (CSafeLoader)": lambda d=data: list(
+                pyyaml.load_all(d, Loader=pyyaml.CSafeLoader),
+            ),
+            "ruamel.yaml": lambda d=data: list(ruamel.yaml.YAML(typ="safe").load_all(d)),
+            "oyaml": lambda d=data: list(oyaml.safe_load_all(d)),
+        }
+
+        dumps = {
+            "yaml_rs": lambda d=data: yaml_rs.dumps(d),
+            "ryaml": lambda d=data: ryaml.dumps(d),
+            "PyYAML": lambda d=data: pyyaml.dump(d),
+            "PyYAML (CDumper)": lambda d=data: pyyaml.dump(d, Dumper=pyyaml.CDumper),
+            "PyYAML (CSafeDumper)": lambda d=data: pyyaml.dump(d, Dumper=pyyaml.CSafeDumper),
+            "ruamel.yaml": (
+                lambda d=data: (
+                    (lambda yaml: (lambda buf: (yaml.dump(d, buf), buf.getvalue())[1])(
+                        io.StringIO(),
+                    ))(ruamel.yaml.YAML(typ="safe"))
+                )
+            ),
+            "oyaml": lambda d=data: oyaml.dump(d),
+        }
+
+        for name, func in loads.items():
+            load_total.setdefault(name, []).append(benchmark(func, run_count))
+
+        for name, func in dumps.items():
+            dump_total.setdefault(name, []).append(benchmark(func, run_count))
+
+    avg_loads = {name: sum(times) / len(times) for name, times in load_total.items()}
+    avg_dumps = {name: sum(times) / len(times) for name, times in dump_total.items()}
+
+    plot_benchmark(avg_loads, FILE_PATH / "loads.svg", "loads")
+    plot_benchmark(avg_dumps, FILE_PATH / "dumps.svg", "dumps")
 
 
 if __name__ == "__main__":
