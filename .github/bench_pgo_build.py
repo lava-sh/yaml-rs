@@ -11,7 +11,7 @@ print("CWD:", os.getcwd())
 print("Repo root contents:", os.listdir(os.getcwd()))
 
 ROOT = Path(__file__).resolve().parents[1]
-YAMLS = ROOT / "data"
+YAMLS = ROOT / "benchmark" / "data"
 # example of a config file for app
 FILE_1 = YAMLS / "config.yaml"
 # file from https://github.com/yaml/yaml-test-suite
