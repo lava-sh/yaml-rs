@@ -295,36 +295,45 @@ jobs:
           path: dist
 
   build-pgo:
-    name: "pgo-optimized (${{ matrix.platform.os }} / ${{ matrix.interpreter }})"
+    name: "pgo-optimized (${{ matrix.platform.os }})"
     needs: [ tests, cargo-fmt, cargo-clippy ]
     runs-on: ${{ matrix.platform.runner }}
     strategy:
       matrix:
         platform:
-          - { os: linux, runner: ubuntu-latest }
-          - { os: linux_aarch64, runner: ubuntu-24.04-arm }
-          - { os: windows, runner: windows-latest }
-          - { os: macos, runner: macos-latest }
-        interpreter: [
-          "3.10",
-          "3.11",
-          "3.12",
-          "3.13", "3.13t",
-          "3.14", "3.14t",
-        ]
+          - {
+            os: linux,
+            runner: ubuntu-latest,
+            interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t"
+          }
+          - {
+            os: linux_aarch64,
+            runner: ubuntu-24.04-arm,
+            interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t"
+          }
+          - {
+            os: windows,
+            runner: windows-latest,
+            interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t"
+          }
+          - {
+            os: macos,
+            runner: macos-latest,
+            interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t"
+          }
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
         with:
           persist-credentials: false
       - name: "Install uv"
-        uses: astral-sh/setup-uv@5a7eac68fb9809dea845d802897dc5c723910fa3 # v7.1.3
+        uses: astral-sh/setup-uv@5a7eac68fb9809dea845d802897dc5c723910fa3
         with:
           enable-cache: false
-          python-version: ${{ matrix.interpreter }}
+          python-version: 3.x
 
       - name: "Install rust stable"
         id: rust-toolchain
-        uses: dtolnay/rust-toolchain@master # zizmor: ignore[unpinned-uses]
+        uses: dtolnay/rust-toolchain@master
         with:
           components: llvm-tools
           toolchain: stable
@@ -333,14 +342,14 @@ jobs:
         id: pgo-wheel
         uses: ./.github/actions/build-pgo-wheel
         with:
-          interpreter: ${{ matrix.interpreter }}
+          interpreter: ${{ matrix.platform.interpreter }}
           rust-toolchain: ${{ steps.rust-toolchain.outputs.name }}
 
       - run: ${{ (startsWith(matrix.platform.os, 'windows') && 'dir') || 'ls -lh' }} dist/
 
-      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
         with:
-          name: pypi_files_${{ matrix.platform.os }}_${{ matrix.interpreter }}
+          name: pypi_files_${{ matrix.platform.os }}
           path: dist
 
   build-sdist:

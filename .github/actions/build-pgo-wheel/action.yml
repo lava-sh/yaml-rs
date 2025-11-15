@@ -16,13 +16,13 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - name: prepare profiling directory
+    - name: "Prepare profiling directory"
       shell: bash
       # making this ahead of to compile ensures that the local user can write to this
       # directory; the maturin action (on linux) runs in docker so would create as root
       run: mkdir -p ${{ github.workspace }}/profdata
 
-    - name: build initial wheel
+    - name: "Build initial wheel"
       uses: PyO3/maturin-action@86b9d133d34bc1b40018696f782949dac11bd380 # v1.49.4
       with:
         manylinux: auto
@@ -35,11 +35,11 @@ runs:
       env:
         RUSTFLAGS: "-Cprofile-generate=${{ github.workspace }}/profdata"
 
-    - name: detect rust host
+    - name: "Detect rust host"
       run: echo RUST_HOST=$(rustc -Vv | grep host | cut -d ' ' -f 2) >> "$GITHUB_ENV" # zizmor: ignore[github-env]
       shell: bash
 
-    - name: generate pgo data
+    - name: "Generate pgo data"
       run: |
         uv sync --group dev
         uv pip install yaml-rs --no-index --no-deps --find-links pgo-wheel --force-reinstall
@@ -50,11 +50,11 @@ runs:
       env:
         RUST_TOOLCHAIN: ${{ inputs.rust-toolchain }}
 
-    - name: merge pgo data
+    - name: "Merge pgo data"
       run: ${{ env.LLVM_PROFDATA }} merge -o ${{ github.workspace }}/merged.profdata ${{ github.workspace }}/profdata # zizmor: ignore[github-env, template-injection]
       shell: pwsh  # because it handles paths on windows better, and works well enough on unix for this step
 
-    - name: build pgo-optimized wheel
+    - name: "Build pgo-optimized wheel"
       uses: PyO3/maturin-action@86b9d133d34bc1b40018696f782949dac11bd380 # v1.49.4
       with:
         manylinux: auto
@@ -67,7 +67,7 @@ runs:
       env:
         RUSTFLAGS: "-Cprofile-use=${{ github.workspace }}/merged.profdata"
 
-    - name: find built wheel
+    - name: "Find built wheel"
       id: find_wheel
       run: echo "path=$(ls dist/*.whl)" | tee -a "$GITHUB_OUTPUT"
       shell: bash
