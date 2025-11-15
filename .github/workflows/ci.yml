@@ -296,6 +296,7 @@ jobs:
 
   build-pgo:
     name: build pgo-optimized on ${{ matrix.platform.os }} / ${{ matrix.interpreter }}
+    needs: [ tests, cargo-fmt, cargo-clippy ]
     strategy:
       matrix:
         platform:
