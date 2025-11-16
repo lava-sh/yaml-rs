@@ -449,7 +449,6 @@ fn is_8digits(v: u64) -> bool {
     (a | b) & 0x8080_8080_8080_8080 == 0
 }
 
-
 // This is based off the algorithm described in "Fast numeric string to int",
 // available here: https://johnnylee-sde.github.io/Fast-numeric-string-to-int/
 //
