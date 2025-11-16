@@ -11,8 +11,9 @@ def load(
     encoding: str | None = None,
     encoder_errors: str | None = None,
 ) -> dict[str, Any]: ...
-def loads(
-    s: str | bytes | BinaryIO,
+def loads(s: str, /, *, parse_datetime: bool = True) -> dict[str, Any]: ...
+def loadb(
+    s: bytes,
     /,
     *,
     parse_datetime: bool = True,

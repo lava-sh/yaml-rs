@@ -5,6 +5,7 @@ __all__ = (
     "dump",
     "dumps",
     "load",
+    "loadb",
     "loads",
 )
 
@@ -15,6 +16,8 @@ from ._yaml_rs import (
     YAMLDecodeError,
     YAMLEncodeError,
     _dumps,
+    _load,
+    _loadb,
     _loads,
     _version,
 )
@@ -30,7 +33,7 @@ def load(
     encoding: str | None = None,
     encoder_errors: str | None = None,
 ) -> dict[str, Any] | list[dict[str, Any]]:
-    return _loads(
+    return _load(
         fp,
         parse_datetime=parse_datetime,
         encoding=encoding,
@@ -39,15 +42,21 @@ def load(
 
 
 def loads(
-    s: str | bytes | BinaryIO,
+    s: str, /, *, parse_datetime: bool = True
+) -> dict[str, Any] | list[dict[str, Any]]:
+    return _loads(s, parse_datetime=parse_datetime)
+
+
+def loadb(
+    b: bytes,
     /,
     *,
     parse_datetime: bool = True,
     encoding: str | None = None,
     encoder_errors: str | None = None,
 ) -> dict[str, Any] | list[dict[str, Any]]:
-    return _loads(
-        s,
+    return _loadb(
+        b,
         parse_datetime=parse_datetime,
         encoding=encoding,
         encoder_errors=encoder_errors,
