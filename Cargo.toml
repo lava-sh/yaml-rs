@@ -14,7 +14,9 @@ crate-type = ["cdylib"]
 pyo3 = { version = "0.27.1", features = [
     "generate-import-lib",
     "extension-module",
+    "smallvec",
 ] }
+smallvec = "1.15.1"
 atoi = "2.0.0"
 itoa = "1.0.15"
 saphyr = "0.0.6"

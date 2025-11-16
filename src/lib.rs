@@ -31,22 +31,22 @@ fn _load(
     encoder_errors: Option<String>,
 ) -> PyResult<Py<PyAny>> {
     let obj = obj.bind(py);
-    _loadb(
-        py,
-        if let Ok(str) = obj.cast::<PyString>() {
-            // We assume obj to be a path to a file
-            let path = str.to_str()?;
-            py.detach(|| std::fs::read(path))?
-        } else if let Ok(b) = obj.cast::<PyBytes>() {
-            b.as_unbound().extract(py)?
-        } else {
-            // We assume/expect BinaryIO type. Read the whole file.
-            obj.call_method0("read")?.extract()?
-        },
-        parse_datetime,
-        encoding,
-        encoder_errors,
-    )
+    let data = if let Ok(str) = obj.cast::<PyString>() {
+        // We assume obj to be a path to a file
+        let path = str.to_str()?;
+        py.detach(|| std::fs::read(path))?
+    } else if let Ok(b) = obj.cast::<PyBytes>() {
+        b.as_unbound().extract(py)?
+    } else {
+        // We assume/expect BinaryIO type. Read the whole file.
+        obj.call_method0("read")?.extract()?
+    };
+    let s = py
+        .detach(|| encode(&data, encoding.as_deref(), encoder_errors.as_deref()))
+        .map_err(|err| {
+            PyErr::new::<PyValueError, _>(format!("Failed to encode bytes to UTF-8 string: {err}"))
+        })?;
+    _loads(py, &s, parse_datetime)
 }
 
 #[pyfunction]
@@ -64,22 +64,6 @@ fn _loads(py: Python, s: &str, parse_datetime: bool) -> PyResult<Py<PyAny>> {
 }
 
 #[pyfunction]
-fn _loadb(
-    py: Python,
-    data: Vec<u8>,
-    parse_datetime: bool,
-    encoding: Option<String>,
-    encoder_errors: Option<String>,
-) -> PyResult<Py<PyAny>> {
-    let s = py
-        .detach(|| encode(&data, encoding.as_deref(), encoder_errors.as_deref()))
-        .map_err(|err| {
-            PyErr::new::<PyValueError, _>(format!("Failed to encode bytes to UTF-8 string: {err}"))
-        })?;
-    _loads(py, &s, parse_datetime)
-}
-
-#[pyfunction]
 fn _dumps(obj: &Bound<'_, PyAny>) -> PyResult<String> {
     let mut yaml = String::new();
     let mut emitter = saphyr::YamlEmitter::new(&mut yaml);
@@ -94,7 +78,6 @@ fn _dumps(obj: &Bound<'_, PyAny>) -> PyResult<String> {
 fn yaml_rs(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(_load, m)?)?;
     m.add_function(wrap_pyfunction!(_loads, m)?)?;
-    m.add_function(wrap_pyfunction!(_loadb, m)?)?;
     m.add_function(wrap_pyfunction!(_dumps, m)?)?;
     m.add("_version", env!("CARGO_PKG_VERSION"))?;
     m.add("YAMLDecodeError", m.py().get_type::<YAMLDecodeError>())?;
