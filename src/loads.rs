@@ -474,7 +474,7 @@ unsafe fn _parse_digits(bytes: &[u8], start: usize, count: usize) -> u32 {
             if is_8digits(v) {
                 let mut v = v;
                 v -= 0x3030_3030_3030_3030;
-                v = (v * 10) + (v >> 8);
+                v = (v * 10) + (v >> 8); // will not overflow, fits in 63 bits
                 let v1 = (v & MASK).wrapping_mul(MUL1);
                 let v2 = ((v >> 16) & MASK).wrapping_mul(MUL2);
                 let parsed = ((v1.wrapping_add(v2) >> 32) as u32) as u64;
