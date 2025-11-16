@@ -441,10 +441,19 @@ fn _parse_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py, 
     }
 }
 
-// https://github.com/rust-lang/rust/blob/1.91.0/library/core/src/num/dec2flt/parse.rs#L9-L26
-//
+// https://github.com/rust-lang/rust/blob/1.91.1/library/core/src/num/dec2flt/common.rs#L60-L64
+#[inline]
+fn is_8digits(v: u64) -> bool {
+    let a = v.wrapping_add(0x4646_4646_4646_4646);
+    let b = v.wrapping_sub(0x3030_3030_3030_3030);
+    (a | b) & 0x8080_8080_8080_8080 == 0
+}
+
+
 // This is based off the algorithm described in "Fast numeric string to int",
 // available here: https://johnnylee-sde.github.io/Fast-numeric-string-to-int/
+//
+// https://github.com/rust-lang/rust/blob/1.91.0/library/core/src/num/dec2flt/parse.rs#L9-L26
 #[inline]
 unsafe fn _parse_digits(bytes: &[u8], start: usize, count: usize) -> u32 {
     const MASK: u64 = 0x0000_00FF_0000_00FF;
@@ -462,25 +471,33 @@ unsafe fn _parse_digits(bytes: &[u8], start: usize, count: usize) -> u32 {
             let mut tmp = [0u8; 8];
             std::ptr::copy_nonoverlapping(ptr, tmp.as_mut_ptr(), 8);
             let v = u64::from_le_bytes(tmp);
-            let mut v = v;
-            v -= 0x3030_3030_3030_3030;
-            v = (v * 10) + (v >> 8); // will not overflow, fits in 63 bits
-            let v1 = (v & MASK).wrapping_mul(MUL1);
-            let v2 = ((v >> 16) & MASK).wrapping_mul(MUL2);
-            let parsed = ((v1.wrapping_add(v2) >> 32) as u32) as u64;
-            d = d.wrapping_mul(100_000_000).wrapping_add(parsed as u32);
+
+            if is_8digits(v) {
+                let mut v = v;
+                v -= 0x3030_3030_3030_3030;
+                v = (v * 10) + (v >> 8);
+                let v1 = (v & MASK).wrapping_mul(MUL1);
+                let v2 = ((v >> 16) & MASK).wrapping_mul(MUL2);
+                let parsed = ((v1.wrapping_add(v2) >> 32) as u32) as u64;
+                d = d.wrapping_mul(100_000_000).wrapping_add(parsed as u32);
+                i += 8;
+            } else {
+                break;
+            }
         }
-        i += 8;
     }
 
     while i < count {
-        d = d * 10
-            + unsafe {
-                // SAFETY: `i < count` and `start + count <= bytes.len()`
-                // ensures `start + i` is a valid index.
-                bytes.get_unchecked(start + i).wrapping_sub(b'0') as u32
-            };
-        i += 1;
+        // SAFETY: `i < count` and `start + count <= bytes.len()`
+        // ensures `start + i` is a valid index.
+        let byte = unsafe { *bytes.get_unchecked(start + i) };
+        let digit = byte.wrapping_sub(b'0');
+        if digit < 10 {
+            d = d * 10 + digit as u32;
+            i += 1;
+        } else {
+            break;
+        }
     }
     d
 }
