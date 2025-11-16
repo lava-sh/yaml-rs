@@ -18,15 +18,15 @@ pub fn encode(
                 // SAFETY: `data` has been validated as UTF-8 by `from_utf8` above.
                 match std::str::from_utf8(data) {
                     Ok(_) => unsafe { Ok(String::from_utf8_unchecked(data.to_vec())) },
-                    Err(e) => Err(Error::new(
+                    Err(err) => Err(Error::new(
                         ErrorKind::InvalidInput,
-                        format!("Invalid UTF-8: {e}"),
+                        format!("failed to encode bytes: {err}"),
                     )),
                 }
             }
             Some(other) => Err(Error::new(
                 ErrorKind::InvalidInput,
-                format!("Invalid decoder error handling: {other}"),
+                format!("invalid decoder: {other}"),
             )),
         };
     }
@@ -45,7 +45,7 @@ pub fn encode(
         Some(other) => {
             return Err(Error::new(
                 ErrorKind::InvalidInput,
-                format!("Invalid decoder error handling: {other}"),
+                format!("invalid decoder: {other}"),
             ));
         }
         None => DecoderTrap::Ignore,
@@ -54,11 +54,11 @@ pub fn encode(
     let decoder = encoding_from_whatwg_label(encoding_label).ok_or_else(|| {
         Error::new(
             ErrorKind::InvalidData,
-            format!("Invalid encoder {encoding_label}"),
+            format!("invalid encoding: {encoding_label}"),
         )
     })?;
 
     decoder
         .decode(data, decoder_trap)
-        .map_err(|e| Error::new(ErrorKind::InvalidInput, format!("Decoding error: {e}")))
+        .map_err(|e| Error::new(ErrorKind::InvalidInput, format!("decoding error: {e}")))
 }
