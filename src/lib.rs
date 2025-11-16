@@ -49,9 +49,7 @@ fn _load(
 
     let s = py
         .detach(|| encode(&data, encoding.as_deref(), encoder_errors.as_deref()))
-        .map_err(|err| {
-            PyErr::new::<PyValueError, _>(format!("Failed to encode bytes to UTF-8 string: {err}"))
-        })?;
+        .map_err(|err| YAMLDecodeError::new_err(err.to_string()))?;
 
     _loads(py, &s, parse_datetime)
 }

@@ -41,10 +41,10 @@ dev = [
     "pytest == 9.0.1",
     "dirty-equals == 0.10.0",
     "maturin == 1.10.1",
-    "ruff == 0.14.4",
+    "ruff == 0.14.5",
     "zizmor == 1.16.3",
-    "typos == 1.39.0",
-    "rumdl == 0.0.175",
+    "typos == 1.39.2",
+    "rumdl == 0.0.176",
 ]
 bench = [
     "oyaml",

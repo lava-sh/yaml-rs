@@ -1,4 +1,3 @@
-# ruff: noqa: E501, DTZ001
 import sys
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path

@@ -7,6 +7,7 @@ include = [
     "src/**.pyi",
     "tests/**.py",
     "examples/**.py",
+    "benchmark/**.py",
 ]
 
 [lint.isort]
@@ -37,5 +38,17 @@ ignore = [
     "INP001",
     "T201",
     "T203",
+    "PLC3002",
+]
+"tests/test_loads.py" = [
+    "E501",
+]
+"tests/test_dumps.py" = [
+    "E501",
+    "DTZ001",
+    "DTZ01"
+]
+"benchmark/run.py" = [
+    "INP001",
     "PLC3002",
 ]

@@ -1,4 +1,3 @@
-# ruff: noqa: PLC3002, E501
 import io
 import platform
 import time
@@ -109,10 +108,14 @@ def run(run_count: int) -> None:
 
         loads = {
             "yaml_rs": lambda d=data: yaml_rs.loads(d),
-            "yaml_rs (parse_dt=False)": lambda d=data: yaml_rs.loads(d, parse_datetime=False),
+            "yaml_rs (parse_dt=False)": lambda d=data: yaml_rs.loads(
+                d, parse_datetime=False,
+            ),
             "ryaml": lambda d=data: ryaml.loads_all(d),
             "PyYAML": lambda d=data: list(pyyaml.safe_load_all(d)),
-            "PyYAML (CLoader)": lambda d=data: list(pyyaml.load_all(d, Loader=pyyaml.CLoader)),
+            "PyYAML (CLoader)": lambda d=data: list(pyyaml.load_all(
+                d, Loader=pyyaml.CLoader,
+            )),
             "PyYAML (CSafeLoader)": lambda d=data: list(
                 pyyaml.load_all(d, Loader=pyyaml.CSafeLoader),
             ),
@@ -125,7 +128,9 @@ def run(run_count: int) -> None:
             "ryaml": lambda d=data: ryaml.dumps(d),
             "PyYAML": lambda d=data: pyyaml.dump(d),
             "PyYAML (CDumper)": lambda d=data: pyyaml.dump(d, Dumper=pyyaml.CDumper),
-            "PyYAML (CSafeDumper)": lambda d=data: pyyaml.dump(d, Dumper=pyyaml.CSafeDumper),
+            "PyYAML (CSafeDumper)": lambda d=data: pyyaml.dump(
+                d, Dumper=pyyaml.CSafeDumper,
+            ),
             "ruamel.yaml": (
                 lambda d=data: (
                     (lambda yaml: (lambda buf: (yaml.dump(d, buf), buf.getvalue())[1])(

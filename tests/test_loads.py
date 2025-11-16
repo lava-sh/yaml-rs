@@ -1,4 +1,3 @@
-# ruff: noqa: E501
 import json
 import sys
 from datetime import date, datetime, timedelta, timezone
@@ -15,16 +14,8 @@ if sys.version_info >= (3, 11):
 else:
     UTC = timezone.utc
 
-dt = datetime(
-    2001,
-    12,
-    14,
-    21,
-    59,
-    43,
-    100000,
-    tzinfo=timezone(timedelta(days=-1, seconds=68400)),
-)
+_tzinfo = timezone(timedelta(days=-1, seconds=68400))
+dt = datetime(2001, 12, 14, 21, 59, 43, 100000, tzinfo=_tzinfo)
 
 
 @pytest.mark.parametrize(
@@ -55,10 +46,56 @@ while scanning an anchor or alias, did not find expected alphabetic or numeric c
         ),
     ],
 )
-def test_loads_errors(bad_yaml: str, exc_msg: str) -> None:
+def test_yaml_loads_decode_error(bad_yaml: str, exc_msg: str) -> None:
     with pytest.raises(yaml_rs.YAMLDecodeError) as exc_info:
         yaml_rs.loads(bad_yaml)
     assert str(exc_info.value) == exc_msg
+
+
+@pytest.mark.parametrize(
+    ("bad", "exc_msg"),
+    [
+        (5, "Expected str object, not 'int'"),
+        ({1, 2}, "Expected str object, not 'set'"),
+        ([1, 2], "Expected str object, not 'list'"),
+    ],
+)
+def test_yaml_loads_type_error(bad: str, exc_msg: str) -> None:
+    with pytest.raises(TypeError) as exc_info:
+        yaml_rs.loads(bad)
+    assert str(exc_info.value) == exc_msg
+
+
+@pytest.mark.parametrize(
+    ("data", "encoding", "encoder_errors", "expected_error"),
+    [
+        (
+            b"\xff\xfe",
+            "utf-8",
+            "strict",
+            "failed to encode bytes: invalid utf-8 sequence of 1 bytes from index 0",
+        ),
+        (b"test", "utf-8", "qsfasf", "invalid decoder: qsfasf"),
+        (b"test", "asdfas", None, "invalid encoding: asdfas"),
+        (b"\x81", "shift_jis", "strict", "decoding error: incomplete sequence"),
+        (b"\xff", "iso-2022-jp", "strict", "decoding error: invalid sequence"),
+        (
+            b"test",
+            "windows-1252",
+            "unknown_handler",
+            "invalid decoder: unknown_handler",
+        ),
+    ],
+)
+def test_yaml_load_encoding_errors(
+        data: Any,
+        encoding: str,
+        encoder_errors: str,
+        expected_error: str,
+) -> None:
+    with pytest.raises(yaml_rs.YAMLDecodeError) as exc_info:
+        yaml_rs.load(data, encoding=encoding, encoder_errors=encoder_errors)
+    assert expected_error == str(exc_info.value)
 
 
 @pytest.mark.parametrize(
@@ -96,7 +133,6 @@ def test_parse_datetime(yaml: str, parsed: Any) -> None:
     assert yaml_rs.loads(yaml, parse_datetime=True) == parsed
 
 
-# fmt: off
 @pytest.mark.parametrize(
     ("yaml", "parsed"),
     [
@@ -274,8 +310,8 @@ def test_parse_datetime(yaml: str, parsed: Any) -> None:
          "date: 2002-12-14\n",
          {"canonical": datetime(2001, 12, 15, 2, 59, 43, 100000, tzinfo=UTC),
           "date": date(2002, 12, 14),
-          "iso8601": datetime(2001, 12, 14, 21, 59, 43, 100000, tzinfo=timezone(timedelta(days=-1, seconds=68400))),
-          "spaced": datetime(2001, 12, 14, 21, 59, 43, 100000, tzinfo=timezone(timedelta(days=-1, seconds=68400)))}),
+          "iso8601": datetime(2001, 12, 14, 21, 59, 43, 100000, tzinfo=_tzinfo),
+          "spaced": datetime(2001, 12, 14, 21, 59, 43, 100000, tzinfo=_tzinfo)}),
         # Example 2.23 Various Explicit Tags
         ("---\n"
          "not-date: !!str 2002-04-28\n"
@@ -413,13 +449,13 @@ def test_parse_datetime(yaml: str, parsed: Any) -> None:
          "  line: 58\n"
          "  code: |-\n"
          "    foo = bar\n",
-         [{"Time": datetime(2001, 11, 23, 15, 1, 42, tzinfo=timezone(timedelta(days=-1, seconds=68400))),
+         [{"Time": datetime(2001, 11, 23, 15, 1, 42, tzinfo=_tzinfo),
            "User": "ed",
            "Warning": "This is an error message for the log file"},
-          {"Time": datetime(2001, 11, 23, 15, 2, 31, tzinfo=timezone(timedelta(days=-1, seconds=68400))),
+          {"Time": datetime(2001, 11, 23, 15, 2, 31, tzinfo=_tzinfo),
            "User": "ed",
            "Warning": "A slightly different error message."},
-          {"Date": datetime(2001, 11, 23, 15, 3, 17, tzinfo=timezone(timedelta(days=-1, seconds=68400))),
+          {"Date": datetime(2001, 11, 23, 15, 3, 17, tzinfo=_tzinfo),
            "Fatal": 'Unknown variable "bar"',
            "Stack": [{"code": 'x = MoreObject("345\\n")\n',
                       "file": "TopClass.py",
@@ -521,7 +557,6 @@ def test_parse_datetime(yaml: str, parsed: Any) -> None:
          [{None: None}, {"Mark McGwire", "Sammy Sosa", "Ken Griffey"}]),
     ],
 )
-# fmt off
 def test_parse(yaml: str, parsed: Any) -> None:
     assert yaml_rs.loads(yaml) == _is_nan(parsed)
 
