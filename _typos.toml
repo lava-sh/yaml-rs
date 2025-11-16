@@ -1,7 +1,8 @@
 [files]
 extend-exclude = [
-    "tests/data/yaml-test-suite/*.yaml",
     "tests/data/bench.yaml",
+    "benchmark/data/bench.yaml",
+    "tests/data/yaml-test-suite/*.yaml",
 ]
 
 [default.extend-words]
