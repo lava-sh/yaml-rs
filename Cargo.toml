@@ -20,6 +20,7 @@ itoa = "1.0.15"
 saphyr = "0.0.6"
 saphyr-parser = "0.0.6"
 ordered-float = "5.1.0"
+encoding = "0.2.33"
 memchr = { version = "2", default-features = false }
 mimalloc = { version = "*", features = ["v3"], optional = true }
 
