@@ -30,12 +30,12 @@ jobs:
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@master # zizmor: ignore[unpinned-uses]
         with:
-          toolchain: stable
+          toolchain: nightly
           components: rustfmt
       - uses: Swatinem/rust-cache@f13886b937689c021905a6b90929199931d60db1 # v2.8.1
         with:
           lookup-only: true
-      - run: cargo fmt --all --check
+      - run: cargo _fmt --check
 
   cargo-clippy:
     name: "cargo clippy"
@@ -47,7 +47,7 @@ jobs:
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@master # zizmor: ignore[unpinned-uses]
         with:
-          toolchain: stable
+          toolchain: nightly
           components: clippy
       - uses: Swatinem/rust-cache@f13886b937689c021905a6b90929199931d60db1 # v2.8.1
         with:
