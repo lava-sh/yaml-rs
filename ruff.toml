@@ -18,7 +18,12 @@ no-lines-before = ["local-folder"]
 [lint]
 preview = true
 
-allowed-confusables = ["’"]
+allowed-confusables = [
+    "’",
+    "ס",
+    "Α",
+    "К",
+]
 select = ["ALL"]
 ignore = [
     "D",

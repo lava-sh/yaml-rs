@@ -85,6 +85,15 @@ def test_yaml_loads_type_error(bad: str, exc_msg: str) -> None:
             "unknown_handler",
             "invalid decoder: unknown_handler",
         ),
+        (b"\x81", "shift-jis", "strict", "decoding error: malformed input"),
+        (b"\x81", "sjis", "strict", "decoding error: malformed input"),
+        (b"\x81", "big5", "strict", "decoding error: malformed input"),
+        (b"\x81", "gbk", "strict", "decoding error: malformed input"),
+        (b"\x81", "gb18030", "strict", "decoding error: malformed input"),
+        (b"\x81", "euc-kr", "strict", "decoding error: malformed input"),
+        (b"\x81", "euckr", "strict", "decoding error: malformed input"),
+        (b"\x81", "euc-jp", "strict", "decoding error: malformed input"),
+        (b"\x81", "eucjp", "strict", "decoding error: malformed input"),
     ],
 )
 def test_yaml_load_encoding_errors(
@@ -96,6 +105,59 @@ def test_yaml_load_encoding_errors(
     with pytest.raises(yaml_rs.YAMLDecodeError) as exc_info:
         yaml_rs.load(data, encoding=encoding, encoder_errors=encoder_errors)
     assert expected_error == str(exc_info.value)
+
+
+@pytest.mark.parametrize(
+    ("data", "encoding", "expected"),
+    [
+        (b"test", "utf-8", "test"),
+        (b"test", "shift_jis", "test"),
+        (b"test", "shift-jis", "test"),
+        (b"test", "sjis", "test"),
+        (b"test", "big5", "test"),
+        (b"test", "gbk", "test"),
+        (b"test", "gb18030", "test"),
+        (b"test", "euc-kr", "test"),
+        (b"test", "euckr", "test"),
+        (b"test", "iso-2022-jp", "test"),
+        (b"test", "windows-1252", "test"),
+        (b"test", "cp1252", "test"),
+        (b"test", "windows-1251", "test"),
+        (b"test", "windows-1250", "test"),
+        (b"test", "iso-8859-1", "test"),
+        (b"test", "latin1", "test"),
+        (b"test", "iso-8859-2", "test"),
+        (b"test", "iso-8859-5", "test"),
+        (b"test", "iso-8859-6", "test"),
+        (b"test", "iso-8859-7", "test"),
+        (b"test", "iso-8859-8", "test"),
+        (b"test", "euc-jp", "test"),
+        (b"test", "eucjp", "test"),
+
+        (b"\x82\xa0", "shift_jis", "あ"),
+        (b"\xa4\x40", "big5", "一"),
+        (b"\xb0\xa1", "euc-kr", "가"),
+        (b"\x81\x40", "gbk", "丂"),
+
+        (b"\xe4", "windows-1252", "ä"),
+        (b"\xe4", "iso-8859-1", "ä"),
+        (b"\xe4", "latin1", "ä"),
+        (b"\xca", "windows-1251", "К"),
+        (b"\xe0", "windows-1250", "ŕ"),
+        (b"\xc1", "iso-8859-2", "Á"),
+        (b"\xb1", "iso-8859-5", "Б"),
+        (b"\xc1", "iso-8859-6", "ء"),
+        (b"\xc1", "iso-8859-7", "Α"),
+        (b"\xf1", "iso-8859-8", "ס"),
+    ],
+)
+def test_yaml_load_encoding_success(
+    data: bytes,
+    encoding: str,
+    expected: str,
+) -> None:
+    result = yaml_rs.load(data, encoding=encoding)
+    assert expected in str(result)
 
 
 @pytest.mark.parametrize(
