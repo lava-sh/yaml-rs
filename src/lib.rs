@@ -4,17 +4,17 @@ mod loads;
 
 use std::borrow::Cow;
 
-use crate::{
-    decoder::encode,
-    dumps::python_to_yaml,
-    loads::{format_error, yaml_to_python},
-};
-
 use pyo3::{
     create_exception,
     exceptions::{PyTypeError, PyValueError},
     prelude::*,
     types::PyString,
+};
+
+use crate::{
+    decoder::encode,
+    dumps::python_to_yaml,
+    loads::{format_error, yaml_to_python},
 };
 
 #[cfg(feature = "default")]
