@@ -35,7 +35,7 @@ pub fn encode(
         "utf-8"
     });
 
-    let encoding_comp= match encoding_label {
+    let encoding_comp = match encoding_label {
         "shift_jis" | "shift-jis" | "sjis" => encoding_rs::SHIFT_JIS,
         "big5" => encoding_rs::BIG5,
         "gbk" | "gb18030" => encoding_rs::GBK,
