@@ -77,8 +77,8 @@ def test_yaml_loads_type_error(bad: str, exc_msg: str) -> None:
         ),
         (b"test", "utf-8", "qsfasf", "invalid decoder: qsfasf"),
         (b"test", "asdfas", None, "invalid encoding: asdfas"),
-        (b"\x81", "shift_jis", "strict", "decoding error: incomplete sequence"),
-        (b"\xff", "iso-2022-jp", "strict", "decoding error: invalid sequence"),
+        (b"\x81", "shift_jis", "strict", "decoding error: malformed input"),
+        (b"\xff", "iso-2022-jp", "strict", "decoding error: malformed input"),
         (
             b"test",
             "windows-1252",
