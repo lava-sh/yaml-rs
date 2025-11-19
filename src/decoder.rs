@@ -1,26 +1,28 @@
-use std::io::{Error, ErrorKind};
+use std::{
+    borrow::Cow,
+    io::{Error, ErrorKind},
+    str::from_utf8,
+};
 
-pub fn encode(
-    data: &[u8],
+pub fn encode<'a>(
+    data: &'a [u8],
     encoding: Option<&str>,
     encoder_errors: Option<&str>,
-) -> Result<String, Error> {
+) -> Result<Cow<'a, str>, Error> {
     let is_utf8 = matches!(encoding, None | Some("utf-8") | Some("UTF-8"));
 
     if is_utf8 {
         return match encoder_errors {
-            None | Some("ignore") | Some("replace") => match std::str::from_utf8(data) {
-                Ok(s) => Ok(s.to_owned()),
-                Err(_) => Ok(String::from_utf8_lossy(data).into_owned()),
+            None | Some("ignore") | Some("replace") => match from_utf8(data) {
+                Ok(s) => Ok(Cow::Borrowed(s)),
+                Err(_) => Ok(String::from_utf8_lossy(data)),
             },
-            Some("strict") => std::str::from_utf8(data)
-                .map(|s| s.to_owned())
-                .map_err(|err| {
-                    Error::new(
-                        ErrorKind::InvalidInput,
-                        format!("failed to encode bytes: {err}"),
-                    )
-                }),
+            Some("strict") => from_utf8(data).map(Cow::Borrowed).map_err(|err| {
+                Error::new(
+                    ErrorKind::InvalidInput,
+                    format!("failed to encode bytes: {err}"),
+                )
+            }),
             Some(other) => Err(Error::new(
                 ErrorKind::InvalidInput,
                 format!("invalid decoder: {other}"),
@@ -59,18 +61,21 @@ pub fn encode(
         })?,
     };
 
-    match encoder_errors {
+    let cow = match encoder_errors {
         Some("strict") => encoding_comp
             .decode_without_bom_handling_and_without_replacement(data)
-            .map(|s| s.into_owned())
-            .ok_or_else(|| Error::new(ErrorKind::InvalidInput, "decoding error: malformed input")),
+            .ok_or_else(|| {
+                Error::new(ErrorKind::InvalidInput, "decoding error: malformed input")
+            })?,
         Some("ignore") | Some("replace") | None => {
-            let (cow, _) = encoding_comp.decode_without_bom_handling(data);
-            Ok(cow.into_owned())
+            encoding_comp.decode_without_bom_handling(data).0
         }
-        Some(other) => Err(Error::new(
-            ErrorKind::InvalidInput,
-            format!("invalid decoder: {other}"),
-        )),
-    }
+        Some(other) => {
+            return Err(Error::new(
+                ErrorKind::InvalidInput,
+                format!("invalid decoder: {other}"),
+            ));
+        }
+    };
+    Ok(cow)
 }
