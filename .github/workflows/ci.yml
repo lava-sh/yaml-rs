@@ -302,7 +302,7 @@ jobs:
         uses: PyO3/maturin-action@86b9d133d34bc1b40018696f782949dac11bd380 # v1.49.4
         with:
           command: sdist
-          args: --out dist --features mimalloc
+          args: --out dist
           rust-toolchain: stable
       - name: "Upload sdist"
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
