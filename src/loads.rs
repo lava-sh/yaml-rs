@@ -11,7 +11,7 @@ use saphyr::{Scalar, ScalarStyle, ScanError, Yaml};
 
 pub(crate) fn yaml_to_python<'py>(
     py: Python<'py>,
-    docs: Vec<Yaml<'_>>,
+    docs: &[Yaml<'_>],
     parse_datetime: bool,
 ) -> PyResult<Bound<'py, PyAny>> {
     match docs.len() {
@@ -19,7 +19,7 @@ pub(crate) fn yaml_to_python<'py>(
         1 => _yaml_to_python(py, &docs[0], parse_datetime, false),
         _ => {
             let py_list = PyList::empty(py);
-            for doc in &docs {
+            for doc in docs {
                 py_list.append(_yaml_to_python(py, doc, parse_datetime, false)?)?;
             }
             Ok(py_list.into_any())
@@ -221,7 +221,7 @@ fn _parse_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py, 
     // Indices 0..4, 5..7, and 8..10 are all within bounds.
     let day = unsafe { _parse_digits(bytes, 8, 2) as u8 };
     let month = unsafe { _parse_digits(bytes, 5, 2) as u8 };
-    let year = unsafe { _parse_digits(bytes, 0, 4) as i32 };
+    let year = unsafe { _parse_digits(bytes, 0, 4).cast_signed() };
 
     if bytes.len() == 10 {
         return Ok(Some(PyDate::new(py, year, month, day)?.into_any()));
@@ -340,7 +340,7 @@ fn _parse_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py, 
                                 if digit >= 10 {
                                     break;
                                 }
-                                result += (digit as u32) * multiplier;
+                                result += u32::from(digit) * multiplier;
                                 multiplier /= 10;
                             }
                             result
@@ -372,7 +372,6 @@ fn _parse_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py, 
 
             match first_byte {
                 b'Z' => Some(PyTzInfo::utc(py)?.to_owned()),
-                b'z' => return Ok(None),
                 b'+' | b'-' => {
                     let sign = if first_byte == b'+' { 1 } else { -1 };
                     let offset_bytes = &tz_bytes[1..];
@@ -396,9 +395,9 @@ fn _parse_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py, 
                         } else {
                             // SAFETY: `offset_bytes.len()` > 2 verified by else branch,
                             // so indices 0..2 and potentially 2..4 are valid.
-                            let h = _parse_digits(offset_bytes, 0, 2) as i32;
+                            let h = _parse_digits(offset_bytes, 0, 2).cast_signed();
                             let m = if offset_bytes.len() >= 4 {
-                                _parse_digits(offset_bytes, 2, 2) as i32
+                                _parse_digits(offset_bytes, 2, 2).cast_signed()
                             } else {
                                 0
                             };
@@ -477,7 +476,7 @@ unsafe fn _parse_digits(bytes: &[u8], start: usize, count: usize) -> u32 {
                 v = (v * 10) + (v >> 8); // will not overflow, fits in 63 bits
                 let v1 = (v & MASK).wrapping_mul(MUL1);
                 let v2 = ((v >> 16) & MASK).wrapping_mul(MUL2);
-                let parsed = ((v1.wrapping_add(v2) >> 32) as u32) as u64;
+                let parsed = u64::from((v1.wrapping_add(v2) >> 32) as u32);
                 d = d.wrapping_mul(100_000_000).wrapping_add(parsed as u32);
                 i += 8;
             } else {
@@ -492,7 +491,7 @@ unsafe fn _parse_digits(bytes: &[u8], start: usize, count: usize) -> u32 {
         let byte = unsafe { *bytes.get_unchecked(start + i) };
         let digit = byte.wrapping_sub(b'0');
         if digit < 10 {
-            d = d * 10 + digit as u32;
+            d = d * 10 + u32::from(digit);
             i += 1;
         } else {
             break;

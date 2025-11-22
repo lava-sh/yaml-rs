@@ -27,28 +27,24 @@ create_exception!(yaml_rs, YAMLEncodeError, PyTypeError);
 #[pyfunction]
 fn _load(
     py: Python,
-    obj: Py<PyAny>,
+    obj: &Bound<'_, PyAny>,
     parse_datetime: bool,
-    encoding: Option<String>,
-    encoder_errors: Option<String>,
+    encoding: Option<&str>,
+    encoder_errors: Option<&str>,
 ) -> PyResult<Py<PyAny>> {
-    let obj_bound = obj.bind_borrowed(py);
-    let py = obj_bound.py();
-
-    let data: Cow<[u8]> = if let Ok(string) = obj_bound.cast::<PyString>() {
+    let data: Cow<[u8]> = if let Ok(string) = obj.cast::<PyString>() {
         let path = string.to_str()?;
         Cow::Owned(py.detach(|| std::fs::read(path))?)
     } else {
-        obj_bound.extract().or_else(|_| {
-            obj_bound
-                .call_method0("read")?
+        obj.extract().or_else(|_| {
+            obj.call_method0("read")?
                 .extract::<Vec<u8>>()
                 .map(Cow::Owned)
         })?
     };
 
     let cow = py
-        .detach(|| encode(&data, encoding.as_deref(), encoder_errors.as_deref()))
+        .detach(|| encode(&data, encoding, encoder_errors))
         .map_err(|err| YAMLDecodeError::new_err(err.to_string()))?;
 
     _loads(py, cow.as_ref(), parse_datetime)
@@ -65,7 +61,7 @@ fn _loads(py: Python, s: &str, parse_datetime: bool) -> PyResult<Py<PyAny>> {
             Ok::<_, saphyr_parser::ScanError>(loader.into_documents())
         })
         .map_err(|err| YAMLDecodeError::new_err(format_error(s, &err)))?;
-    Ok(yaml_to_python(py, yaml, parse_datetime)?.unbind())
+    Ok(yaml_to_python(py, &yaml, parse_datetime)?.unbind())
 }
 
 #[pyfunction]

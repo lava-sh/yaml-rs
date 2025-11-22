@@ -9,11 +9,11 @@ pub fn encode<'a>(
     encoding: Option<&str>,
     encoder_errors: Option<&str>,
 ) -> Result<Cow<'a, str>, Error> {
-    let is_utf8 = matches!(encoding, None | Some("utf-8") | Some("UTF-8"));
+    let is_utf8 = matches!(encoding, None | Some("utf-8" | "UTF-8"));
 
     if is_utf8 {
         return match encoder_errors {
-            None | Some("ignore") | Some("replace") => match from_utf8(data) {
+            None | Some("ignore" | "replace") => match from_utf8(data) {
                 Ok(s) => Ok(Cow::Borrowed(s)),
                 Err(_) => Ok(String::from_utf8_lossy(data)),
             },
@@ -43,10 +43,9 @@ pub fn encode<'a>(
         "gbk" | "gb18030" => encoding_rs::GBK,
         "euc-kr" | "euckr" => encoding_rs::EUC_KR,
         "iso-2022-jp" => encoding_rs::ISO_2022_JP,
-        "windows-1252" | "cp1252" => encoding_rs::WINDOWS_1252,
+        "windows-1252" | "cp1252" | "iso-8859-1" | "latin1" => encoding_rs::WINDOWS_1252,
         "windows-1251" => encoding_rs::WINDOWS_1251,
         "windows-1250" => encoding_rs::WINDOWS_1250,
-        "iso-8859-1" | "latin1" => encoding_rs::WINDOWS_1252,
         "iso-8859-2" => encoding_rs::ISO_8859_2,
         "iso-8859-5" => encoding_rs::ISO_8859_5,
         "iso-8859-6" => encoding_rs::ISO_8859_6,
@@ -67,9 +66,7 @@ pub fn encode<'a>(
             .ok_or_else(|| {
                 Error::new(ErrorKind::InvalidInput, "decoding error: malformed input")
             })?,
-        Some("ignore") | Some("replace") | None => {
-            encoding_comp.decode_without_bom_handling(data).0
-        }
+        Some("ignore" | "replace") | None => encoding_comp.decode_without_bom_handling(data).0,
         Some(other) => {
             return Err(Error::new(
                 ErrorKind::InvalidInput,

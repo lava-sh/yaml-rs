@@ -58,8 +58,7 @@ pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
 
         write!(
             &mut datetime_str,
-            "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}",
-            year, month, day, hour, minute, second
+            "{year:04}-{month:02}-{day:02}T{hour:02}:{minute:02}:{second:02}",
         )
         .unwrap();
 
@@ -103,12 +102,7 @@ pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
                     });
 
                 if let Some((offset_hours, offset_minutes)) = result {
-                    write!(
-                        &mut datetime_str,
-                        "{:+03}:{:02}",
-                        offset_hours, offset_minutes
-                    )
-                    .unwrap();
+                    write!(&mut datetime_str, "{offset_hours:+03}:{offset_minutes:02}",).unwrap();
                 }
             }
         }
@@ -119,7 +113,7 @@ pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
         let month = date.get_month();
         let day = date.get_day();
         let mut date = String::with_capacity(10);
-        write!(&mut date, "{:04}-{:02}-{:02}", year, month, day).unwrap();
+        write!(&mut date, "{year:04}-{month:02}-{day:02}").unwrap();
         Ok(Value(ScalarOwned::String(date)))
     } else if let Ok(tuple) = obj.cast::<PyTuple>() {
         let len = tuple.len();
@@ -169,8 +163,7 @@ pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
             obj_type = obj.get_type(),
             obj_repr = obj
                 .repr()
-                .map(|r| r.to_string())
-                .unwrap_or_else(|_| "<repr failed>".to_string())
+                .map_or_else(|_| "<repr failed>".to_string(), |r| r.to_string())
         )))
     }
 }
