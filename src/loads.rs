@@ -227,8 +227,9 @@ fn _parse_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py, 
         return Ok(Some(PyDate::new(py, year, month, day)?.into_any()));
     }
 
-    let Some(sep_pos) = memchr::memchr3(b'T', b't', b' ', &bytes[10..]).map(|pos| pos + 10) else {
-        return Ok(None);
+    let sep_pos = match memchr::memchr3(b'T', b't', b' ', &bytes[10..]).map(|pos| pos + 10) {
+        Some(pos) => pos,
+        None => return Ok(None),
     };
 
     let mut dt_end = bytes.len();
