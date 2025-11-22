@@ -77,7 +77,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@85856786d1ce8acfbcc2f13a5f3fbd6b938f9f41 # v7.1.2
+        uses: astral-sh/setup-uv@5a7eac68fb9809dea845d802897dc5c723910fa3 # v7.1.3
         with:
           enable-cache: ${{ !startsWith(github.ref, 'refs/tags/') }} # zizmor: ignore[cache-poisoning]
       - name: "Create and activate .venv"
@@ -294,6 +294,68 @@ jobs:
           name: wheels-macos-${{ matrix.platform.target }}
           path: dist
 
+  build-pgo:
+    name: "pgo-optimized (${{ matrix.platform.os }}, python ${{ matrix.interpreter }})"
+    #needs: [ tests, cargo-fmt, cargo-clippy ]
+    runs-on: ${{ matrix.platform.runs-on }}
+    strategy:
+      fail-fast: true
+      matrix:
+        platform:
+          [
+            { os: linux, runs-on: ubuntu-latest },
+            { os: linux_aarch64, runs-on: ubuntu-24.04-arm },
+            { os: windows, runs-on: windows-latest },
+            { os: macos, runs-on: macos-latest },
+          ]
+        interpreter: [ "3.10", "3.11", "3.12", "3.13", "3.14", "3.14t" ]
+
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          persist-credentials: false
+      - name: "Install uv"
+        uses: astral-sh/setup-uv@5a7eac68fb9809dea845d802897dc5c723910fa3
+        with:
+          python-version: ${{ matrix.interpreter }}
+          enable-cache: ${{ !startsWith(github.ref, 'refs/tags/') }} # zizmor: ignore[cache-poisoning]
+
+      - name: "Install rust stable"
+        id: rust-toolchain
+        uses: dtolnay/rust-toolchain@master # zizmor: ignore[unpinned-uses]
+        with:
+          components: llvm-tools
+          toolchain: stable
+
+      - name: "Build PGO wheel"
+        id: pgo-wheel
+        uses: ./.github/actions/build-pgo-wheel
+        with:
+          interpreter: ${{ matrix.interpreter }}
+          rust-toolchain: ${{ steps.rust-toolchain.outputs.name }}
+
+      - run: ${{ (startsWith(matrix.platform.os, 'windows') && 'dir') || 'ls -lh' }} dist/
+
+      - name: "Benchmark"
+        run: | # zizmor: ignore[template-injection]
+          uv venv _pypi --python ${{ matrix.interpreter }}
+          source _pypi/bin/activate
+          uv pip install yaml_rs rich==14.2.0 --index pypi
+          python .github/bench_pgo_build.py
+          deactivate
+
+          uv venv _local --python ${{ matrix.interpreter }}
+          source _local/bin/activate
+          uv pip install rich==14.2.0 --index pypi
+          uv pip install ${{ steps.pgo-wheel.outputs.wheel }} 
+          python .github/bench_pgo_build.py
+          deactivate
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: pypi_files_${{ matrix.platform.os }}_${{ matrix.interpreter }}
+          path: dist
+
   build-sdist:
     name: "build sdist"
     runs-on: ubuntu-latest
@@ -317,7 +379,17 @@ jobs:
     name: "Release"
     runs-on: ubuntu-latest
     if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
-    needs: [ linux, musllinux, windows, macos, build-sdist, tests, cargo-clippy, cargo-fmt ]
+    needs: [
+      linux,
+      musllinux,
+      windows,
+      macos,
+      build-pgo,
+      build-sdist,
+      tests,
+      cargo-clippy,
+      cargo-fmt,
+    ]
     permissions:
       # Use to sign the release artifacts
       id-token: write
