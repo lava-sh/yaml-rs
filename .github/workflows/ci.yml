@@ -95,7 +95,7 @@ jobs:
       - name: "Run maturin (--release)"
         run: |
           rustc --version --verbose
-          maturin build --release
+          maturin build --release --features mimalloc
           uv pip install target/wheels/*.whl
       - name: "Run Ruff"
         run: |
@@ -111,47 +111,41 @@ jobs:
           pytest tests/
 
   linux:
-    name: "linux (${{ matrix.platform.runner }} / ${{ matrix.platform.target }})"
+    name: "linux (ubuntu-latest / ${{ matrix.platform.target }})"
     needs: [ tests, cargo-fmt, cargo-clippy ]
-    runs-on: ${{ matrix.platform.runner }}
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         platform:
           - {
-            runner: ubuntu-latest,
             target: x86_64,
             interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
-            maturin-args: "--release --out dist"
+            maturin-args: "--features mimalloc"
           }
           - {
-            runner: ubuntu-latest,
             target: x86,
             interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
-            maturin-args: "--release --out dist"
+            maturin-args: "--features mimalloc"
           }
           - {
-            runner: ubuntu-latest,
             target: aarch64,
             interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
-            maturin-args: "--release --out dist --zig"
+            maturin-args: "--features mimalloc --zig"
           }
           - {
-            runner: ubuntu-latest,
             target: armv7,
             interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
-            maturin-args: "--release --out dist --no-default-features"
+            maturin-args: ""
           }
           - {
-            runner: ubuntu-latest,
             target: s390x,
             interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
-            maturin-args: "--release --out dist --no-default-features"
+            maturin-args: ""
           }
           - {
-            runner: ubuntu-latest,
             target: ppc64le,
             interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
-            maturin-args: "--release --out dist --no-default-features"
+            maturin-args: ""
           }
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -164,7 +158,9 @@ jobs:
         uses: PyO3/maturin-action@86b9d133d34bc1b40018696f782949dac11bd380 # v1.49.4
         with:
           target: ${{ matrix.platform.target }}
-          args: ${{ matrix.platform.maturin-args }} --interpreter ${{ matrix.platform.interpreter }}
+          args: >
+            --release --out dist ${{ matrix.platform.maturin-args }} 
+            --interpreter ${{ matrix.platform.interpreter }}
           sccache: ${{ !startsWith(github.ref, 'refs/tags/') }} # zizmor: ignore[cache-poisoning]
           manylinux: auto
       - name: "Upload wheels"
@@ -174,29 +170,25 @@ jobs:
           path: dist
 
   musllinux:
-    name: "musllinux (${{ matrix.platform.runner }} / ${{ matrix.platform.target }})"
+    name: "musllinux (ubuntu-latest / ${{ matrix.platform.target }})"
     needs: [ tests, cargo-fmt, cargo-clippy ]
-    runs-on: ${{ matrix.platform.runner }}
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         platform:
           - {
-            runner: ubuntu-latest,
             target: x86_64,
             interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11"
           }
           - {
-            runner: ubuntu-latest,
             target: x86,
             interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11"
           }
           - {
-            runner: ubuntu-latest,
             target: aarch64,
             interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11"
           }
           - {
-            runner: ubuntu-latest,
             target: armv7,
             interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11"
           }
@@ -212,7 +204,10 @@ jobs:
         uses: PyO3/maturin-action@86b9d133d34bc1b40018696f782949dac11bd380 # v1.49.4
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist --interpreter ${{ matrix.platform.interpreter }}
+          args: >
+            --release --out dist 
+            --interpreter ${{ matrix.platform.interpreter }}
+            --features mimalloc
           sccache: ${{ !startsWith(github.ref, 'refs/tags/') }} # zizmor: ignore[cache-poisoning]
           manylinux: musllinux_1_2
       - name: "Upload wheels"
@@ -222,19 +217,17 @@ jobs:
           path: dist
 
   windows:
-    name: "windows (${{ matrix.platform.runner }} / ${{ matrix.platform.target }})"
+    name: "windows (windows-latest / ${{ matrix.platform.target }})"
     needs: [ tests, cargo-fmt, cargo-clippy ]
-    runs-on: ${{ matrix.platform.runner }}
+    runs-on: windows-latest
     strategy:
       matrix:
         platform:
           - {
-            runner: windows-latest,
             target: x64,
             interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11"
           }
           - {
-            runner: windows-latest,
             target: x86,
             interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t"
           }
@@ -250,7 +243,10 @@ jobs:
         uses: PyO3/maturin-action@86b9d133d34bc1b40018696f782949dac11bd380 # v1.49.4
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist --interpreter ${{ matrix.platform.interpreter }}
+          args: >
+            --release --out dist 
+            --interpreter ${{ matrix.platform.interpreter }}
+            --features mimalloc
           sccache: ${{ !startsWith(github.ref, 'refs/tags/') }} # zizmor: ignore[cache-poisoning]
       - name: "Upload wheels"
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
@@ -259,19 +255,17 @@ jobs:
           path: dist
 
   macos:
-    name: "macos (${{ matrix.platform.runner }} / ${{ matrix.platform.target }})"
+    name: "macos (macos-latest / ${{ matrix.platform.target }})"
     needs: [ tests, cargo-fmt, cargo-clippy ]
-    runs-on: ${{ matrix.platform.runner }}
+    runs-on: macos-latest
     strategy:
       matrix:
         platform:
           - {
-            runner: macos-latest,
             target: x86_64,
             interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11"
           }
           - {
-            runner: macos-latest,
             target: aarch64,
             interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11"
           }
@@ -286,7 +280,10 @@ jobs:
         uses: PyO3/maturin-action@86b9d133d34bc1b40018696f782949dac11bd380 # v1.49.4
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist --interpreter ${{ matrix.platform.interpreter }}
+          args: >
+            --release --out dist 
+            --interpreter ${{ matrix.platform.interpreter }} 
+            --features mimalloc
           sccache: ${{ !startsWith(github.ref, 'refs/tags/') }} # zizmor: ignore[cache-poisoning]
       - name: "Upload wheels"
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0

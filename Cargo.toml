@@ -22,10 +22,11 @@ saphyr-parser = "0.0.6"
 ordered-float = "5.1.0"
 encoding_rs = "0.8.35"
 memchr = { version = "2", default-features = false }
-mimalloc = { version = "*", features = ["v3"], optional = true }
+mimalloc = { version = "0.1.48", features = ["v3", "override"], optional = true }
 
 [features]
-default = ["dep:mimalloc"]
+default = []
+mimalloc = ["dep:mimalloc"]
 
 [profile.release]
 lto = "fat"
