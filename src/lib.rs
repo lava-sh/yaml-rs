@@ -17,7 +17,7 @@ use crate::{
     loads::{format_error, yaml_to_python},
 };
 
-#[cfg(feature = "default")]
+#[cfg(feature = "mimalloc")]
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 

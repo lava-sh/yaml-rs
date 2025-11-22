@@ -205,6 +205,8 @@ static _TABLE: [u8; 256] = {
 };
 
 fn _parse_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py, PyAny>>> {
+    const SECS_IN_DAY: i32 = 86_400;
+
     let bytes = s.as_bytes();
 
     if bytes.len() < 10 {
@@ -253,7 +255,6 @@ fn _parse_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py, 
                 tz_start = Some(i);
                 break;
             }
-            b'z' => return Ok(None),
             b'+' => {
                 let mut actual_dt_end = i;
                 // SAFETY: Loop condition ensures actual_dt_end > sep_pos + 1,
@@ -292,6 +293,7 @@ fn _parse_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py, 
                     break;
                 }
             }
+            b'z' => return Ok(None),
             _ => {}
         }
     }
@@ -405,15 +407,8 @@ fn _parse_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py, 
                         };
 
                     let total_seconds = sign * (hours * 3600 + minutes * 60);
-                    let (days, seconds) = if total_seconds < 0 {
-                        (
-                            total_seconds.div_euclid(86400),
-                            total_seconds.rem_euclid(86400),
-                        )
-                    } else {
-                        (0, total_seconds)
-                    };
-
+                    let days = total_seconds.div_euclid(SECS_IN_DAY);
+                    let seconds = total_seconds.rem_euclid(SECS_IN_DAY);
                     let py_delta = PyDelta::new(py, days, seconds, 0, false)?;
                     Some(PyTzInfo::fixed_offset(py, py_delta)?)
                 }
