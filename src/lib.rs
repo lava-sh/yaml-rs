@@ -45,7 +45,7 @@ fn _load(
 
     let encoded_string = py
         .detach(|| encode(&data, encoding, encoder_errors))
-        .map_err(|err| YAMLDecodeError::new_err(err))?;
+        .map_err(YAMLDecodeError::new_err)?;
 
     _loads(py, encoded_string.as_ref(), parse_datetime)
 }
