@@ -43,11 +43,11 @@ fn _load(
         })?
     };
 
-    let cow = py
+    let encoded_string = py
         .detach(|| encode(&data, encoding, encoder_errors))
-        .map_err(|err| YAMLDecodeError::new_err(err.to_string()))?;
+        .map_err(YAMLDecodeError::new_err)?;
 
-    _loads(py, cow.as_ref(), parse_datetime)
+    _loads(py, encoded_string.as_ref(), parse_datetime)
 }
 
 #[pyfunction]
