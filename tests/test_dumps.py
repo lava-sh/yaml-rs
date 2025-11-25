@@ -1,6 +1,7 @@
 import sys
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+from textwrap import dedent
 from typing import Any
 
 import pytest
@@ -79,72 +80,67 @@ def test_datetime_dumps(data: Any, dumped: str) -> None:
             True,
             False,
             {"e": ["f", "g", {"h": []}]},
-            """
+            dedent("""\
             ---
             e:
               - f
               - g
-              - h: []
-            """,
+              - h: []"""),
         ),
         (
             False,
             False,
             {"e": ["f", "g", {"h": []}]},
-            """
+            dedent("""\
             ---
             e:
               - f
               - g
               -
-                h: []
-            """,  # ^ with new line
+                h: []"""),  # <-- with new line
         ),
         (
             True,
             True,
             {"key": "line1\nline2"},
-            """
+            dedent("""\
             ---
             key: |-
               line1
-              line2
-            """,  # literal block style
+              line2"""),  # literal block style
         ),
         (
             True,
             False,
             {"key": "line1\nline2"},
-            """
+            dedent("""\
             ---
-            key: "line1\\nline2\"
-            """,  # escaped style
+            key: "line1\\nline2"
+            """).rstrip("\n"),  # escaped style
         ),
         (
             True,
             True,
             {"items": ["text\nwith\nnewlines", {"nested": []}]},
-            """
+            dedent("""\
             ---
             items:
               - |-
                 text
                 with
                 newlines
-              - nested: []
-              """,
+              - nested: []"""),
         ),
         (
             False,
             False,
             {"items": ["text\nwith\nnewlines", {"nested": []}]},
-            """
+            dedent("""\
             ---
             items:
               - "text\\nwith\\nnewlines"
               -
-                nested: []
-            """,
+                nested: []"""),
         ),
     ],
 )
