@@ -75,32 +75,94 @@ def test_datetime_dumps(data: Any, dumped: str) -> None:
 @pytest.mark.parametrize(
     ("compact", "multiline_strings", "data", "expected"),
     [
-        # compact=True, multiline_strings=True (default)
-        (True, True, {"key": "value"}, "---\nkey: value"),
-        (True, True, {"key": "line1\nline2"}, "---\nkey: |-\n  line1\n  line2"),
-        # compact=True, multiline_strings=False
-        (True, False, {"key": "value"}, "---\nkey: value"),
-        (True, False, {"key": "line1\nline2"}, '---\nkey: "line1\\nline2"'),
-        # compact=False, multiline_strings=True
-        (False, True, {"key": "value"}, "---\nkey: value"),
-        (False, True, [1, 2, 3], "---\n- 1\n- 2\n- 3"),
-        # compact=False, multiline_strings=False
-        (False, False, {"key": "value"}, "---\nkey: value"),
-        (False, False, [1, 2, 3], "---\n- 1\n- 2\n- 3"),
+        (
+            True,
+            False,
+            {"e": ["f", "g", {"h": []}]},
+            """
+            ---
+            e:
+              - f
+              - g
+              - h: []
+            """,
+        ),
+        (
+            False,
+            False,
+            {"e": ["f", "g", {"h": []}]},
+            """
+            ---
+            e:
+              - f
+              - g
+              -
+                h: []
+            """,  # ^ with new line
+        ),
+        (
+            True,
+            True,
+            {"key": "line1\nline2"},
+            """
+            ---
+            key: |-
+              line1
+              line2
+            """,  # literal block style
+        ),
+        (
+            True,
+            False,
+            {"key": "line1\nline2"},
+            """
+            ---
+            key: "line1\\nline2\"
+            """,  # escaped style
+        ),
+        (
+            True,
+            True,
+            {"items": ["text\nwith\nnewlines", {"nested": []}]},
+            """
+            ---
+            items:
+              - |-
+                text
+                with
+                newlines
+              - nested: []
+              """,
+        ),
+        (
+            False,
+            False,
+            {"items": ["text\nwith\nnewlines", {"nested": []}]},
+            """
+            ---
+            items:
+              - "text\\nwith\\nnewlines"
+              -
+                nested: []
+            """,
+        ),
     ],
 )
 def test_dumps_with_options(
-        *,
-        compact: bool,
-        multiline_strings: bool,
-        data: Any,
-        expected: str,
+    *,
+    compact: bool,
+    multiline_strings: bool,
+    data: Any,
+    expected: str,
 ) -> None:
-    assert yaml_rs.dumps(
-        data,
-        compact=compact,
-        multiline_strings=multiline_strings,
-    ) == expected
+    assert (
+        yaml_rs.dumps(
+            data,
+            compact=compact,
+            multiline_strings=multiline_strings,
+        )
+        == expected
+    )
 
 
 @pytest.mark.parametrize("yaml", VALID_YAMLS)
