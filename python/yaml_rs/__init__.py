@@ -50,8 +50,15 @@ def loads(
     return _loads(s, parse_datetime=parse_datetime)
 
 
-def dump(obj: Any, /, file: str | Path | TextIO) -> int:
-    _str = _dumps(obj)
+def dump(
+    obj: Any,
+    /,
+    file: str | Path | TextIO,
+    *,
+    compact: bool = True,
+    multiline_strings: bool = True,
+) -> int:
+    _str = _dumps(obj, compact=compact, multiline_strings=multiline_strings)
     if isinstance(file, str):
         file = Path(file)
     if isinstance(file, Path):
@@ -60,5 +67,11 @@ def dump(obj: Any, /, file: str | Path | TextIO) -> int:
         return file.write(_str)
 
 
-def dumps(obj: Any, /) -> str:
-    return _dumps(obj)
+def dumps(
+    obj: Any,
+    /,
+    *,
+    compact: bool = True,
+    multiline_strings: bool = True,
+) -> str:
+    return _dumps(obj, compact=compact, multiline_strings=multiline_strings)

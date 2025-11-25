@@ -1,6 +1,7 @@
 import sys
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+from textwrap import dedent
 from typing import Any
 
 import pytest
@@ -68,8 +69,96 @@ def test_incorrect_dumps(v, pattern):
          '"2025-01-01T00:00:00+03:00"'),
     ],
 )
-def test_dumps(data: Any, dumped: str) -> None:
+def test_datetime_dumps(data: Any, dumped: str) -> None:
     assert yaml_rs.dumps(data).removeprefix("---\n") == str(dumped)
+
+
+@pytest.mark.parametrize(
+    ("compact", "multiline_strings", "data", "expected"),
+    [
+        (
+            True,
+            False,
+            {"e": ["f", "g", {"h": []}]},
+            dedent("""\
+            ---
+            e:
+              - f
+              - g
+              - h: []"""),
+        ),
+        (
+            False,
+            False,
+            {"e": ["f", "g", {"h": []}]},
+            dedent("""\
+            ---
+            e:
+              - f
+              - g
+              -
+                h: []"""),  # <-- with new line
+        ),
+        (
+            True,
+            True,
+            {"key": "line1\nline2"},
+            dedent("""\
+            ---
+            key: |-
+              line1
+              line2"""),  # literal block style
+        ),
+        (
+            True,
+            False,
+            {"key": "line1\nline2"},
+            dedent("""\
+            ---
+            key: "line1\\nline2"
+            """).rstrip("\n"),  # escaped style
+        ),
+        (
+            True,
+            True,
+            {"items": ["text\nwith\nnewlines", {"nested": []}]},
+            dedent("""\
+            ---
+            items:
+              - |-
+                text
+                with
+                newlines
+              - nested: []"""),
+        ),
+        (
+            False,
+            False,
+            {"items": ["text\nwith\nnewlines", {"nested": []}]},
+            dedent("""\
+            ---
+            items:
+              - "text\\nwith\\nnewlines"
+              -
+                nested: []"""),
+        ),
+    ],
+)
+def test_dumps_with_options(
+    *,
+    compact: bool,
+    multiline_strings: bool,
+    data: Any,
+    expected: str,
+) -> None:
+    assert (
+        yaml_rs.dumps(
+            data,
+            compact=compact,
+            multiline_strings=multiline_strings,
+        )
+        == expected
+    )
 
 
 @pytest.mark.parametrize("yaml", VALID_YAMLS)

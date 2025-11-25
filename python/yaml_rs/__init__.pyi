@@ -11,9 +11,30 @@ def load(
     encoding: str | None = None,
     encoder_errors: str | None = None,
 ) -> dict[str, Any] | list[dict[str, Any]]: ...
-def loads(s: str, /, *, parse_datetime: bool = True) -> dict[str, Any] | list[dict[str, Any]]: ...
-def dump(obj: Any, file: str | Path | TextIO) -> int: ...
-def dumps(obj: Any) -> str: ...
+
+def loads(
+    s: str,
+    /,
+    *,
+    parse_datetime: bool = True,
+) -> dict[str, Any] | list[dict[str, Any]]: ...
+
+def dump(
+    obj: Any,
+    /,
+    file: str | Path | TextIO,
+    *,
+    compact: bool = True,
+    multiline_strings: bool = False,
+) -> int: ...
+
+def dumps(
+    obj: Any,
+    /,
+    *,
+    compact: bool = True,
+    multiline_strings: bool = False,
+) -> str: ...
 
 class YAMLDecodeError(ValueError): ...
 class YAMLEncodeError(TypeError): ...

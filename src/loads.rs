@@ -7,7 +7,7 @@ use pyo3::{
     prelude::*,
     types::{PyDate, PyDateTime, PyDelta, PyDict, PyFrozenSet, PyList, PySet, PyTuple, PyTzInfo},
 };
-use saphyr::{Scalar, ScalarStyle, ScanError, Yaml};
+use saphyr::{Scalar, ScalarStyle, ScanError, Tag, Yaml};
 
 pub(crate) fn yaml_to_python<'py>(
     py: Python<'py>,
@@ -34,7 +34,7 @@ fn _yaml_to_python<'py>(
     _tagged_string: bool,
 ) -> PyResult<Bound<'py, PyAny>> {
     match value {
-        Yaml::Value(scalar) => _scalar(py, scalar, parse_datetime, _tagged_string),
+        Yaml::Value(v) => scalar(py, v, parse_datetime, _tagged_string),
         Yaml::Sequence(sequence) => {
             let py_list = PyList::empty(py);
             for item in sequence {
@@ -61,14 +61,14 @@ fn _yaml_to_python<'py>(
             if all_nulls && !has_null_key {
                 let py_set = PySet::empty(py)?;
                 for (k, _) in mapping {
-                    py_set.add(_yaml_key(py, k, parse_datetime)?)?;
+                    py_set.add(yaml_key(py, k, parse_datetime)?)?;
                 }
                 Ok(py_set.into_any())
             } else {
                 let py_dict = PyDict::new(py);
                 for (k, v) in mapping {
                     py_dict.set_item(
-                        _yaml_key(py, k, parse_datetime)?,
+                        yaml_key(py, k, parse_datetime)?,
                         _yaml_to_python(py, v, parse_datetime, false)?,
                     )?;
                 }
@@ -80,33 +80,45 @@ fn _yaml_to_python<'py>(
                 return Ok(py.None().into_bound(py));
             }
 
-            if let Some(tag_ref) = tag.as_ref() {
-                if tag_ref.handle.is_empty() && tag_ref.suffix == "!" {
-                    return cow.as_ref().into_bound_py_any(py);
+            if tag.is_none() {
+                if *style == ScalarStyle::Plain {
+                    let scalar = Scalar::parse_from_cow(Cow::Borrowed(cow.as_ref()));
+                    return _yaml_to_python(py, &Yaml::Value(scalar), parse_datetime, false);
                 }
-                if let Some(scalar) = Scalar::parse_from_cow_and_metadata(
-                    Cow::Borrowed(cow.as_ref()),
-                    *style,
-                    Some(tag_ref),
-                ) {
-                    let is_str_tag = tag_ref.is_yaml_core_schema() && tag_ref.suffix == "str";
-                    return _yaml_to_python(py, &Yaml::Value(scalar), parse_datetime, is_str_tag);
-                }
-            } else if *style == ScalarStyle::Plain {
-                let scalar = Scalar::parse_from_cow(Cow::Borrowed(cow.as_ref()));
-                return _yaml_to_python(py, &Yaml::Value(scalar), parse_datetime, false);
+                return cow.as_ref().into_bound_py_any(py);
             }
+
+            let tag_ref = tag.as_ref().unwrap();
+
+            if tag_ref.handle.is_empty() && tag_ref.suffix == "!" {
+                return cow.as_ref().into_bound_py_any(py);
+            }
+
+            if let Some(scalar) = Scalar::parse_from_cow_and_metadata(
+                Cow::Borrowed(cow.as_ref()),
+                *style,
+                Some(tag_ref),
+            ) {
+                return _yaml_to_python(
+                    py,
+                    &Yaml::Value(scalar),
+                    parse_datetime,
+                    is_str_tag(tag_ref),
+                );
+            }
+
             cow.as_ref().into_bound_py_any(py)
         }
-        Yaml::Tagged(tag, node) => {
-            let is_str_tag = tag.as_ref().is_yaml_core_schema() && tag.as_ref().suffix == "str";
-            _yaml_to_python(py, node, parse_datetime, is_str_tag)
-        }
+        Yaml::Tagged(tag, node) => _yaml_to_python(py, node, parse_datetime, is_str_tag(tag)),
         Yaml::Alias(_) | Yaml::BadValue => Ok(py.None().into_bound(py)),
     }
 }
 
-fn _scalar<'py>(
+fn is_str_tag(tag: &Tag) -> bool {
+    tag.is_yaml_core_schema() && tag.suffix == "str"
+}
+
+fn scalar<'py>(
     py: Python<'py>,
     scalar: &Scalar<'_>,
     parse_datetime: bool,
@@ -144,11 +156,7 @@ fn _scalar<'py>(
     }
 }
 
-fn _yaml_key<'py>(
-    py: Python<'py>,
-    key: &Yaml,
-    parse_datetime: bool,
-) -> PyResult<Bound<'py, PyAny>> {
+fn yaml_key<'py>(py: Python<'py>, key: &Yaml, parse_datetime: bool) -> PyResult<Bound<'py, PyAny>> {
     match key {
         Yaml::Value(scalar) => match scalar {
             Scalar::String(str) => str.as_ref().into_bound_py_any(py),
@@ -158,12 +166,12 @@ fn _yaml_key<'py>(
             Scalar::Null => Ok(py.None().into_bound(py)),
         },
         Yaml::Representation(cow, style, tag) => {
-            if let Some(scalar) = Scalar::parse_from_cow_and_metadata(
+            if let Some(s) = Scalar::parse_from_cow_and_metadata(
                 Cow::Borrowed(cow.as_ref()),
                 *style,
                 tag.as_ref(),
             ) {
-                _scalar(py, &scalar, parse_datetime, false)
+                scalar(py, &s, parse_datetime, false)
             } else {
                 cow.as_ref().into_bound_py_any(py)
             }
@@ -171,7 +179,7 @@ fn _yaml_key<'py>(
         Yaml::Sequence(sequence) => {
             let mut items = Vec::with_capacity(sequence.len());
             for item in sequence {
-                items.push(_yaml_key(py, item, parse_datetime)?);
+                items.push(yaml_key(py, item, parse_datetime)?);
             }
             PyTuple::new(py, &items)?.into_bound_py_any(py)
         }
@@ -181,7 +189,7 @@ fn _yaml_key<'py>(
                 let tuple = PyTuple::new(
                     py,
                     &[
-                        _yaml_key(py, k, parse_datetime)?,
+                        yaml_key(py, k, parse_datetime)?,
                         _yaml_to_python(py, v, parse_datetime, false)?,
                     ],
                 )?;
@@ -189,12 +197,12 @@ fn _yaml_key<'py>(
             }
             PyFrozenSet::new(py, items)?.into_bound_py_any(py)
         }
-        Yaml::Tagged(_, node) => _yaml_key(py, node, parse_datetime),
+        Yaml::Tagged(_, node) => yaml_key(py, node, parse_datetime),
         Yaml::Alias(_) | Yaml::BadValue => Ok(py.None().into_bound(py)),
     }
 }
 
-static _TABLE: [u8; 256] = {
+static TABLE: [u8; 256] = {
     let mut table = [255u8; 256];
     let mut i = 0;
     while i < 10 {
@@ -221,9 +229,9 @@ fn _parse_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py, 
     }
     // SAFETY: `bytes.len()` >= 10 and date format verified above.
     // Indices 0..4, 5..7, and 8..10 are all within bounds.
-    let day = unsafe { _parse_digits(bytes, 8, 2) as u8 };
-    let month = unsafe { _parse_digits(bytes, 5, 2) as u8 };
-    let year = unsafe { _parse_digits(bytes, 0, 4).cast_signed() };
+    let day = unsafe { parse_digits(bytes, 8, 2) as u8 };
+    let month = unsafe { parse_digits(bytes, 5, 2) as u8 };
+    let year = unsafe { parse_digits(bytes, 0, 4).cast_signed() };
 
     if bytes.len() == 10 {
         return Ok(Some(PyDate::new(py, year, month, day)?.into_any()));
@@ -310,14 +318,14 @@ fn _parse_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py, 
     // 2. time_start derived from sep_pos which is a valid index
     // 3. All subsequent indices are bounds-checked before use
     unsafe {
-        let hour = _parse_digits(bytes, time_start, 2) as u8;
-        let minute = _parse_digits(bytes, time_start + 3, 2) as u8;
+        let hour = parse_digits(bytes, time_start, 2) as u8;
+        let minute = parse_digits(bytes, time_start + 3, 2) as u8;
 
         let (second, microsecond) =
             // SAFETY: time_start + 5 < dt_end verified by condition,
             // and dt_end <= `bytes.len()`, so time_start + 5 is valid.
             if time_start + 5 < dt_end && *bytes.get_unchecked(time_start + 5) == b':' {
-                let _second = _parse_digits(bytes, time_start + 6, 2) as u8;
+                let _second = parse_digits(bytes, time_start + 6, 2) as u8;
                 // SAFETY: time_start + 8 < dt_end verified by condition,
                 // so time_start + 8 is a valid index.
                 let _microsecond =
@@ -326,7 +334,7 @@ fn _parse_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py, 
                         let frac_len = (dt_end - frac_start).min(6);
 
                         if frac_len == 6 {
-                            _parse_digits(bytes, frac_start, 6)
+                            parse_digits(bytes, frac_start, 6)
                         } else {
                             let mut result = 0u32;
                             let mut multiplier = 100_000u32;
@@ -338,7 +346,7 @@ fn _parse_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py, 
                                 if byte == b' ' {
                                     return Ok(None);
                                 }
-                                let digit = _TABLE[byte as usize];
+                                let digit = TABLE[byte as usize];
                                 if digit >= 10 {
                                     break;
                                 }
@@ -397,9 +405,9 @@ fn _parse_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py, 
                         } else {
                             // SAFETY: `offset_bytes.len()` > 2 verified by else branch,
                             // so indices 0..2 and potentially 2..4 are valid.
-                            let h = _parse_digits(offset_bytes, 0, 2).cast_signed();
+                            let h = parse_digits(offset_bytes, 0, 2).cast_signed();
                             let m = if offset_bytes.len() >= 4 {
-                                _parse_digits(offset_bytes, 2, 2).cast_signed()
+                                parse_digits(offset_bytes, 2, 2).cast_signed()
                             } else {
                                 0
                             };
@@ -448,7 +456,7 @@ fn is_8digits(v: u64) -> bool {
 //
 // https://github.com/rust-lang/rust/blob/1.91.0/library/core/src/num/dec2flt/parse.rs#L9-L26
 #[inline]
-unsafe fn _parse_digits(bytes: &[u8], start: usize, count: usize) -> u32 {
+unsafe fn parse_digits(bytes: &[u8], start: usize, count: usize) -> u32 {
     const MASK: u64 = 0x0000_00FF_0000_00FF;
     const MUL1: u64 = 0x000F_4240_0000_0064;
     const MUL2: u64 = 0x0000_2710_0000_0001;
