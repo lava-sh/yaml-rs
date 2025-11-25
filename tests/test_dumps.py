@@ -68,8 +68,39 @@ def test_incorrect_dumps(v, pattern):
          '"2025-01-01T00:00:00+03:00"'),
     ],
 )
-def test_date_dumps(data: Any, dumped: str) -> None:
+def test_datetime_dumps(data: Any, dumped: str) -> None:
     assert yaml_rs.dumps(data).removeprefix("---\n") == str(dumped)
+
+
+@pytest.mark.parametrize(
+    ("compact", "multiline_strings", "data", "expected"),
+    [
+        # compact=True, multiline_strings=True (default)
+        (True, True, {"key": "value"}, "---\nkey: value"),
+        (True, True, {"key": "line1\nline2"}, "---\nkey: |-\n  line1\n  line2"),
+        # compact=True, multiline_strings=False
+        (True, False, {"key": "value"}, "---\nkey: value"),
+        (True, False, {"key": "line1\nline2"}, '---\nkey: "line1\\nline2"'),
+        # compact=False, multiline_strings=True
+        (False, True, {"key": "value"}, "---\nkey: value"),
+        (False, True, [1, 2, 3], "---\n- 1\n- 2\n- 3"),
+        # compact=False, multiline_strings=False
+        (False, False, {"key": "value"}, "---\nkey: value"),
+        (False, False, [1, 2, 3], "---\n- 1\n- 2\n- 3"),
+    ],
+)
+def test_dumps_with_options(
+        *,
+        compact: bool,
+        multiline_strings: bool,
+        data: Any,
+        expected: str,
+) -> None:
+    assert yaml_rs.dumps(
+        data,
+        compact=compact,
+        multiline_strings=multiline_strings,
+    ) == expected
 
 
 @pytest.mark.parametrize("yaml", VALID_YAMLS)
