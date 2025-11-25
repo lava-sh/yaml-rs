@@ -65,10 +65,12 @@ fn _loads(py: Python, s: &str, parse_datetime: bool) -> PyResult<Py<PyAny>> {
 }
 
 #[pyfunction]
-fn _dumps(obj: &Bound<'_, PyAny>) -> PyResult<String> {
+fn _dumps(obj: &Bound<'_, PyAny>, compact: bool, multiline_strings: bool) -> PyResult<String> {
     let mut yaml = String::new();
     let mut emitter = saphyr::YamlEmitter::new(&mut yaml);
-    emitter.multiline_strings(true);
+
+    emitter.compact(compact);
+    emitter.multiline_strings(multiline_strings);
     emitter
         .dump(&(&python_to_yaml(obj)?).into())
         .map_err(|err| YAMLDecodeError::new_err(err.to_string()))?;

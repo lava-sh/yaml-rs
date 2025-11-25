@@ -10,12 +10,7 @@ use pyo3::{
         PyStringMethods, PyTimeAccess, PyTuple, PyTupleMethods, PyTzInfo, PyTzInfoAccess,
     },
 };
-use saphyr::{
-    MappingOwned, ScalarOwned,
-    ScalarOwned::{Boolean, FloatingPoint, Integer, Null},
-    YamlOwned,
-    YamlOwned::Value,
-};
+use saphyr::{MappingOwned, ScalarOwned, YamlOwned, YamlOwned::Value};
 
 pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
     if let Ok(str) = obj.cast::<PyString>() {
@@ -23,16 +18,21 @@ pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
             str.to_string_lossy().into_owned(),
         )));
     }
-
     if obj.is_none() {
-        Ok(Value(Null))
-    } else if let Ok(bool) = obj.cast::<PyBool>() {
-        Ok(Value(Boolean(bool.is_true())))
-    } else if let Ok(int) = obj.cast::<PyInt>() {
-        Ok(Value(Integer(int.extract()?)))
-    } else if let Ok(float) = obj.cast::<PyFloat>() {
-        Ok(Value(FloatingPoint(OrderedFloat(float.value()))))
-    } else if let Ok(datetime) = obj.cast::<PyDateTime>() {
+        return Ok(Value(ScalarOwned::Null));
+    }
+    if let Ok(bool) = obj.cast::<PyBool>() {
+        return Ok(Value(ScalarOwned::Boolean(bool.is_true())));
+    }
+    if let Ok(int) = obj.cast::<PyInt>() {
+        return Ok(Value(ScalarOwned::Integer(int.extract()?)));
+    }
+    if let Ok(float) = obj.cast::<PyFloat>() {
+        return Ok(Value(ScalarOwned::FloatingPoint(OrderedFloat(
+            float.value(),
+        ))));
+    }
+    if let Ok(datetime) = obj.cast::<PyDateTime>() {
         let year = datetime.get_year();
         let month = datetime.get_month();
         let day = datetime.get_day();
@@ -47,13 +47,12 @@ pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
         let mut datetime_str = String::with_capacity(capacity);
 
         let py = datetime.py();
-        let is_utc = if let Some(ref tz) = tzinfo {
-            PyTzInfo::utc(py)
+        let is_utc = match tzinfo {
+            Some(ref tz) => PyTzInfo::utc(py)
                 .ok()
                 .and_then(|utc| tz.eq(utc).ok())
-                .unwrap_or(false)
-        } else {
-            false
+                .unwrap_or(false),
+            None => false,
         };
 
         write!(
@@ -107,15 +106,17 @@ pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
             }
         }
 
-        Ok(Value(ScalarOwned::String(datetime_str)))
-    } else if let Ok(date) = obj.cast::<PyDate>() {
+        return Ok(Value(ScalarOwned::String(datetime_str)));
+    }
+    if let Ok(date) = obj.cast::<PyDate>() {
         let year = date.get_year();
         let month = date.get_month();
         let day = date.get_day();
         let mut date = String::with_capacity(10);
         write!(&mut date, "{year:04}-{month:02}-{day:02}").unwrap();
-        Ok(Value(ScalarOwned::String(date)))
-    } else if let Ok(tuple) = obj.cast::<PyTuple>() {
+        return Ok(Value(ScalarOwned::String(date)));
+    }
+    if let Ok(tuple) = obj.cast::<PyTuple>() {
         let len = tuple.len();
         if len == 0 {
             return Ok(YamlOwned::Sequence(Vec::new()));
@@ -124,8 +125,9 @@ pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
         for item in tuple.iter() {
             sequence.push(python_to_yaml(&item)?);
         }
-        Ok(YamlOwned::Sequence(sequence))
-    } else if let Ok(list) = obj.cast::<PyList>() {
+        return Ok(YamlOwned::Sequence(sequence));
+    }
+    if let Ok(list) = obj.cast::<PyList>() {
         let len = list.len();
         if len == 0 {
             return Ok(YamlOwned::Sequence(Vec::new()));
@@ -134,20 +136,23 @@ pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
         for item in list.iter() {
             sequence.push(python_to_yaml(&item)?);
         }
-        Ok(YamlOwned::Sequence(sequence))
-    } else if let Ok(set) = obj.cast::<PySet>() {
+        return Ok(YamlOwned::Sequence(sequence));
+    }
+    if let Ok(set) = obj.cast::<PySet>() {
         let mut mapping = MappingOwned::with_capacity(set.len());
         for item in set.iter() {
-            mapping.insert(python_to_yaml(&item)?, Value(Null));
+            mapping.insert(python_to_yaml(&item)?, Value(ScalarOwned::Null));
         }
-        Ok(YamlOwned::Mapping(mapping))
-    } else if let Ok(frozenset) = obj.cast::<PyFrozenSet>() {
+        return Ok(YamlOwned::Mapping(mapping));
+    }
+    if let Ok(frozenset) = obj.cast::<PyFrozenSet>() {
         let mut mapping = MappingOwned::with_capacity(frozenset.len());
         for item in frozenset.iter() {
-            mapping.insert(python_to_yaml(&item)?, Value(Null));
+            mapping.insert(python_to_yaml(&item)?, Value(ScalarOwned::Null));
         }
-        Ok(YamlOwned::Mapping(mapping))
-    } else if let Ok(dict) = obj.cast::<PyDict>() {
+        return Ok(YamlOwned::Mapping(mapping));
+    }
+    if let Ok(dict) = obj.cast::<PyDict>() {
         let len = dict.len();
         if len == 0 {
             return Ok(YamlOwned::Mapping(MappingOwned::new()));
@@ -156,14 +161,13 @@ pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
         for (k, v) in dict.iter() {
             mapping.insert(python_to_yaml(&k)?, python_to_yaml(&v)?);
         }
-        Ok(YamlOwned::Mapping(mapping))
-    } else {
-        Err(crate::YAMLEncodeError::new_err(format!(
-            "Cannot serialize {obj_type} ({obj_repr}) to YAML",
-            obj_type = obj.get_type(),
-            obj_repr = obj
-                .repr()
-                .map_or_else(|_| "<repr failed>".to_string(), |r| r.to_string())
-        )))
+        return Ok(YamlOwned::Mapping(mapping));
     }
+    Err(crate::YAMLEncodeError::new_err(format!(
+        "Cannot serialize {obj_type} ({obj_repr}) to YAML",
+        obj_type = obj.get_type(),
+        obj_repr = obj
+            .repr()
+            .map_or_else(|_| "<repr failed>".to_string(), |r| r.to_string())
+    )))
 }
