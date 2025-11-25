@@ -68,7 +68,7 @@ def test_incorrect_dumps(v, pattern):
          '"2025-01-01T00:00:00+03:00"'),
     ],
 )
-def test_dumps(data: Any, dumped: str) -> None:
+def test_date_dumps(data: Any, dumped: str) -> None:
     assert yaml_rs.dumps(data).removeprefix("---\n") == str(dumped)
 
 
