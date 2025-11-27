@@ -41,6 +41,4 @@ clippy.pedantic = { level = "warn", priority = -1 }
 
 clippy.too_many_lines = "allow"
 clippy.manual_let_else = "allow"
-clippy.used_underscore_items = "allow"
-clippy.used_underscore_binding = "allow"
 clippy.cast_possible_truncation = "allow"

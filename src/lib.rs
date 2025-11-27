@@ -24,8 +24,8 @@ static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 create_exception!(yaml_rs, YAMLDecodeError, PyValueError);
 create_exception!(yaml_rs, YAMLEncodeError, PyTypeError);
 
-#[pyfunction]
-fn _load(
+#[pyfunction(name = "_load")]
+fn load(
     py: Python,
     obj: &Bound<'_, PyAny>,
     parse_datetime: bool,
@@ -47,11 +47,11 @@ fn _load(
         .detach(|| encode(&data, encoding, encoder_errors))
         .map_err(YAMLDecodeError::new_err)?;
 
-    _loads(py, encoded_string.as_ref(), parse_datetime)
+    load_yaml_from_string(py, encoded_string.as_ref(), parse_datetime)
 }
 
-#[pyfunction]
-fn _loads(py: Python, s: &str, parse_datetime: bool) -> PyResult<Py<PyAny>> {
+#[pyfunction(name = "_loads")]
+fn load_yaml_from_string(py: Python, s: &str, parse_datetime: bool) -> PyResult<Py<PyAny>> {
     let yaml = py
         .detach(|| {
             let mut loader = saphyr::YamlLoader::default();
@@ -64,8 +64,8 @@ fn _loads(py: Python, s: &str, parse_datetime: bool) -> PyResult<Py<PyAny>> {
     Ok(yaml_to_python(py, &yaml, parse_datetime)?.unbind())
 }
 
-#[pyfunction]
-fn _dumps(obj: &Bound<'_, PyAny>, compact: bool, multiline_strings: bool) -> PyResult<String> {
+#[pyfunction(name = "_dumps")]
+fn dumps_yaml(obj: &Bound<'_, PyAny>, compact: bool, multiline_strings: bool) -> PyResult<String> {
     let mut yaml = String::new();
     let mut emitter = saphyr::YamlEmitter::new(&mut yaml);
 
@@ -79,9 +79,9 @@ fn _dumps(obj: &Bound<'_, PyAny>, compact: bool, multiline_strings: bool) -> PyR
 
 #[pymodule(name = "_yaml_rs")]
 fn yaml_rs(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(_load, m)?)?;
-    m.add_function(wrap_pyfunction!(_loads, m)?)?;
-    m.add_function(wrap_pyfunction!(_dumps, m)?)?;
+    m.add_function(wrap_pyfunction!(load, m)?)?;
+    m.add_function(wrap_pyfunction!(load_yaml_from_string, m)?)?;
+    m.add_function(wrap_pyfunction!(dumps_yaml, m)?)?;
     m.add("_version", env!("CARGO_PKG_VERSION"))?;
     m.add("YAMLDecodeError", m.py().get_type::<YAMLDecodeError>())?;
     m.add("YAMLEncodeError", m.py().get_type::<YAMLEncodeError>())?;
