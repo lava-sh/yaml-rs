@@ -16,29 +16,29 @@ pub(crate) fn yaml_to_python<'py>(
 ) -> PyResult<Bound<'py, PyAny>> {
     match docs.len() {
         0 => Ok(py.None().into_bound(py)),
-        1 => _yaml_to_python(py, &docs[0], parse_datetime, false),
+        1 => to_python(py, &docs[0], parse_datetime, false),
         _ => {
             let py_list = PyList::empty(py);
             for doc in docs {
-                py_list.append(_yaml_to_python(py, doc, parse_datetime, false)?)?;
+                py_list.append(to_python(py, doc, parse_datetime, false)?)?;
             }
             Ok(py_list.into_any())
         }
     }
 }
 
-fn _yaml_to_python<'py>(
+fn to_python<'py>(
     py: Python<'py>,
     value: &Yaml<'_>,
     parse_datetime: bool,
-    _tagged_string: bool,
+    tagged_string: bool,
 ) -> PyResult<Bound<'py, PyAny>> {
     match value {
-        Yaml::Value(v) => scalar(py, v, parse_datetime, _tagged_string),
+        Yaml::Value(v) => scalar(py, v, parse_datetime, tagged_string),
         Yaml::Sequence(sequence) => {
             let py_list = PyList::empty(py);
             for item in sequence {
-                py_list.append(_yaml_to_python(py, item, parse_datetime, false)?)?;
+                py_list.append(to_python(py, item, parse_datetime, false)?)?;
             }
             Ok(py_list.into_any())
         }
@@ -47,16 +47,15 @@ fn _yaml_to_python<'py>(
                 return Ok(PyDict::new(py).into_any());
             }
 
-            let (all_nulls, has_null_key) =
-                mapping.iter().fold((true, false), |(_a, _h), (k, v)| {
-                    (
-                        _a && (matches!(v, Yaml::Value(Scalar::Null))
-                            || matches!(v, Yaml::Representation(cow, _, _) if cow.as_ref() == "~")),
-                        _h || (matches!(k, Yaml::Value(Scalar::Null))
-                            || matches!(k, Yaml::Representation(cow, _, _)
+            let (all_nulls, has_null_key) = mapping.iter().fold((true, false), |(a, h), (k, v)| {
+                (
+                    a && (matches!(v, Yaml::Value(Scalar::Null))
+                        || matches!(v, Yaml::Representation(cow, _, _) if cow.as_ref() == "~")),
+                    h || (matches!(k, Yaml::Value(Scalar::Null))
+                        || matches!(k, Yaml::Representation(cow, _, _)
                             if matches!(cow.as_ref(), "~" | "null" | "NULL" | "Null"))),
-                    )
-                });
+                )
+            });
 
             if all_nulls && !has_null_key {
                 let py_set = PySet::empty(py)?;
@@ -69,7 +68,7 @@ fn _yaml_to_python<'py>(
                 for (k, v) in mapping {
                     py_dict.set_item(
                         yaml_key(py, k, parse_datetime)?,
-                        _yaml_to_python(py, v, parse_datetime, false)?,
+                        to_python(py, v, parse_datetime, false)?,
                     )?;
                 }
                 Ok(py_dict.into_any())
@@ -83,7 +82,7 @@ fn _yaml_to_python<'py>(
             if tag.is_none() {
                 if *style == ScalarStyle::Plain {
                     let scalar = Scalar::parse_from_cow(Cow::Borrowed(cow.as_ref()));
-                    return _yaml_to_python(py, &Yaml::Value(scalar), parse_datetime, false);
+                    return to_python(py, &Yaml::Value(scalar), parse_datetime, false);
                 }
                 return cow.as_ref().into_bound_py_any(py);
             }
@@ -99,7 +98,7 @@ fn _yaml_to_python<'py>(
                 *style,
                 Some(tag_ref),
             ) {
-                return _yaml_to_python(
+                return to_python(
                     py,
                     &Yaml::Value(scalar),
                     parse_datetime,
@@ -109,7 +108,7 @@ fn _yaml_to_python<'py>(
 
             cow.as_ref().into_bound_py_any(py)
         }
-        Yaml::Tagged(tag, node) => _yaml_to_python(py, node, parse_datetime, is_str_tag(tag)),
+        Yaml::Tagged(tag, node) => to_python(py, node, parse_datetime, is_str_tag(tag)),
         Yaml::Alias(_) | Yaml::BadValue => Ok(py.None().into_bound(py)),
     }
 }
@@ -122,7 +121,7 @@ fn scalar<'py>(
     py: Python<'py>,
     scalar: &Scalar<'_>,
     parse_datetime: bool,
-    _tagged_string: bool,
+    tagged_string: bool,
 ) -> PyResult<Bound<'py, PyAny>> {
     // Core Schema: https://yaml.org/spec/1.2.2/#103-core-schema
     match scalar {
@@ -144,8 +143,8 @@ fn scalar<'py>(
                 _ => {}
             }
 
-            if parse_datetime && !_tagged_string {
-                match _parse_datetime(py, str_ref) {
+            if parse_datetime && !tagged_string {
+                match parse_py_datetime(py, str_ref) {
                     Ok(Some(dt)) => return Ok(dt),
                     Err(e) if e.is_instance_of::<PyValueError>(py) => return Err(e),
                     Err(_) | Ok(None) => {}
@@ -190,7 +189,7 @@ fn yaml_key<'py>(py: Python<'py>, key: &Yaml, parse_datetime: bool) -> PyResult<
                     py,
                     &[
                         yaml_key(py, k, parse_datetime)?,
-                        _yaml_to_python(py, v, parse_datetime, false)?,
+                        to_python(py, v, parse_datetime, false)?,
                     ],
                 )?;
                 items.append(tuple)?;
@@ -212,7 +211,7 @@ static TABLE: [u8; 256] = {
     table
 };
 
-fn _parse_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py, PyAny>>> {
+fn parse_py_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py, PyAny>>> {
     const SECS_IN_DAY: i32 = 86_400;
 
     let bytes = s.as_bytes();
@@ -325,10 +324,10 @@ fn _parse_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py, 
             // SAFETY: time_start + 5 < dt_end verified by condition,
             // and dt_end <= `bytes.len()`, so time_start + 5 is valid.
             if time_start + 5 < dt_end && *bytes.get_unchecked(time_start + 5) == b':' {
-                let _second = parse_digits(bytes, time_start + 6, 2) as u8;
+                let second = parse_digits(bytes, time_start + 6, 2) as u8;
                 // SAFETY: time_start + 8 < dt_end verified by condition,
                 // so time_start + 8 is a valid index.
-                let _microsecond =
+                let microsecond =
                     if time_start + 8 < dt_end && *bytes.get_unchecked(time_start + 8) == b'.' {
                         let frac_start = time_start + 9;
                         let frac_len = (dt_end - frac_start).min(6);
@@ -358,7 +357,7 @@ fn _parse_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py, 
                     } else {
                         0
                     };
-                (_second, _microsecond)
+                (second, microsecond)
             } else {
                 (0, 0)
             };
