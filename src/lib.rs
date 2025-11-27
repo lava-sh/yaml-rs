@@ -24,7 +24,7 @@ static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 create_exception!(yaml_rs, YAMLDecodeError, PyValueError);
 create_exception!(yaml_rs, YAMLEncodeError, PyTypeError);
 
-#[pyfunction(name = "load")]
+#[pyfunction(name = "_load")]
 fn load(
     py: Python,
     obj: &Bound<'_, PyAny>,
