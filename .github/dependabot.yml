@@ -1,16 +1,14 @@
 version: 2
 updates:
-  - package-ecosystem: "github-actions"
+  - package-ecosystem: "github-actions" # zizmor: ignore[dependabot-cooldown]
     directory: "/"
     schedule:
       interval: "weekly"
     target-branch: main
-    cooldown:
-      default-days: 4
-  - package-ecosystem: "cargo"
+
+  - package-ecosystem: "cargo" # zizmor: ignore[dependabot-cooldown]
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "cron"
+      cronjob: "0 12 * * *"
     target-branch: main
-    cooldown:
-      default-days: 4

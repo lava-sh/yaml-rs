@@ -44,7 +44,7 @@ dev = [
     "ruff == 0.14.7",
     "zizmor == 1.18.0",
     "typos == 1.40.0",
-    "rumdl == 0.0.183",
+    "rumdl == 0.0.185",
 ]
 bench = [
     "oyaml",
