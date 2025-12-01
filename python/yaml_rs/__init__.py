@@ -9,7 +9,7 @@ __all__ = (
 )
 
 from pathlib import Path
-from typing import Any, BinaryIO, TextIO
+from typing import Any, BinaryIO, Literal, TextIO
 
 from ._yaml_rs import (
     YAMLDecodeError,
@@ -29,7 +29,7 @@ def load(
     *,
     parse_datetime: bool = True,
     encoding: str | None = None,
-    encoder_errors: str | None = None,
+    encoder_errors: Literal["ignore", "replace", "strict"] | None = None,
 ) -> dict[str, Any] | list[dict[str, Any]]:
     return _load(
         fp,
