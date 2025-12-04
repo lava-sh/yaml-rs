@@ -44,6 +44,12 @@ YAML parse error at line 1, column 1
   | ^
 while scanning an anchor or alias, did not find expected alphabetic or numeric character""",
         ),
+        ("x: !!bool 1", "Invalid value '1' for '!!bool' tag"),
+        ("x: !!bool 3.14", "Invalid value '3.14' for '!!bool' tag"),
+        # ______________________________________________________
+        ("x: !!int true", "Invalid value 'true' for '!!int' tag"),
+        # _________________________________________
+        ("x: !!invalid", "Invalid tag: '!!invalid'"),
     ],
 )
 def test_yaml_loads_decode_error(bad_yaml: str, exc_msg: str) -> None:
@@ -619,8 +625,25 @@ def test_parse_datetime(yaml: str, parsed: Any) -> None:
          [{None: None}, {"Mark McGwire", "Sammy Sosa", "Ken Griffey"}]),
     ],
 )
-def test_parse(yaml: str, parsed: Any) -> None:
+def test_parse_yaml_spec_examples(yaml: str, parsed: Any) -> None:
     assert yaml_rs.loads(yaml) == _is_nan(parsed)
+
+
+@pytest.mark.parametrize(
+    ("yaml", "parsed"),
+    [
+        # This valid, because Core Schema tags on collections are ignored,
+        # since the syntax disallows any ambiguity in parsing.
+        ("x: !!bool [ 1, 2, 3 ]", {"x": [1, 2, 3]}),
+        # Also valid cases
+        ("x: !!null ~", {"x": None}),
+        ("x: !!null Null", {"x": None}),
+        ("x: !!null NULL", {"x": None}),
+        ("x: !!null null", {"x": None}),
+    ],
+)
+def test_parse_yaml_tags(yaml: str, parsed: Any) -> None:
+    assert yaml_rs.loads(yaml) == parsed
 
 
 @pytest.mark.parametrize("yaml", VALID_YAMLS)
