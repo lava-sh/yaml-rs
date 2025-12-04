@@ -1,6 +1,6 @@
 [package]
 name = "yaml-rs"
-version = "0.0.7"
+version = "0.0.8"
 edition = "2024"
 license = "Unlicense"
 repository = "https://github.com/lava-sh/yaml-rs"
