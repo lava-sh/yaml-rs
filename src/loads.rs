@@ -9,6 +9,8 @@ use pyo3::{
 };
 use saphyr::{Scalar, ScalarStyle, ScanError, Tag, Yaml};
 
+use crate::YAMLDecodeError;
+
 pub(crate) fn yaml_to_python<'py>(
     py: Python<'py>,
     docs: &[Yaml<'_>],
@@ -43,7 +45,9 @@ fn to_python<'py>(
             Ok(py_list.into_any())
         }
         Yaml::Mapping(mapping) => {
-            if mapping.is_empty() {
+            let len = mapping.len();
+
+            if len == 0 {
                 return Ok(PyDict::new(py).into_any());
             }
 
@@ -52,12 +56,11 @@ fn to_python<'py>(
                     a && (matches!(v, Yaml::Value(Scalar::Null))
                         || matches!(v, Yaml::Representation(cow, _, _) if cow.as_ref() == "~")),
                     h || (matches!(k, Yaml::Value(Scalar::Null))
-                        || matches!(k, Yaml::Representation(cow, _, _)
-                            if matches!(cow.as_ref(), "~" | "null" | "NULL" | "Null"))),
+                        || matches!(k, Yaml::Representation(cow, _, _) if null_tag_value(cow))),
                 )
             });
 
-            if all_nulls && !has_null_key {
+            if all_nulls && !has_null_key && len > 1 {
                 let py_set = PySet::empty(py)?;
                 for (k, _) in mapping {
                     py_set.add(yaml_key(py, k, parse_datetime)?)?;
@@ -81,32 +84,52 @@ fn to_python<'py>(
 
             if tag.is_none() {
                 if *style == ScalarStyle::Plain {
-                    let scalar = Scalar::parse_from_cow(Cow::Borrowed(cow.as_ref()));
+                    let scalar = Scalar::parse_from_cow(Cow::Borrowed(cow));
                     return to_python(py, &Yaml::Value(scalar), parse_datetime, false);
                 }
-                return cow.as_ref().into_bound_py_any(py);
+                return cow.into_bound_py_any(py);
             }
 
             let tag_ref = tag.as_ref().unwrap();
 
+            // ```yaml
+            // x: ! 15 # `15` must be string {"x": "15"}
+            // y: ! true # {"x": "true"}
+            // ```
             if tag_ref.handle.is_empty() && tag_ref.suffix == "!" {
-                return cow.as_ref().into_bound_py_any(py);
+                return cow.into_bound_py_any(py);
             }
 
-            if let Some(scalar) = Scalar::parse_from_cow_and_metadata(
-                Cow::Borrowed(cow.as_ref()),
-                *style,
-                Some(tag_ref),
-            ) {
-                return to_python(
-                    py,
-                    &Yaml::Value(scalar),
-                    parse_datetime,
-                    is_str_tag(tag_ref),
-                );
+            if tag_ref.is_yaml_core_schema() && *style == ScalarStyle::Plain {
+                if tag_ref.suffix == "null" && (cow.is_empty() || null_tag_value(cow)) {
+                    return Ok(py.None().into_bound(py));
+                }
+
+                if let Some(scalar) =
+                    Scalar::parse_from_cow_and_metadata(Cow::Borrowed(cow), *style, Some(tag_ref))
+                {
+                    return to_python(
+                        py,
+                        &Yaml::Value(scalar),
+                        parse_datetime,
+                        is_str_tag(tag_ref),
+                    );
+                }
+
+                let error_msg = if cow.is_empty() {
+                    format!("Invalid tag: '!!{suffix}'", suffix = tag_ref.suffix)
+                } else {
+                    format!(
+                        "Invalid value '{invalid}' for '!!{suffix}' tag",
+                        invalid = cow,
+                        suffix = tag_ref.suffix
+                    )
+                };
+
+                return Err(YAMLDecodeError::new_err(error_msg));
             }
 
-            cow.as_ref().into_bound_py_any(py)
+            cow.into_bound_py_any(py)
         }
         Yaml::Tagged(tag, node) => to_python(py, node, parse_datetime, is_str_tag(tag)),
         Yaml::Alias(_) | Yaml::BadValue => Ok(py.None().into_bound(py)),
@@ -115,6 +138,10 @@ fn to_python<'py>(
 
 fn is_str_tag(tag: &Tag) -> bool {
     tag.is_yaml_core_schema() && tag.suffix == "str"
+}
+
+fn null_tag_value(value: &str) -> bool {
+    matches!(value, "~" | "null" | "NULL" | "Null")
 }
 
 fn scalar<'py>(
@@ -158,21 +185,19 @@ fn scalar<'py>(
 fn yaml_key<'py>(py: Python<'py>, key: &Yaml, parse_datetime: bool) -> PyResult<Bound<'py, PyAny>> {
     match key {
         Yaml::Value(scalar) => match scalar {
-            Scalar::String(str) => str.as_ref().into_bound_py_any(py),
+            Scalar::String(str) => str.into_bound_py_any(py),
             Scalar::Integer(int) => int.into_bound_py_any(py),
             Scalar::FloatingPoint(float) => float.into_inner().into_bound_py_any(py),
             Scalar::Boolean(bool) => bool.into_bound_py_any(py),
             Scalar::Null => Ok(py.None().into_bound(py)),
         },
         Yaml::Representation(cow, style, tag) => {
-            if let Some(s) = Scalar::parse_from_cow_and_metadata(
-                Cow::Borrowed(cow.as_ref()),
-                *style,
-                tag.as_ref(),
-            ) {
+            if let Some(s) =
+                Scalar::parse_from_cow_and_metadata(Cow::Borrowed(cow), *style, tag.as_ref())
+            {
                 scalar(py, &s, parse_datetime, false)
             } else {
-                cow.as_ref().into_bound_py_any(py)
+                cow.into_bound_py_any(py)
             }
         }
         Yaml::Sequence(sequence) => {
