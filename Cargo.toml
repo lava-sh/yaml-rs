@@ -25,8 +25,11 @@ encoding_rs = { version = "0.8.35", features = ["simd-accel"] }
 simdutf8 = { version = "0.1.5", features = ["aarch64_neon_prefetch"] }
 mimalloc = { version = "0.1.48", features = ["v3", "override"], optional = true }
 
-# `encoding_rs` has no support this target
+# `encoding_rs` has no support this targets
 [target.armv7-unknown-linux-musleabihf.dependencies]
+encoding_rs = { version = "0.8.35", features = [] }
+
+[target.armv7-unknown-linux-gnueabihf.dependencies]
 encoding_rs = { version = "0.8.35", features = [] }
 
 [features]
