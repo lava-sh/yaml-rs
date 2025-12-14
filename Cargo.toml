@@ -27,7 +27,7 @@ mimalloc = { version = "0.1.48", features = ["v3", "override"], optional = true 
 
 # `encoding_rs` has no support this target
 [target.armv7-unknown-linux-musleabihf.dependencies]
-encoding_rs = "0.8.35"
+encoding_rs = { version = "0.8.35", features = [] }
 
 [features]
 default = []
