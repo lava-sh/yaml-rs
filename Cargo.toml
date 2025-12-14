@@ -20,8 +20,9 @@ itoa = "1.0.15"
 saphyr = "0.0.6"
 saphyr-parser = "0.0.6"
 ordered-float = "5.1.0"
-encoding_rs = { version = "0.8.35", features = ["simd-accel"] }
 memchr = { version = "2", default-features = false }
+encoding_rs = { version = "0.8.35", features = ["simd-accel"] }
+simdutf8 = { version = "0.1.5", features = ["aarch64_neon_prefetch"] }
 mimalloc = { version = "0.1.48", features = ["v3", "override"], optional = true }
 
 [features]
