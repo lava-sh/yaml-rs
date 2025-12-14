@@ -4,6 +4,7 @@ use std::{
 };
 
 use simdutf8::basic::from_utf8;
+
 pub fn encode<'a>(
     data: &'a [u8],
     encoding: Option<&str>,
