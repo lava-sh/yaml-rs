@@ -2,6 +2,7 @@ use std::{
     borrow::Cow,
     io::{Error, ErrorKind},
 };
+
 use simdutf8::basic::from_utf8;
 pub fn encode<'a>(
     data: &'a [u8],
