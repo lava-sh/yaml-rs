@@ -79,7 +79,7 @@ def test_yaml_loads_type_error(bad: str, exc_msg: str) -> None:
             b"\xff\xfe",
             "utf-8",
             "strict",
-            "failed to encode bytes: invalid utf-8 sequence of 1 bytes from index 0",
+            "failed to encode bytes: invalid utf-8 sequence",
         ),
         (b"test", "utf-8", "qsfasf", "invalid decoder: qsfasf"),
         (b"test", "asdfas", None, "invalid encoding: asdfas"),

@@ -1,8 +1,9 @@
 use std::{
     borrow::Cow,
     io::{Error, ErrorKind},
-    str::from_utf8,
 };
+
+use simdutf8::basic::from_utf8;
 
 pub fn encode<'a>(
     data: &'a [u8],
