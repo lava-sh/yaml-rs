@@ -1,6 +1,6 @@
 [package]
 name = "yaml-rs"
-version = "0.0.9"
+version = "0.0.10"
 edition = "2024"
 license = "Unlicense"
 repository = "https://github.com/lava-sh/yaml-rs"
@@ -16,7 +16,7 @@ pyo3 = { version = "0.27.2", features = [
     "extension-module",
 ] }
 atoi = "2.0.0"
-itoa = "1.0.15"
+itoa = "1.0.16"
 saphyr = "0.0.6"
 saphyr-parser = "0.0.6"
 ordered-float = "5.1.0"

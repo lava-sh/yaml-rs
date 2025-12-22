@@ -1,13 +1,14 @@
 use std::borrow::Cow;
 
 use atoi::atoi;
+use memchr::{memchr, memchr3};
 use pyo3::{
     IntoPyObjectExt,
     exceptions::PyValueError,
     prelude::*,
     types::{PyDate, PyDateTime, PyDelta, PyDict, PyFrozenSet, PyList, PySet, PyTuple, PyTzInfo},
 };
-use saphyr::{Scalar, ScalarStyle, ScanError, Tag, Yaml};
+use saphyr::{Scalar, ScalarStyle, Tag, Yaml};
 
 use crate::YAMLDecodeError;
 
@@ -238,6 +239,14 @@ static TABLE: [u8; 256] = {
 
 fn parse_py_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py, PyAny>>> {
     const SECS_IN_DAY: i32 = 86_400;
+    const SEP: u8 = b':';
+    const WHITESPACE: u8 = b' ';
+    const T: u8 = b'T';
+    const LOWER_T: u8 = b't';
+    const Z: u8 = b'Z';
+    const LOWER_Z: u8 = b'z';
+    const PLUS: u8 = b'+';
+    const MINUS: u8 = b'-';
 
     let bytes = s.as_bytes();
 
@@ -248,7 +257,7 @@ fn parse_py_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py
     //                     ^        ^
     // index:              4        7
     // SAFETY: `bytes.len()` >= 10 verified above, so indices 4 and 7 are valid.
-    if unsafe { !(*bytes.get_unchecked(4) == b'-' && *bytes.get_unchecked(7) == b'-') } {
+    if unsafe { !(*bytes.get_unchecked(4) == SEP && *bytes.get_unchecked(7) == SEP) } {
         return Ok(None);
     }
     // SAFETY: `bytes.len()` >= 10 and date format verified above.
@@ -261,7 +270,7 @@ fn parse_py_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py
         return Ok(Some(PyDate::new(py, year, month, day)?.into_any()));
     }
 
-    let sep_pos = match memchr::memchr3(b'T', b't', b' ', &bytes[10..]).map(|pos| pos + 10) {
+    let sep_pos = match memchr3(T, LOWER_T, WHITESPACE, &bytes[10..]).map(|pos| pos + 10) {
         Some(pos) => pos,
         None => return Ok(None),
     };
@@ -274,12 +283,12 @@ fn parse_py_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py
         let b = unsafe { *bytes.get_unchecked(i) };
 
         match b {
-            b'Z' => {
+            Z => {
                 let mut actual_dt_end = i;
                 // SAFETY: Loop condition ensures actual_dt_end > sep_pos + 1,
                 // so actual_dt_end - 1 >= sep_pos + 1 > 0, making it a valid index.
                 while actual_dt_end > sep_pos + 1
-                    && unsafe { *bytes.get_unchecked(actual_dt_end - 1) } == b' '
+                    && unsafe { *bytes.get_unchecked(actual_dt_end - 1) } == WHITESPACE
                 {
                     actual_dt_end -= 1;
                 }
@@ -287,12 +296,13 @@ fn parse_py_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py
                 tz_start = Some(i);
                 break;
             }
-            b'+' => {
+            LOWER_Z => return Ok(None),
+            PLUS => {
                 let mut actual_dt_end = i;
                 // SAFETY: Loop condition ensures actual_dt_end > sep_pos + 1,
                 // so actual_dt_end - 1 is a valid index.
                 while actual_dt_end > sep_pos + 1
-                    && unsafe { *bytes.get_unchecked(actual_dt_end - 1) } == b' '
+                    && unsafe { *bytes.get_unchecked(actual_dt_end - 1) } == WHITESPACE
                 {
                     actual_dt_end -= 1;
                 }
@@ -300,11 +310,13 @@ fn parse_py_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py
                 tz_start = Some(i);
                 break;
             }
-            b'-' if i > 10 => {
+            MINUS if i > 10 => {
                 let mut check_pos = i - 1;
                 // SAFETY: Loop condition ensures check_pos > sep_pos >= 0,
                 // making check_pos a valid index.
-                while check_pos > sep_pos && unsafe { *bytes.get_unchecked(check_pos) } == b' ' {
+                while check_pos > sep_pos
+                    && unsafe { *bytes.get_unchecked(check_pos) } == WHITESPACE
+                {
                     check_pos -= 1;
                 }
                 // SAFETY: check_pos > sep_pos verified by loop condition above,
@@ -316,7 +328,7 @@ fn parse_py_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py
                     // SAFETY: Loop condition ensures actual_dt_end > sep_pos + 1,
                     // so actual_dt_end - 1 is a valid index.
                     while actual_dt_end > sep_pos + 1
-                        && unsafe { *bytes.get_unchecked(actual_dt_end - 1) } == b' '
+                        && unsafe { *bytes.get_unchecked(actual_dt_end - 1) } == WHITESPACE
                     {
                         actual_dt_end -= 1;
                     }
@@ -325,7 +337,6 @@ fn parse_py_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py
                     break;
                 }
             }
-            b'z' => return Ok(None),
             _ => {}
         }
     }
@@ -333,7 +344,7 @@ fn parse_py_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py
     let time_start = sep_pos + 1;
     // SAFETY: time_start + 2 < dt_end verified by the condition,
     // and dt_end <= `bytes.len()`, so time_start + 2 is a valid index.
-    if time_start + 5 > dt_end || unsafe { *bytes.get_unchecked(time_start + 2) } != b':' {
+    if time_start + 5 > dt_end || unsafe { *bytes.get_unchecked(time_start + 2) } != SEP {
         return Ok(None);
     }
 
@@ -348,7 +359,7 @@ fn parse_py_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py
         let (second, microsecond) =
             // SAFETY: time_start + 5 < dt_end verified by condition,
             // and dt_end <= `bytes.len()`, so time_start + 5 is valid.
-            if time_start + 5 < dt_end && *bytes.get_unchecked(time_start + 5) == b':' {
+            if time_start + 5 < dt_end && *bytes.get_unchecked(time_start + 5) == SEP {
                 let second = parse_digits(bytes, time_start + 6, 2) as u8;
                 // SAFETY: time_start + 8 < dt_end verified by condition,
                 // so time_start + 8 is a valid index.
@@ -367,7 +378,7 @@ fn parse_py_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py
                                 // SAFETY: i < frac_len and frac_len <= dt_end - frac_start,
                                 // so frac_start + i < dt_end <= `bytes.len()`.
                                 let byte = *bytes.get_unchecked(frac_start + i);
-                                if byte == b' ' {
+                                if byte == WHITESPACE {
                                     return Ok(None);
                                 }
                                 let digit = TABLE[byte as usize];
@@ -391,7 +402,9 @@ fn parse_py_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py
             let mut tz_actual_start = tz_pos;
             // SAFETY: Loop increments tz_actual_start while checking it's < `bytes.len()`,
             // ensuring all accesses are within bounds.
-            while tz_actual_start < bytes.len() && *bytes.get_unchecked(tz_actual_start) == b' ' {
+            while tz_actual_start < bytes.len()
+                && *bytes.get_unchecked(tz_actual_start) == WHITESPACE
+            {
                 tz_actual_start += 1;
             }
 
@@ -405,38 +418,37 @@ fn parse_py_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py
             let first_byte = *tz_bytes.get_unchecked(0);
 
             match first_byte {
-                b'Z' => Some(PyTzInfo::utc(py)?.to_owned()),
-                b'+' | b'-' => {
-                    let sign = if first_byte == b'+' { 1 } else { -1 };
+                Z => Some(PyTzInfo::utc(py)?.to_owned()),
+                PLUS | MINUS => {
+                    let sign = if first_byte == PLUS { 1 } else { -1 };
                     let offset_bytes = &tz_bytes[1..];
 
-                    let (hours, minutes) =
-                        if let Some(colon_pos) = memchr::memchr(b':', offset_bytes) {
-                            let h = atoi::<i32>(&offset_bytes[..colon_pos]).ok_or_else(|| {
-                                PyErr::new::<PyValueError, _>("Invalid timezone hour")
-                            })?;
-                            let m = if colon_pos + 1 < offset_bytes.len() {
-                                atoi::<i32>(&offset_bytes[colon_pos + 1..]).unwrap_or(0)
-                            } else {
-                                0
-                            };
-                            (h, m)
-                        } else if offset_bytes.len() <= 2 {
-                            let h = atoi::<i32>(offset_bytes).ok_or_else(|| {
-                                PyErr::new::<PyValueError, _>("Invalid timezone hour")
-                            })?;
-                            (h, 0)
+                    let (hours, minutes) = if let Some(colon_pos) = memchr(SEP, offset_bytes) {
+                        let h = atoi::<i32>(&offset_bytes[..colon_pos]).ok_or_else(|| {
+                            PyErr::new::<PyValueError, _>("Invalid timezone hour")
+                        })?;
+                        let m = if colon_pos + 1 < offset_bytes.len() {
+                            atoi::<i32>(&offset_bytes[colon_pos + 1..]).unwrap_or(0)
                         } else {
-                            // SAFETY: `offset_bytes.len()` > 2 verified by else branch,
-                            // so indices 0..2 and potentially 2..4 are valid.
-                            let h = parse_digits(offset_bytes, 0, 2).cast_signed();
-                            let m = if offset_bytes.len() >= 4 {
-                                parse_digits(offset_bytes, 2, 2).cast_signed()
-                            } else {
-                                0
-                            };
-                            (h, m)
+                            0
                         };
+                        (h, m)
+                    } else if offset_bytes.len() <= 2 {
+                        let h = atoi::<i32>(offset_bytes).ok_or_else(|| {
+                            PyErr::new::<PyValueError, _>("Invalid timezone hour")
+                        })?;
+                        (h, 0)
+                    } else {
+                        // SAFETY: `offset_bytes.len()` > 2 verified by else branch,
+                        // so indices 0..2 and potentially 2..4 are valid.
+                        let h = parse_digits(offset_bytes, 0, 2).cast_signed();
+                        let m = if offset_bytes.len() >= 4 {
+                            parse_digits(offset_bytes, 2, 2).cast_signed()
+                        } else {
+                            0
+                        };
+                        (h, m)
+                    };
 
                     let total_seconds = sign * (hours * 3600 + minutes * 60);
                     let days = total_seconds.div_euclid(SECS_IN_DAY);
@@ -525,76 +537,4 @@ unsafe fn parse_digits(bytes: &[u8], start: usize, count: usize) -> u32 {
         }
     }
     d
-}
-
-pub(crate) fn format_error(source: &str, error: &ScanError) -> String {
-    let marker = error.marker();
-    let line = marker.line();
-    let col = marker.col() + 1;
-    let gutter = line.to_string().len();
-
-    let error_len = error.info().len();
-    let base_len = 50;
-    let line_len = itoa::Buffer::new().format(line).len();
-    let col_len = itoa::Buffer::new().format(col).len();
-
-    let error_line = source.lines().nth(line - 1);
-
-    let total_len = base_len
-        + line_len
-        + col_len
-        + error_len
-        + if let Some(error_line) = error_line {
-            gutter + 3 + line_len + 3 + error_line.len() + 1 + gutter + 2 + marker.col() + 3 + 1
-        } else {
-            0
-        };
-
-    let mut err = String::with_capacity(total_len);
-
-    err.push_str("YAML parse error at line ");
-    err.push_str(itoa::Buffer::new().format(line));
-    err.push_str(", column ");
-    err.push_str(itoa::Buffer::new().format(col));
-    err.push('\n');
-
-    if let Some(error_line) = error_line {
-        unsafe {
-            // SAFETY: We only push valid ASCII bytes (spaces, '|', '\n') to the Vec<u8>.
-            // String's UTF-8 invariant is maintained because all bytes are valid UTF-8.
-            let bytes = err.as_mut_vec();
-            bytes.reserve(gutter + 3);
-            for _ in 0..gutter {
-                bytes.push(b' ');
-            }
-            bytes.push(b' ');
-            bytes.push(b'|');
-            bytes.push(b'\n');
-        }
-        err.push_str(itoa::Buffer::new().format(line));
-        err.push_str(" | ");
-        err.push_str(error_line);
-        err.push('\n');
-        unsafe {
-            // SAFETY: We only push valid ASCII bytes (spaces, '|', '^', '\n') to the Vec<u8>.
-            // All ASCII bytes are valid UTF-8, so String's invariant is preserved.
-            let bytes = err.as_mut_vec();
-            let spaces = gutter + 2 + marker.col();
-            bytes.reserve(spaces + 3);
-
-            for _ in 0..gutter {
-                bytes.push(b' ');
-            }
-            bytes.push(b' ');
-            bytes.push(b'|');
-            for _ in 0..marker.col() {
-                bytes.push(b' ');
-            }
-            bytes.push(b' ');
-            bytes.push(b'^');
-            bytes.push(b'\n');
-        }
-    }
-    err.push_str(error.info());
-    err
 }

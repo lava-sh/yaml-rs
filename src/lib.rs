@@ -1,5 +1,6 @@
 mod decoder;
 mod dumps;
+mod format_error;
 mod loads;
 
 use std::borrow::Cow;
@@ -12,9 +13,7 @@ use pyo3::{
 };
 
 use crate::{
-    decoder::encode,
-    dumps::python_to_yaml,
-    loads::{format_error, yaml_to_python},
+    decoder::encode, dumps::python_to_yaml, format_error::format_error, loads::yaml_to_python,
 };
 
 #[cfg(feature = "mimalloc")]
