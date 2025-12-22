@@ -37,14 +37,19 @@ classifiers = [
 ]
 
 [dependency-groups]
-dev = [
+typos = ["typos == 1.40.0"]
+zizmor = ["zizmor == 1.19.0"]
+ci = [
     "pytest == 9.0.2",
     "dirty-equals == 0.11.0",
     "maturin == 1.10.2",
     "ruff == 0.14.9",
-    "zizmor == 1.18.0",
-    "typos == 1.40.0",
     "rumdl == 0.0.194",
+]
+dev = [
+    {include-group = "ci"},
+    {include-group = "typos"},
+    {include-group = "zizmor"},
 ]
 bench = [
     "oyaml",
