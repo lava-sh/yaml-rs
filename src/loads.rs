@@ -257,7 +257,7 @@ fn parse_py_datetime<'py>(py: Python<'py>, s: &str) -> PyResult<Option<Bound<'py
     //                     ^        ^
     // index:              4        7
     // SAFETY: `bytes.len()` >= 10 verified above, so indices 4 and 7 are valid.
-    if unsafe { !(*bytes.get_unchecked(4) == SEP && *bytes.get_unchecked(7) == SEP) } {
+    if unsafe { !(*bytes.get_unchecked(4) == MINUS && *bytes.get_unchecked(7) == MINUS) } {
         return Ok(None);
     }
     // SAFETY: `bytes.len()` >= 10 and date format verified above.
