@@ -70,7 +70,7 @@ jobs:
          enable-cache: ${{ !startsWith(github.ref, 'refs/tags/') }} # zizmor: ignore[cache-poisoning]
      - name: "Install zizmor"
        run: |
-         uv pip install --group zizmor
+         uv pip install --group zizmor --system
      - name: "Run zizmor"
        run: |
          zizmor .github/
@@ -91,7 +91,7 @@ jobs:
           enable-cache: ${{ !startsWith(github.ref, 'refs/tags/') }} # zizmor: ignore[cache-poisoning]
       - name: "Install typos"
         run: |
-          uv pip install --group typos
+          uv pip install --group typos --system
       - name: "Run typos"
         run: |
           typos --config .typos.toml
