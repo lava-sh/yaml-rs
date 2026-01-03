@@ -23,7 +23,17 @@ ordered-float = "5.1.0"
 memchr = { version = "2", default-features = false }
 encoding_rs = "0.8.35"
 simdutf8 = { version = "0.1.5", features = ["aarch64_neon_prefetch"] }
-mimalloc = { version = "0.1.48", features = ["v3", "override"], optional = true }
+
+[dependencies.mimalloc]
+optional = true
+version = "0.1.48"
+features = [
+    # mimalloc v3
+    # See: https://github.com/microsoft/mimalloc/tree/dev3?tab=readme-ov-file#branches
+    "v3",
+    "override",
+    "local_dynamic_tls",
+]
 
 [features]
 default = []
