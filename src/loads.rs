@@ -10,7 +10,7 @@ use pyo3::{
 };
 use saphyr::{Scalar, ScalarStyle, Tag, Yaml};
 
-use crate::yaml_rs::YAMLDecodeError;
+use crate::YAMLDecodeError;
 
 pub(crate) fn yaml_to_python<'py>(
     py: Python<'py>,

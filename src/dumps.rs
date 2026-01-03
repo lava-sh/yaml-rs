@@ -12,7 +12,7 @@ use pyo3::{
 };
 use saphyr::{MappingOwned, ScalarOwned, YamlOwned, YamlOwned::Value};
 
-use crate::yaml_rs::YAMLEncodeError;
+use crate::YAMLEncodeError;
 
 pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
     if let Ok(str) = obj.cast::<PyString>() {

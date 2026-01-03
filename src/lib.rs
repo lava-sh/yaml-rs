@@ -7,21 +7,20 @@ mod loads;
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
+use pyo3::exceptions;
+
+pyo3::create_exception!(yaml_rs, YAMLDecodeError, exceptions::PyValueError);
+pyo3::create_exception!(yaml_rs, YAMLEncodeError, exceptions::PyTypeError);
+
 #[pyo3::pymodule(name = "_yaml_rs")]
 mod yaml_rs {
     use std::borrow::Cow;
 
-    use pyo3::{
-        create_exception,
-        exceptions::{PyTypeError, PyValueError},
-        prelude::*,
-        types::PyString,
-    };
+    use pyo3::{prelude::*, types::PyString};
 
+    #[pymodule_export]
+    use super::{YAMLDecodeError, YAMLEncodeError};
     use crate::{decoder, dumps, format_error::format_error, loads};
-
-    create_exception!(yaml_rs, YAMLDecodeError, PyValueError);
-    create_exception!(yaml_rs, YAMLEncodeError, PyTypeError);
 
     #[pymodule_export]
     #[allow(non_upper_case_globals)]
