@@ -12,6 +12,8 @@ use pyo3::{
 };
 use saphyr::{MappingOwned, ScalarOwned, YamlOwned, YamlOwned::Value};
 
+use crate::YAMLEncodeError;
+
 pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
     if let Ok(str) = obj.cast::<PyString>() {
         return Ok(Value(ScalarOwned::String(
@@ -163,7 +165,7 @@ pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
         }
         return Ok(YamlOwned::Mapping(mapping));
     }
-    Err(crate::YAMLEncodeError::new_err(format!(
+    Err(YAMLEncodeError::new_err(format!(
         "Cannot serialize {obj_type} ({obj_repr}) to YAML",
         obj_type = obj.get_type(),
         obj_repr = obj
