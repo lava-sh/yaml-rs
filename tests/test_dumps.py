@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 import yaml_rs
 
-from tests import VALID_YAMLS, normalize_yaml
+from .helpers import VALID_YAMLS, normalize_yaml
 
 if sys.version_info >= (3, 11):
     from datetime import UTC

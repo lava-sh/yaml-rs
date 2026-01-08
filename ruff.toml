@@ -3,8 +3,8 @@ target-version = "py310"
 line-length = 90
 
 include = [
-    "src/**.py",
-    "src/**.pyi",
+    "python/**.py",
+    "python/**.pyi",
     "tests/**.py",
     "examples/**.py",
     "benchmark/**.py",
@@ -34,8 +34,9 @@ ignore = [
     "CPY001",
     "S101",
     "ARG001",
-    "PLR6201",
     "PLR2004",
+    "PLR6201",
+    "ISC004",
 ]
 
 [lint.extend-per-file-ignores]
