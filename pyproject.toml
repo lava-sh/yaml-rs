@@ -1,5 +1,5 @@
 [build-system]
-requires = ["maturin == 1.10.2"]
+requires = ["maturin == 1.11.4"]
 build-backend = "maturin"
 
 [tool.maturin]
@@ -37,14 +37,14 @@ classifiers = [
 ]
 
 [dependency-groups]
-typos = ["typos == 1.40.0"]
-zizmor = ["zizmor == 1.19.0"]
+typos = ["typos == 1.42.0"]
+zizmor = ["zizmor == 1.20.0"]
 ci = [
     "pytest == 9.0.2",
     "dirty-equals == 0.11.0",
-    "maturin == 1.10.2",
-    "ruff == 0.14.9",
-    "rumdl == 0.0.194",
+    "maturin == 1.11.4",
+    "ruff == 0.14.11",
+    "rumdl == 0.0.212",
 ]
 dev = [
     {include-group = "ci"},
