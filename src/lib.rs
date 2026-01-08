@@ -23,8 +23,7 @@ mod yaml_rs {
     use crate::{decoder, dumps, format_error::format_error, loads};
 
     #[pymodule_export]
-    #[allow(non_upper_case_globals)]
-    const _version: &str = env!("CARGO_PKG_VERSION");
+    const _VERSION: &str = env!("CARGO_PKG_VERSION");
 
     #[pyfunction(name = "_load")]
     fn load(
