@@ -1,2 +1,5 @@
 [toolchain]
+# TOML v1.1.0 support is already available in nightly.
+# IDK what the minimum version is, but it's already available in "nightly-2026-01-08",
+# so we'll consider that the minimum version.
 channel = "nightly"
