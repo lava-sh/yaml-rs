@@ -163,7 +163,7 @@ jobs:
       - name: "latest"
         run: |
           mkdir -p /tmp/__build
-          cp -r python src Cargo.toml Cargo.lock pyproject.toml README.md /tmp/__build/
+          cp -r python src Cargo.toml pyproject.toml README.md /tmp/__build/
           
           docker run --rm \
             -v /tmp/__build:/app \
