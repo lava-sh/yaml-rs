@@ -11,29 +11,38 @@ name = "_yaml_rs"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.27.2", features = [
-    "generate-import-lib",
-    "extension-module",
-] }
+pyo3 = {
+    version = "0.27.2",
+    features = [
+        "generate-import-lib",
+        "extension-module",
+    ],
+}
 atoi = "2.0.0"
 itoa = "1.0.17"
 saphyr = "0.0.6"
 saphyr-parser = "0.0.6"
 ordered-float = "5.1.0"
-memchr = { version = "2", default-features = false }
+memchr = {
+    version = "2",
+    default-features = false,
+}
 encoding_rs = "0.8.35"
-simdutf8 = { version = "0.1.5", features = ["aarch64_neon_prefetch"] }
-
-[dependencies.mimalloc]
-optional = true
-version = "0.1.48"
-features = [
-    # mimalloc v3
-    # See: https://github.com/microsoft/mimalloc/tree/dev3?tab=readme-ov-file#branches
-    "v3",
-    "override",
-    "local_dynamic_tls",
-]
+simdutf8 = {
+    version = "0.1.5",
+    features = ["aarch64_neon_prefetch"],
+}
+mimalloc = {
+    version = "0.1.48",
+    optional = true,
+    features = [
+        # mimalloc v3
+        # See: https://github.com/microsoft/mimalloc/tree/dev3?tab=readme-ov-file#branches
+        "v3",
+        "override",
+        "local_dynamic_tls",
+    ],
+}
 
 [features]
 default = []
