@@ -2,3 +2,4 @@
 venv/
 target/
 uv.lock
+Cargo.lock
