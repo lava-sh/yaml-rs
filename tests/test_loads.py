@@ -2,7 +2,7 @@ import json
 import sys
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import pytest
 import yaml_rs
@@ -43,6 +43,29 @@ YAML parse error at line 1, column 1
 1 | *
   | ^
 while scanning an anchor or alias, did not find expected alphabetic or numeric character""",
+        ),
+        # Test case 4H7K: extra closing bracket is an error
+        (
+            "[ a, b, c ] ]",
+            """\
+YAML parse error at line 1, column 13
+  |
+1 | [ a, b, c ] ]
+  |             ^
+misplaced bracket""",
+        ),
+        # Test case BS4K: comment intercepts multiline content
+        (
+                """\
+word1  # comment
+word2
+                """,
+                """\
+YAML parse error at line 1, column 8
+  |
+1 | word1  # comment
+  |        ^
+comment intercepting the multiline text""",
         ),
         ("x: !!bool 1", "Invalid value '1' for '!!bool' tag"),
         ("x: !!bool 3.14", "Invalid value '3.14' for '!!bool' tag"),
@@ -105,7 +128,7 @@ def test_yaml_loads_type_error(bad: str, exc_msg: str) -> None:
 def test_yaml_load_encoding_errors(
         data: Any,
         encoding: str,
-        encoder_errors: str,
+        encoder_errors: Literal["ignore", "replace", "strict"] | None,
         expected_error: str,
 ) -> None:
     with pytest.raises(yaml_rs.YAMLDecodeError) as exc_info:
@@ -623,6 +646,15 @@ def test_parse_datetime(yaml: str, parsed: Any) -> None:
          "? Sammy Sosa\n"
          "? Ken Griffey",
          [{None: None}, {"Mark McGwire", "Sammy Sosa", "Ken Griffey"}]),
+        # https://github.com/saphyr-rs/saphyr/issues/84
+        (
+            """
+            hello:
+              world: this is a string
+                --- still a string
+            """,
+            {"hello": {"world": "this is a string --- still a string"}},
+        ),
     ],
 )
 def test_parse_yaml_spec_examples(yaml: str, parsed: Any) -> None:

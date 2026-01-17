@@ -17,12 +17,20 @@ pyo3 = { version = "0.27.2", features = [
 ] }
 atoi = "2.0.0"
 itoa = "1.0.17"
-saphyr = "0.0.6"
-saphyr-parser = "0.0.6"
 ordered-float = "5.1.0"
 memchr = { version = "2", default-features = false }
 encoding_rs = "0.8.35"
 simdutf8 = { version = "0.1.5", features = ["aarch64_neon_prefetch"] }
+
+# https://github.com/bourumir-wyngs/saphyr/tree/dev/saphyr-parser
+[dependencies.saphyr]
+git = "https://github.com/bourumir-wyngs/saphyr"
+rev = "467ef9aa750faa6cffed06c4e4cc35c59c2a78bd"
+
+[dependencies.saphyr-parser]
+package = "saphyr-parser-bw"
+git = "https://github.com/bourumir-wyngs/saphyr"
+rev = "467ef9aa750faa6cffed06c4e4cc35c59c2a78bd"
 
 [dependencies.mimalloc]
 optional = true
