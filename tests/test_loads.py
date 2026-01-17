@@ -2,6 +2,7 @@ import json
 import sys
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+from textwrap import dedent
 from typing import Any, Literal
 
 import pytest
@@ -47,27 +48,25 @@ while scanning an anchor or alias, did not find expected alphabetic or numeric c
         # Test case 4H7K: extra closing bracket is an error
         (
             "[ a, b, c ] ]",
-            """
+            """\
 YAML parse error at line 1, column 13
   |
 1 | [ a, b, c ] ]
   |             ^
-misplaced bracket
-            """,
+misplaced bracket""",
         ),
         # Test case BS4K: comment intercepts multiline content
         (
-                """
+                """\
 word1  # comment
 word2
                 """,
-                """
+                """\
 YAML parse error at line 1, column 8
   |
 1 | word1  # comment
   |        ^
-comment intercepting the multiline text
-                """,
+comment intercepting the multiline text""",
         ),
         ("x: !!bool 1", "Invalid value '1' for '!!bool' tag"),
         ("x: !!bool 3.14", "Invalid value '3.14' for '!!bool' tag"),
