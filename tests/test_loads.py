@@ -55,6 +55,7 @@ YAML parse error at line 1, column 13
 misplaced bracket
             """,
         ),
+        # Test case BS4K: comment intercepts multiline content
         (
                 """
 word1  # comment
