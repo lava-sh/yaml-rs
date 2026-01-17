@@ -22,14 +22,15 @@ memchr = { version = "2", default-features = false }
 encoding_rs = "0.8.35"
 simdutf8 = { version = "0.1.5", features = ["aarch64_neon_prefetch"] }
 
+# https://github.com/bourumir-wyngs/saphyr/tree/dev/saphyr-parser
 [dependencies.saphyr]
 git = "https://github.com/bourumir-wyngs/saphyr"
-rev = "0bdcc5fd58f8488a6837266f0e31adc2e01f9ee0"
+rev = "467ef9aa750faa6cffed06c4e4cc35c59c2a78bd"
 
 [dependencies.saphyr-parser]
 package = "saphyr-parser-bw"
 git = "https://github.com/bourumir-wyngs/saphyr"
-rev = "0bdcc5fd58f8488a6837266f0e31adc2e01f9ee0"
+rev = "467ef9aa750faa6cffed06c4e4cc35c59c2a78bd"
 
 [dependencies.mimalloc]
 optional = true
