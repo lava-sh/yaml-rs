@@ -23,8 +23,12 @@ dt = datetime(2001, 12, 14, 21, 59, 43, 100000, tzinfo=_tzinfo)
     [
         (
             "[ [ [ [",
-            "YAML parse error at line 2, column 1\n"
-            "while parsing a node, did not find expected node content",
+            """\
+YAML parse error at line 1, column 7
+  |
+1 | [ [ [ [
+  |       ^
+unclosed bracket '['""",
         ),
         (
             'name: "unclosed',
@@ -33,7 +37,7 @@ YAML parse error at line 1, column 7
   |
 1 | name: "unclosed
   |       ^
-while scanning a quoted scalar, found unexpected end of stream""",
+unclosed quote""",
         ),
         (
             "*",
