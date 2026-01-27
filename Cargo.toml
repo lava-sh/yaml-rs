@@ -25,12 +25,12 @@ simdutf8 = { version = "0.1.5", features = ["aarch64_neon_prefetch"] }
 # https://github.com/bourumir-wyngs/saphyr/tree/dev/saphyr-parser
 [dependencies.saphyr]
 git = "https://github.com/bourumir-wyngs/saphyr"
-rev = "aee7745984d9dd83136f863403acd800ba1dc986"
+rev = "7961e44d50f876283c1417dd147cd00a0d30535c"
 
 [dependencies.saphyr-parser]
 package = "saphyr-parser-bw"
 git = "https://github.com/bourumir-wyngs/saphyr"
-rev = "aee7745984d9dd83136f863403acd800ba1dc986"
+rev = "7961e44d50f876283c1417dd147cd00a0d30535c"
 
 [dependencies.mimalloc]
 optional = true
