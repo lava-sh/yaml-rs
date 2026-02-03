@@ -2,6 +2,7 @@
 extend-exclude = [
     "benchmark/data/bench.yaml",
     "tests/data/yaml-test-suite/*.yaml",
+    "ruff.toml",
 ]
 
 [default.extend-words]
