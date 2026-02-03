@@ -37,14 +37,14 @@ classifiers = [
 ]
 
 [dependency-groups]
-typos = ["typos == 1.42.3"]
+typos = ["typos == 1.43.0"]
 zizmor = ["zizmor == 1.22.0"]
 ci = [
     "pytest == 9.0.2",
     "dirty-equals == 0.11.0",
     "maturin == 1.11.5",
-    "ruff == 0.14.14",
-    "rumdl == 0.1.8",
+    "ruff == 0.15.0",
+    "rumdl == 0.1.11",
 ]
 dev = [
     { include-group = "ci" },
