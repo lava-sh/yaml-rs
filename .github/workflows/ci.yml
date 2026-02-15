@@ -35,7 +35,7 @@ jobs:
       - uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
         with:
           lookup-only: true
-      - run: cargo fmt_nightly --check
+      - run: cargo fmt-nightly --check
 
   cargo-clippy:
     name: "cargo clippy"
@@ -97,7 +97,7 @@ jobs:
           typos --config .typos.toml
 
   tests:
-    name: "tests (python ${{ matrix.python-version }})"
+    name: "tests (py-src ${{ matrix.python-version }})"
     runs-on: ubuntu-latest
     timeout-minutes: 5
     strategy:
@@ -147,7 +147,7 @@ jobs:
           pytest tests/
 
   tests-alpine:
-    name: "tests (alpine / python 3.13)"
+    name: "tests (alpine / py-src 3.13)"
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
