@@ -35,7 +35,7 @@ jobs:
       - uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
         with:
           lookup-only: true
-      - run: cargo fmt_nightly --check
+      - run: cargo fmt-nightly --check
 
   cargo-clippy:
     name: "cargo clippy"
@@ -162,17 +162,20 @@ jobs:
           " 2>&1 | tee /dev/stderr | grep -q "initial-exec TLS resolves to dynamic definition"
       - name: "latest"
         run: |
-          mkdir -p /tmp/__build
-          cp -r python src Cargo.toml pyproject.toml README.md /tmp/__build/
+          mkdir -p /tmp/__build__
+          cp -r py-src src Cargo.toml pyproject.toml README.md /tmp/__build__/
           
           docker run --rm \
-            -v /tmp/__build:/app \
-            -w /app \
+            -v /tmp/__build__:/parser \
+            -w /parser \
             ghcr.io/astral-sh/uv:python3.13-alpine sh -c "
-            apk add --no-cache rust cargo build-base && \
-            uv pip install maturin[patchelf] --system && \
-            maturin build --release --out /app/dist --features mimalloc && \
-            uv pip install /app/dist/*.whl --system && \
+            apk add --no-cache curl build-base musl-dev openssl-dev && \
+            curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly && \
+            . \$HOME/.cargo/env && \
+            rustc --version && \
+            uv pip install maturin[patchelf] -U --system && \
+            maturin build --release --out /parser/dist --features mimalloc && \
+            uv pip install /parser/dist/*.whl --system && \
             python -c 'import yaml_rs; print(yaml_rs.__version__)'
           "
 
