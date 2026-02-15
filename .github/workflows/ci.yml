@@ -97,7 +97,7 @@ jobs:
           typos --config .typos.toml
 
   tests:
-    name: "tests (py-src ${{ matrix.python-version }})"
+    name: "tests (python ${{ matrix.python-version }})"
     runs-on: ubuntu-latest
     timeout-minutes: 5
     strategy:
@@ -147,7 +147,7 @@ jobs:
           pytest tests/
 
   tests-alpine:
-    name: "tests (alpine / py-src 3.13)"
+    name: "tests (alpine / python 3.13)"
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
