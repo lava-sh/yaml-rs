@@ -169,8 +169,11 @@ jobs:
             -v /tmp/__build:/app \
             -w /app \
             ghcr.io/astral-sh/uv:python3.13-alpine sh -c "
-            apk add --no-cache rust cargo build-base && \
-            uv pip install maturin[patchelf] --system && \
+            apk add --no-cache curl build-base musl-dev openssl-dev && \
+            curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly && \
+            . \$HOME/.cargo/env && \
+            rustc --version && \
+            uv pip install maturin -U --system && \
             maturin build --release --out /app/dist --features mimalloc && \
             uv pip install /app/dist/*.whl --system && \
             python -c 'import yaml_rs; print(yaml_rs.__version__)'
