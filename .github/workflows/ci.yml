@@ -173,7 +173,7 @@ jobs:
             curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly && \
             . \$HOME/.cargo/env && \
             rustc --version && \
-            uv pip install maturin -U --system && \
+            uv pip install maturin[patchelf] -U --system && \
             maturin build --release --out /app/dist --features mimalloc && \
             uv pip install /app/dist/*.whl --system && \
             python -c 'import yaml_rs; print(yaml_rs.__version__)'
