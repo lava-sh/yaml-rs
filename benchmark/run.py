@@ -2,6 +2,7 @@ import io
 import platform
 import time
 from collections.abc import Callable
+from importlib.metadata import version as get_lib_version
 from pathlib import Path
 
 import altair as alt
@@ -16,13 +17,13 @@ import yaml_rs
 N = 50
 
 FILE_PATH = Path(__file__).resolve().parent
-YAMLS = FILE_PATH / "data"
-# example of a config file for app
-FILE_1 = YAMLS / "config.yaml"
-# file from https://github.com/yaml/yaml-test-suite
-FILE_2 = YAMLS / "UGM3.yaml"
-# file from `https://examplefile.com`
-FILE_3 = YAMLS / "bench.yaml"
+YAMLS_FOR_BENCHMARK = FILE_PATH / "data"
+# Example of a config file for app
+FILE_1 = YAMLS_FOR_BENCHMARK / "config.yaml"
+# File from `https://github.com/yaml/yaml-test-suite`
+FILE_2 = YAMLS_FOR_BENCHMARK / "UGM3.yaml"
+# File from `https://examplefile.com`
+FILE_3 = YAMLS_FOR_BENCHMARK / "bench.yaml"
 
 FILES = [FILE_1, FILE_2, FILE_3]
 
@@ -39,26 +40,41 @@ def benchmark(func: Callable, count: int) -> float:
 
 
 def plot_benchmark(
-        results: dict[str, float],
-        save_path: Path,
-        run_type: str,
+    results: dict[str, float],
+    save_path: Path,
+    run_type: str,
 ) -> None:
-    df = (
-        pl.DataFrame({
-            "parser": list(results.keys()),
-            "exec_time": list(results.values()),
-        })
-        .sort("exec_time")
-        .with_columns([
-            (pl.col("exec_time") / pl.col("exec_time").min()).alias("slowdown"),
-        ])
+    df = pl.DataFrame({
+        "parser": list(results.keys()),
+        "exec_time": list(results.values()),
+    }).sort("exec_time")
+
+    df = df.with_columns(
+        (pl.col("exec_time") / pl.col("exec_time").min()).alias("slowdown"),
+    )
+
+    df = df.with_columns(
+        pl.Series(
+            "parser_label",
+            [f"{p}\nv{get_lib_version(p.split()[0])}" for p in df["parser"]],
+        ),
     )
 
     chart = (
-        alt.Chart(df)
+        alt
+        .Chart(df)
         .mark_bar(cornerRadiusTopLeft=6, cornerRadiusTopRight=6)
         .encode(
-            x=alt.X("parser:N", sort=None, title="Parser", axis=alt.Axis(labelAngle=0)),
+            x=alt.X(
+                "parser_label:N",
+                sort=None,
+                title="Parser",
+                axis=alt.Axis(
+                    labelAngle=0,
+                    labelExpr="split(datum.label, '\\n')",
+                    labelLineHeight=14,
+                ),
+            ),
             y=alt.Y(
                 "exec_time:Q",
                 title="Execution Time (seconds, lower=better)",
@@ -75,7 +91,8 @@ def plot_benchmark(
     )
 
     text = (
-        chart.mark_text(
+        chart
+        .mark_text(
             align="center",
             baseline="bottom",
             dy=-2,
@@ -109,13 +126,17 @@ def run(run_count: int) -> None:
         loads = {
             "yaml_rs": lambda d=data: yaml_rs.loads(d),
             "yaml_rs (parse_dt=False)": lambda d=data: yaml_rs.loads(
-                d, parse_datetime=False,
+                d,
+                parse_datetime=False,
             ),
             "ryaml": lambda d=data: ryaml.loads_all(d),
             "PyYAML": lambda d=data: list(pyyaml.safe_load_all(d)),
-            "PyYAML (CLoader)": lambda d=data: list(pyyaml.load_all(
-                d, Loader=pyyaml.CLoader,
-            )),
+            "PyYAML (CLoader)": lambda d=data: list(
+                pyyaml.load_all(
+                    d,
+                    Loader=pyyaml.CLoader,
+                ),
+            ),
             "PyYAML (CSafeLoader)": lambda d=data: list(
                 pyyaml.load_all(d, Loader=pyyaml.CSafeLoader),
             ),
@@ -129,14 +150,15 @@ def run(run_count: int) -> None:
             "PyYAML": lambda d=data: pyyaml.dump(d),
             "PyYAML (CDumper)": lambda d=data: pyyaml.dump(d, Dumper=pyyaml.CDumper),
             "PyYAML (CSafeDumper)": lambda d=data: pyyaml.dump(
-                d, Dumper=pyyaml.CSafeDumper,
+                d,
+                Dumper=pyyaml.CSafeDumper,
             ),
             "ruamel.yaml": (
                 lambda d=data: (
-                    (lambda yaml: (lambda buf: (yaml.dump(d, buf), buf.getvalue())[1])(
+                    lambda yaml: (lambda buf: (yaml.dump(d, buf), buf.getvalue())[1])(
                         io.StringIO(),
-                    ))(ruamel.yaml.YAML(typ="safe"))
-                )
+                    )
+                )(ruamel.yaml.YAML(typ="safe"))
             ),
             "oyaml": lambda d=data: oyaml.dump(d),
         }
