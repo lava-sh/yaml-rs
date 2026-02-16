@@ -116,6 +116,13 @@ def plot_benchmark(
     ).save(save_path)
 
 
+def ruamel_dump(data: str) -> str:
+    yaml = ruamel.yaml.YAML(typ="safe")
+    buf = io.StringIO()
+    yaml.dump(data, io.StringIO())
+    return buf.getvalue()
+
+
 def run(run_count: int) -> None:
     load_total = {}
     dump_total = {}
@@ -153,13 +160,7 @@ def run(run_count: int) -> None:
                 d,
                 Dumper=pyyaml.CSafeDumper,
             ),
-            "ruamel.yaml": (
-                lambda d=data: (
-                    lambda yaml: (lambda buf: (yaml.dump(d, buf), buf.getvalue())[1])(
-                        io.StringIO(),
-                    )
-                )(ruamel.yaml.YAML(typ="safe"))
-            ),
+            "ruamel.yaml": lambda d=data: ruamel_dump(d),
             "oyaml": lambda d=data: oyaml.dump(d),
         }
 
