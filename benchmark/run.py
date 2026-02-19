@@ -14,7 +14,7 @@ import ryaml
 import yaml as pyyaml
 import yaml_rs
 
-N = 50
+N = 25
 
 FILE_PATH = Path(__file__).resolve().parent
 YAMLS_FOR_BENCHMARK = FILE_PATH / "data"
