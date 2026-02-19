@@ -1,8 +1,6 @@
-mod decoder;
-mod dumps;
-mod format_error;
-mod loads;
-mod rust_dec2flt;
+mod load;
+
+mod dump;
 
 #[cfg(feature = "mimalloc")]
 #[global_allocator]
@@ -22,9 +20,12 @@ mod yaml_rs {
     #[pymodule_export]
     use super::{YAMLDecodeError, YAMLEncodeError};
     use crate::{
-        decoder, dumps,
-        format_error::format_error,
-        loads::{BuildError, build_from_events, to_python},
+        dump::dumps,
+        load::{
+            decoder,
+            format_error::format_error,
+            loads::{BuildError, build_from_events, to_python},
+        },
     };
 
     #[pymodule_export]
@@ -62,14 +63,14 @@ mod yaml_rs {
         yaml_string: &str,
         parse_datetime: bool,
     ) -> PyResult<Py<PyAny>> {
-        let docs = py
+        let (arena, docs) = py
             .detach(|| build_from_events(yaml_string))
             .map_err(|error| match error {
                 BuildError::Scan(err) => YAMLDecodeError::new_err(format_error(yaml_string, &err)),
                 BuildError::Decode(msg) => YAMLDecodeError::new_err(msg),
             })?;
 
-        Ok(to_python(py, &docs, parse_datetime)?.unbind())
+        Ok(to_python(py, &arena, &docs, parse_datetime)?.unbind())
     }
 
     #[pyfunction(name = "_dumps")]
