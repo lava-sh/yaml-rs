@@ -1,16 +1,15 @@
-mod decoder;
-mod dumps;
-mod format_error;
-mod loads;
+mod load;
+
+mod dump;
 
 #[cfg(feature = "mimalloc")]
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
-use pyo3::exceptions;
+use pyo3::{create_exception, exceptions};
 
-pyo3::create_exception!(yaml_rs, YAMLDecodeError, exceptions::PyValueError);
-pyo3::create_exception!(yaml_rs, YAMLEncodeError, exceptions::PyTypeError);
+create_exception!(yaml_rs, YAMLDecodeError, exceptions::PyValueError);
+create_exception!(yaml_rs, YAMLEncodeError, exceptions::PyTypeError);
 
 #[pyo3::pymodule(name = "_yaml_rs")]
 mod yaml_rs {
@@ -20,7 +19,14 @@ mod yaml_rs {
 
     #[pymodule_export]
     use super::{YAMLDecodeError, YAMLEncodeError};
-    use crate::{decoder, dumps, format_error::format_error, loads};
+    use crate::{
+        dump::dumps,
+        load::{
+            decoder,
+            format_error::format_error,
+            loads::{BuildError, build_from_events, to_python},
+        },
+    };
 
     #[pymodule_export]
     const _VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -52,17 +58,19 @@ mod yaml_rs {
     }
 
     #[pyfunction(name = "_loads")]
-    fn load_yaml_from_string(py: Python, s: &str, parse_datetime: bool) -> PyResult<Py<PyAny>> {
-        let yaml = py
-            .detach(|| {
-                let mut loader = saphyr::YamlLoader::default();
-                loader.early_parse(false);
-                let mut parser = saphyr_parser::Parser::new_from_str(s);
-                parser.load(&mut loader, true)?;
-                Ok::<_, saphyr_parser::ScanError>(loader.into_documents())
-            })
-            .map_err(|err| YAMLDecodeError::new_err(format_error(s, &err)))?;
-        Ok(loads::yaml_to_python(py, &yaml, parse_datetime)?.unbind())
+    fn load_yaml_from_string(
+        py: Python,
+        yaml_string: &str,
+        parse_datetime: bool,
+    ) -> PyResult<Py<PyAny>> {
+        let (arena, docs) = py
+            .detach(|| build_from_events(yaml_string))
+            .map_err(|error| match error {
+                BuildError::Scan(err) => YAMLDecodeError::new_err(format_error(yaml_string, &err)),
+                BuildError::Decode(msg) => YAMLDecodeError::new_err(msg),
+            })?;
+
+        Ok(to_python(py, &arena, &docs, parse_datetime)?.unbind())
     }
 
     #[pyfunction(name = "_dumps")]

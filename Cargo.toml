@@ -1,6 +1,6 @@
 [package]
 name = "yaml-rs"
-version = "0.0.11"
+version = "0.0.12"
 edition = "2024"
 license = "Unlicense"
 repository = "https://github.com/lava-sh/yaml-rs"
@@ -12,14 +12,17 @@ crate-type = ["cdylib"]
 
 [dependencies]
 pyo3 = {
-    version = "=0.28.1",
+    version = "=0.28.2",
     features = [
+        "num-bigint",
         "extension-module",
         "generate-import-lib",
     ]
 }
 atoi = "=2.0.0"
 itoa = "=1.0.17"
+num-bigint = "=0.4.6"
+rustc-hash = "=2.1.1"
 ordered-float = "=5.1.0"
 memchr = {
     version = "=2.8.0",
@@ -30,9 +33,9 @@ simdutf8 = {
     version = "=0.1.5",
     features = ["aarch64_neon_prefetch"],
 }
-# # # #
-# https://github.com/bourumir-wyngs/saphyr/tree/dev/saphyr-parser
-# # # #
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# https://github.com/bourumir-wyngs/saphyr/tree/dev/saphyr-parser #
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 saphyr = {
     git = "https://github.com/bourumir-wyngs/saphyr",
     rev = "1dcf7cd1b1d2f6b4087853905a4313478a142eb0",
@@ -41,6 +44,16 @@ saphyr-parser = {
     package = "saphyr-parser-bw",
     git = "https://github.com/bourumir-wyngs/saphyr",
     rev = "1dcf7cd1b1d2f6b4087853905a4313478a142eb0",
+}
+lexical-core = {
+    git = "https://github.com/Alexhuszagh/rust-lexical",
+    rev = "59382e249f8fd0dd384ed1f180b38d168cf9fcbb",
+    default-features = false,
+    features = [
+        "radix",
+        "parse-floats",
+        "parse-integers",
+    ]
 }
 mimalloc = {
     optional = true,

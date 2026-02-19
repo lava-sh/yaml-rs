@@ -1,4 +1,6 @@
 import json
+import math
+import platform
 import sys
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -728,3 +730,29 @@ def test_invalid_yamls_from_test_suite(yaml: Path) -> None:
     doc = next((d for d in docs if d.get("fail") is True), None)
     with pytest.raises(yaml_rs.YAMLDecodeError):
         yaml_rs.loads(normalize_yaml(doc), parse_datetime=False)
+
+
+@pytest.mark.skipif(
+    platform.python_implementation() == "PyPy",
+    reason="PyPy's `Decimal` parsing hits the int string "
+           "conversion digit limit for very large numbers.",
+)
+def test_parse_big_nums() -> None:
+    big_int = 999**999
+    big_float = float(f"{big_int}.{big_int}")
+
+    y = f"x: {big_int}"
+    y2 = f"x: {big_float}"
+    y3 = f"x: {big_int + big_int}.{big_int}"
+
+    assert yaml_rs.loads(y)["x"] == big_int
+    assert math.isclose(
+        yaml_rs.loads(y2)["x"],
+        float("inf"),
+        abs_tol=1e-9,
+    )
+    assert math.isclose(
+        yaml_rs.loads(y3)["x"],
+        big_float,
+        abs_tol=1e-9,
+    )
