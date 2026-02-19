@@ -181,17 +181,11 @@ fn is_inf_nan(bytes: &[u8]) -> Option<(SpecialFloat, bool)> {
     let b = rest[1];
     let c = rest[2];
 
-    if matches!(
-        (a, b, c),
-        (b'i' | b'I', b'n' | b'N', b'f' | b'F')
-    ) {
+    if matches!((a, b, c), (b'i' | b'I', b'n' | b'N', b'f' | b'F')) {
         return Some((SpecialFloat::Inf, neg));
     }
 
-    if matches!(
-        (a, b, c),
-        (b'n' | b'N', b'a' | b'A', b'n' | b'N')
-    ) {
+    if matches!((a, b, c), (b'n' | b'N', b'a' | b'A', b'n' | b'N')) {
         return Some((SpecialFloat::Nan, neg));
     }
 
@@ -209,7 +203,11 @@ fn parse_float(str: &str) -> Option<f64> {
         return Some(match kind {
             SpecialFloat::Nan => f64::NAN,
             SpecialFloat::Inf => {
-                if neg { f64::NEG_INFINITY } else { f64::INFINITY }
+                if neg {
+                    f64::NEG_INFINITY
+                } else {
+                    f64::INFINITY
+                }
             }
         });
     }
