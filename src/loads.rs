@@ -133,59 +133,89 @@ fn parse_int(str: &str) -> Option<Value> {
     })
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+enum SpecialFloat {
+    Inf,
+    Nan,
+}
+
 #[inline]
-fn is_inf_nan(bytes: &[u8]) -> bool {
+fn is_inf_nan(bytes: &[u8]) -> Option<(SpecialFloat, bool)> {
     if bytes.is_empty() {
-        return false;
+        return None;
     }
 
-    let mut i = 0;
+    let mut i = 0usize;
+    let mut neg = false;
 
-    if bytes[i] == b'+' || bytes[i] == b'-' {
-        i += 1;
-        if i >= bytes.len() {
-            return false;
+    match bytes[i] {
+        b'+' => {
+            i += 1;
+            if i >= bytes.len() {
+                return None;
+            }
         }
+        b'-' => {
+            neg = true;
+            i += 1;
+            if i >= bytes.len() {
+                return None;
+            }
+        }
+        _ => {}
     }
 
     if bytes[i] == b'.' {
         i += 1;
         if i >= bytes.len() {
-            return false;
+            return None;
         }
     }
 
     let rest = &bytes[i..];
-
     if rest.len() != 3 {
-        return false;
-    }
-
-    matches!(
-        (rest[0], rest[1], rest[2]),
-        (b'i' | b'I', b'n' | b'N', b'f' | b'F') | (b'n' | b'N', b'a' | b'A', b'n' | b'N')
-    )
-}
-
-fn parse_float(s: &str) -> Option<f64> {
-    let s = s.trim();
-    if s.is_empty() {
         return None;
     }
 
-    let bytes = s.as_bytes();
+    let a = rest[0];
+    let b = rest[1];
+    let c = rest[2];
 
-    if is_inf_nan(bytes) {
-        if memchr(b'n', bytes).is_some() || memchr(b'N', bytes).is_some() {
-            return Some(f64::NAN);
-        }
-        if memchr(b'-', bytes).is_some() {
-            return Some(f64::NEG_INFINITY);
-        }
-        return Some(f64::INFINITY);
+    if matches!(
+        (a, b, c),
+        (b'i' | b'I', b'n' | b'N', b'f' | b'F')
+    ) {
+        return Some((SpecialFloat::Inf, neg));
     }
 
-    let norm = normalize_num(s);
+    if matches!(
+        (a, b, c),
+        (b'n' | b'N', b'a' | b'A', b'n' | b'N')
+    ) {
+        return Some((SpecialFloat::Nan, neg));
+    }
+
+    None
+}
+
+fn parse_float(str: &str) -> Option<f64> {
+    let trimmed = str.trim();
+
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    if let Some((kind, neg)) = is_inf_nan(trimmed.as_bytes()) {
+        return Some(match kind {
+            SpecialFloat::Nan => f64::NAN,
+            SpecialFloat::Inf => {
+                if neg { f64::NEG_INFINITY } else { f64::INFINITY }
+            }
+        });
+    }
+
+    let norm = normalize_num(trimmed);
+
     lexical_core::parse::<f64>(norm.as_bytes()).ok()
 }
 
@@ -233,7 +263,7 @@ fn resolve_scalar(value: &str, style: ScalarStyle, tag: Option<&Tag>) -> Result<
 
         let bytes = trimmed.as_bytes();
 
-        if (is_inf_nan(bytes)
+        if (is_inf_nan(bytes).is_some()
             || memchr(b'.', bytes).is_some()
             || memchr2(b'e', b'E', bytes).is_some())
             && let Some(float) = parse_float(trimmed)
