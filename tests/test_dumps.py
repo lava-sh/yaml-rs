@@ -1,13 +1,12 @@
 import sys
 from datetime import date, datetime, timedelta, timezone
-from pathlib import Path
 from textwrap import dedent
 from typing import Any
 
 import pytest
 import yaml_rs
 
-from .helpers import VALID_YAMLS, normalize_yaml
+from .helpers import VALID_YAMLS, YamlTestSuite
 
 if sys.version_info >= (3, 11):
     from datetime import UTC
@@ -161,25 +160,26 @@ def test_dumps_with_options(
     )
 
 
-@pytest.mark.parametrize("yaml", VALID_YAMLS)
-def test_valid_yamls_dumps_from_test_suite(yaml: Path) -> None:
-    load_from_str = yaml_rs.loads(yaml.read_text(encoding="utf-8"), parse_datetime=False)
+@pytest.mark.parametrize(
+    "ts",
+    [
+        ts for ts in VALID_YAMLS
+        if ts.out_yaml is not None
+    ],
+    ids=lambda ts: ts.id,
+)
+def test_valid_yamls_dumps_from_test_suite(ts: YamlTestSuite) -> None:
+    loaded = yaml_rs.loads(ts.in_yaml.read_text("utf-8"), parse_datetime=False)
 
-    docs = [load_from_str] if isinstance(load_from_str, dict) else load_from_str
+    if isinstance(loaded, list):
+        dumped = "".join(yaml_rs.dumps(doc) for doc in loaded)
+    else:
+        dumped = yaml_rs.dumps(loaded)
 
-    for doc in docs:
-        parsed_yaml = yaml_rs.loads(normalize_yaml(doc), parse_datetime=False)
+    expected = ts.out_yaml.read_text("utf-8")
 
-        if isinstance(parsed_yaml, set):
-            parsed_yaml = dict.fromkeys(parsed_yaml)
-
-        dump = doc.get("dump")
-        if dump is None:
-            continue
-
-        dumps = yaml_rs.dumps(parsed_yaml)
+    try:
         # FIXME
-        try:
-            assert dumps == dump
-        except AssertionError:
-            pytest.skip(f"skip: {yaml}")
+        assert dumped == expected
+    except AssertionError:
+        pytest.skip(f"dump mismatch: {ts.id}")
