@@ -20,7 +20,7 @@ static TABLE: [u8; 256] = {
 
 pub(crate) fn parse_py_datetime<'py>(
     py: Python<'py>,
-    s: &str,
+    str: &str,
 ) -> PyResult<Option<Bound<'py, PyAny>>> {
     const SECS_IN_DAY: i32 = 86_400;
     const SEP: u8 = b':';
@@ -32,7 +32,7 @@ pub(crate) fn parse_py_datetime<'py>(
     const PLUS: u8 = b'+';
     const MINUS: u8 = b'-';
 
-    let bytes = s.as_bytes();
+    let bytes = str.as_bytes();
 
     if bytes.len() < 10 {
         return Ok(None);

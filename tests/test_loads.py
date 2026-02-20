@@ -763,8 +763,10 @@ def test_parse_big_nums() -> None:
     y = f"x: {big_int}"
     y2 = f"x: {big_float}"
     y3 = f"x: {big_int + big_int}.{big_int}"
+    y4 = f"x: -{big_int}"
 
     assert yaml_rs.loads(y)["x"] == big_int
+    assert yaml_rs.loads(y4)["x"] == -big_int
     assert math.isclose(
         yaml_rs.loads(y2)["x"],
         float("inf"),

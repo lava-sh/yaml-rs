@@ -1,7 +1,7 @@
 use crate::load::arena::NodeId;
 
 #[derive(Clone, Debug)]
-pub enum Value {
+pub(crate) enum Value {
     Null,
     Boolean(bool),
     IntegerI64(i64),

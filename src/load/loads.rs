@@ -66,40 +66,37 @@ fn normalize_num(str: &str) -> Cow<'_, str> {
         return Cow::Borrowed(str);
     }
 
-    let mut out = String::with_capacity(str.len());
-    for &b in bytes {
-        if b != UNDERSCORE {
-            out.push(b as char);
+    let mut num = String::with_capacity(str.len());
+
+    for &byte in bytes {
+        if byte != UNDERSCORE {
+            num.push(byte as char);
         }
     }
-    Cow::Owned(out)
+
+    Cow::Owned(num)
 }
 
 fn parse_int(str: &str) -> Option<Value> {
-    let s = str.trim();
-    if s.is_empty() {
+    if str.is_empty() {
         return None;
     }
 
-    let (sign, rest) = match s.as_bytes()[0] {
-        b'+' => (1i64, &s[1..]),
-        b'-' => (-1i64, &s[1..]),
-        _ => (1i64, s),
+    let (sign, rest) = match str.as_bytes()[0] {
+        b'+' => (1i64, &str[1..]),
+        b'-' => (-1i64, &str[1..]),
+        _ => (1i64, str),
     };
 
     let norm = normalize_num(rest);
     let r = norm.as_ref();
 
-    let (radix, digits) =
-        if let Some(stripped) = r.strip_prefix("0x").or_else(|| r.strip_prefix("0X")) {
-            (16u32, stripped)
-        } else if let Some(stripped) = r.strip_prefix("0o").or_else(|| r.strip_prefix("0O")) {
-            (8u32, stripped)
-        } else if let Some(stripped) = r.strip_prefix("0b").or_else(|| r.strip_prefix("0B")) {
-            (2u32, stripped)
-        } else {
-            (10u32, r)
-        };
+    let (radix, digits) = match r.as_bytes() {
+        [b'0', b'x' | b'X', ..] => (16u32, &r[2..]),
+        [b'0', b'o' | b'O', ..] => (8u32, &r[2..]),
+        [b'0', b'b' | b'B', ..] => (2u32, &r[2..]),
+        _ => (10u32, r),
+    };
 
     if digits.is_empty() {
         return None;
@@ -113,11 +110,11 @@ fn parse_int(str: &str) -> Option<Value> {
         return Some(Value::IntegerI64(i_64.wrapping_mul(sign)));
     }
 
-    BigInt::parse_bytes(digits.as_bytes(), radix).map(|b| {
+    BigInt::parse_bytes(digits.as_bytes(), radix).map(|big_int| {
         if sign < 0 {
-            Value::IntegerBig(-b)
+            Value::IntegerBig(-big_int)
         } else {
-            Value::IntegerBig(b)
+            Value::IntegerBig(big_int)
         }
     })
 }
@@ -182,13 +179,11 @@ fn is_inf_nan(bytes: &[u8]) -> Option<(SpecialFloat, bool)> {
 }
 
 fn parse_float(str: &str) -> Option<f64> {
-    let trimmed = str.trim();
-
-    if trimmed.is_empty() {
+    if str.is_empty() {
         return None;
     }
 
-    if let Some((kind, neg)) = is_inf_nan(trimmed.as_bytes()) {
+    if let Some((kind, neg)) = is_inf_nan(str.as_bytes()) {
         return Some(match kind {
             SpecialFloat::Nan => f64::NAN,
             SpecialFloat::Inf => {
@@ -201,7 +196,7 @@ fn parse_float(str: &str) -> Option<f64> {
         });
     }
 
-    let norm = normalize_num(trimmed);
+    let norm = normalize_num(str);
 
     lexical_core::parse::<f64>(norm.as_bytes()).ok()
 }
@@ -241,27 +236,25 @@ fn resolve_scalar(
     }
 
     if style == ScalarStyle::Plain {
-        let trimmed = value.trim();
-
-        if trimmed.is_empty() || is_null(trimmed) {
+        if value.is_empty() || is_null(value) {
             return Ok(arena.push(Value::Null));
         }
 
-        if let Some(bool) = is_bool(trimmed) {
+        if let Some(bool) = is_bool(value) {
             return Ok(arena.push(Value::Boolean(bool)));
         }
 
-        let bytes = trimmed.as_bytes();
+        let bytes = value.as_bytes();
 
         if (is_inf_nan(bytes).is_some()
             || memchr(b'.', bytes).is_some()
             || memchr2(b'e', b'E', bytes).is_some())
-            && let Some(float) = parse_float(trimmed)
+            && let Some(float) = parse_float(value)
         {
             return Ok(arena.push(Value::Float(float)));
         }
 
-        if let Some(int) = parse_int(trimmed) {
+        if let Some(int) = parse_int(value) {
             return Ok(arena.push(int));
         }
     }
@@ -434,11 +427,11 @@ fn value_to_hashable<'py>(
 ) -> PyResult<Bound<'py, PyAny>> {
     match arena.get(id) {
         Value::Seq(items) => {
-            let mut out = Vec::with_capacity(items.len());
+            let mut vec = Vec::with_capacity(items.len());
             for &child in items {
-                out.push(value_to_hashable(py, arena, child, parse_datetime)?);
+                vec.push(value_to_hashable(py, arena, child, parse_datetime)?);
             }
-            PyTuple::new(py, &out)?.into_bound_py_any(py)
+            PyTuple::new(py, &vec)?.into_bound_py_any(py)
         }
         Value::Map(pairs) => {
             let py_list = PyList::empty(py);

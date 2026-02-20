@@ -74,6 +74,6 @@ pub(crate) fn parse_digits(bytes: &[u8], start: usize, count: usize) -> u32 {
             .checked_add(count)
             .is_some_and(|end| end <= bytes.len())
     );
-    // SAFETY: probably
+    // SAFETY: see `parse_digits_unsafe`.
     unsafe { parse_digits_unsafe(bytes, start, count) }
 }
