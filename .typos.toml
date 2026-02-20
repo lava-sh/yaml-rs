@@ -1,7 +1,7 @@
 [files]
 extend-exclude = [
     "benchmark/data/bench.yaml",
-    "tests/data/yaml-test-suite/*.yaml",
+    "tests/yaml-test-suite/",
     "ruff.toml",
 ]
 

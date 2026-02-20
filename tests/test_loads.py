@@ -3,13 +3,12 @@ import math
 import platform
 import sys
 from datetime import date, datetime, timedelta, timezone
-from pathlib import Path
 from typing import Any, Literal
 
 import pytest
 import yaml_rs
 
-from .helpers import INVALID_YAMLS, VALID_YAMLS, _is_nan, normalize_yaml
+from .helpers import INVALID_YAMLS, VALID_YAMLS, YamlTestSuite, _is_nan
 
 if sys.version_info >= (3, 11):
     from datetime import UTC
@@ -664,7 +663,10 @@ def test_parse_datetime(yaml: str, parsed: Any) -> None:
     ],
 )
 def test_parse_yaml_spec_examples(yaml: str, parsed: Any) -> None:
-    assert yaml_rs.loads(yaml) == _is_nan(parsed)
+    assert yaml_rs.loads(yaml) == _is_nan(parsed), (
+        f"\nRaw: {yaml}\n"
+        f"\nParsed: {parsed}\n"
+    )
 
 
 @pytest.mark.parametrize(
@@ -684,52 +686,69 @@ def test_parse_yaml_tags(yaml: str, parsed: Any) -> None:
     assert yaml_rs.loads(yaml) == parsed
 
 
-@pytest.mark.parametrize("yaml", VALID_YAMLS)
-def test_valid_yamls_from_test_suite(yaml: Path) -> None:
-    load_from_str = yaml_rs.loads(yaml.read_text(encoding="utf-8"), parse_datetime=False)
+@pytest.mark.parametrize("ts", VALID_YAMLS, ids=lambda ts: ts.id)
+def test_valid_yamls_from_test_suite(ts: YamlTestSuite) -> None:
+    actual = yaml_rs.loads(
+        ts.in_yaml.read_text("utf-8"),
+        parse_datetime=False,
+    )
 
-    docs = [load_from_str] if isinstance(load_from_str, dict) else load_from_str
+    text = ts.in_json.read_text("utf-8")
 
-    for doc in docs:
-        parsed_yaml = yaml_rs.loads(normalize_yaml(doc), parse_datetime=False)
-        if isinstance(parsed_yaml, set):
-            parsed_yaml = dict.fromkeys(parsed_yaml)
-
-        get_json_key = doc.get("json")
-
-        if get_json_key is None:
-            assert parsed_yaml is not None
-            continue
-
-        if get_json_key == "":  # noqa: PLC1901
-            get_json_key = None
-            continue
-
+    if text == "":  # noqa: PLC1901
+        expected = None
+    else:
         try:
-            parsed_json = json.loads(get_json_key)
-        except json.decoder.JSONDecodeError:
-            json_decoder = json.JSONDecoder()
-            parsed_json = []
+            expected = json.loads(text)
+        except json.JSONDecodeError:
+            decoder = json.JSONDecoder()
+            expected = []
             pos = 0
-            while pos < len(get_json_key):
-                obj, pos = json_decoder.raw_decode(get_json_key, pos)
-                parsed_json.append(obj)
-                while pos < len(get_json_key) and get_json_key[pos] in " \t\n\r":
+            n = len(text)
+
+            while pos < n:
+                obj, pos = decoder.raw_decode(text, pos)
+                expected.append(obj)
+                while pos < n and text[pos] in " \t\r\n":
                     pos += 1
 
-            if len(parsed_json) == 1:
-                parsed_json = parsed_json[0]
+    if isinstance(expected, list) and not isinstance(actual, list):
+        actual = [actual]
 
-        assert parsed_yaml == parsed_json
+    # JSON does not have a native "set" type, while Python does.
+    # In YAML, the tag `!!set` represents a set, and Python YAML parsers
+    # (including ours) map it to a Python `set`.
+    # ```python
+    # import yaml as py_yaml
+    #
+    # y = """\
+    # --- !!set
+    # ? Mark McGwire
+    # ? Sammy Sosa
+    # ? Ken Griffey
+    # """
+    # print(py_yaml.safe_load(y))  # {'Mark McGwire', 'Ken Griffey', 'Sammy Sosa'}
+    # print(type(py_yaml.safe_load(y)))  # <class 'set'>
+    # ```
+    if (
+            isinstance(actual, set)
+            and isinstance(expected, dict)
+            and all(v is None for v in expected.values())
+    ):
+        actual = dict.fromkeys(actual)
+
+    assert _is_nan(actual) == _is_nan(expected), (
+        f"\nTest case: {ts.id}\n"
+        f"\nYAML file: {ts.in_yaml}\n"
+        f"\nActual:\n{actual!r}\n"
+        f"\nExpected:\n{expected!r}\n"
+    )
 
 
-@pytest.mark.parametrize("yaml", INVALID_YAMLS)
-def test_invalid_yamls_from_test_suite(yaml: Path) -> None:
-    load_from_str = yaml_rs.loads(yaml.read_text(encoding="utf-8"), parse_datetime=False)
-    docs = load_from_str if isinstance(load_from_str, list) else [load_from_str]
-    doc = next((d for d in docs if d.get("fail") is True), None)
+@pytest.mark.parametrize("ts", INVALID_YAMLS, ids=lambda ts: ts.id)
+def test_invalid_yamls_from_test_suite(ts: YamlTestSuite) -> None:
     with pytest.raises(yaml_rs.YAMLDecodeError):
-        yaml_rs.loads(normalize_yaml(doc), parse_datetime=False)
+        yaml_rs.loads(ts.in_yaml.read_text("utf-8"), parse_datetime=False)
 
 
 @pytest.mark.skipif(

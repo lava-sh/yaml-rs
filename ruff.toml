@@ -48,6 +48,7 @@ ignore = [
 ]
 "tests/test_loads.py" = [
     "E501",
+    "ERA001",
 ]
 "tests/test_dumps.py" = [
     "E501",
