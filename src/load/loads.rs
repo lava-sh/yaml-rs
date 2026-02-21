@@ -43,12 +43,14 @@ impl From<ScanError> for BuildError {
     }
 }
 
+#[inline]
 fn is_null(str: &str) -> bool {
     // https://yaml.org/spec/1.2.2/#1031-tags
     // Regular expression: null | Null | NULL | ~
     matches!(str, "null" | "Null" | "NULL" | "~")
 }
 
+#[inline]
 fn is_bool(str: &str) -> Option<bool> {
     // https://yaml.org/spec/1.2.2/#1031-tags
     // Regular expression: true | True | TRUE | false | False | FALSE
@@ -59,6 +61,7 @@ fn is_bool(str: &str) -> Option<bool> {
     }
 }
 
+#[inline]
 fn normalize_num(str: &str) -> Cow<'_, str> {
     let bytes = str.as_bytes();
 
@@ -77,7 +80,7 @@ fn normalize_num(str: &str) -> Cow<'_, str> {
     Cow::Owned(num)
 }
 
-fn parse_int(str: &str) -> Option<Value> {
+fn parse_int<'a>(str: &str) -> Option<Value<'a>> {
     if str.is_empty() {
         return None;
     }
@@ -159,13 +162,12 @@ fn is_inf_nan(bytes: &[u8]) -> Option<(SpecialFloat, bool)> {
     }
 
     let rest = &bytes[i..];
+
     if rest.len() != 3 {
         return None;
     }
 
-    let a = rest[0];
-    let b = rest[1];
-    let c = rest[2];
+    let (a, b, c) = (rest[0], rest[1], rest[2]);
 
     if matches!((a, b, c), (b'i' | b'I', b'n' | b'N', b'f' | b'F')) {
         return Some((SpecialFloat::Inf, neg));
@@ -201,68 +203,73 @@ fn parse_float(str: &str) -> Option<f64> {
     lexical_core::parse::<f64>(norm.as_bytes()).ok()
 }
 
-fn resolve_scalar(
-    arena: &mut Arena,
-    value: &str,
+fn resolve_scalar<'a>(
+    arena: &mut Arena<'a>,
+    value: Cow<'a, str>,
     style: ScalarStyle,
     tag: Option<&Tag>,
 ) -> Result<NodeId, String> {
     if let Some(tag) = tag {
         if tag.is_yaml_core_schema() {
-            let value = match tag.suffix.as_str() {
-                "int" => parse_int(value)
-                    .ok_or_else(|| format!("Invalid value '{value}' for '!!int' tag"))?,
-                "float" => parse_float(value)
+            let v = match tag.suffix.as_str() {
+                "int" => parse_int(value.as_ref())
+                    .ok_or_else(|| format!("Invalid value '{}' for '!!int' tag", value.as_ref()))?,
+                "float" => parse_float(value.as_ref())
                     .map(Value::Float)
-                    .ok_or_else(|| format!("Invalid value '{value}' for '!!float' tag"))?,
-                "bool" => is_bool(value)
-                    .map(Value::Boolean)
-                    .ok_or_else(|| format!("Invalid value '{value}' for '!!bool' tag"))?,
+                    .ok_or_else(|| {
+                        format!("Invalid value '{}' for '!!float' tag", value.as_ref())
+                    })?,
+                "bool" => is_bool(value.as_ref()).map(Value::Boolean).ok_or_else(|| {
+                    format!("Invalid value '{}' for '!!bool' tag", value.as_ref())
+                })?,
                 "null" => {
-                    if value.is_empty() || is_null(value) {
+                    let str = value.as_ref();
+                    if str.is_empty() || is_null(str) {
                         Value::Null
                     } else {
-                        return Err(format!("Invalid value '{value}' for '!!null' tag"));
+                        return Err(format!("Invalid value '{str}' for '!!null' tag"));
                     }
                 }
-                "binary" => Value::String(value.to_string()),
-                "str" => Value::StringExplicit(value.to_string()),
+                "binary" => Value::String(value),
+                "str" => Value::StringExplicit(value),
                 _ => return Err(format!("Invalid tag: '!!{}'", tag.suffix)),
             };
-            return Ok(arena.push(value));
+            return Ok(arena.push(v));
         }
 
-        return Ok(arena.push(Value::String(value.to_string())));
+        return Ok(arena.push(Value::String(value)));
     }
 
     if style == ScalarStyle::Plain {
-        if value.is_empty() || is_null(value) {
+        let str = value.as_ref();
+
+        if str.is_empty() || is_null(str) {
             return Ok(arena.push(Value::Null));
         }
 
-        if let Some(bool) = is_bool(value) {
+        if let Some(bool) = is_bool(str) {
             return Ok(arena.push(Value::Boolean(bool)));
         }
 
-        let bytes = value.as_bytes();
+        let bytes = str.as_bytes();
 
         if (is_inf_nan(bytes).is_some()
             || memchr(b'.', bytes).is_some()
             || memchr2(b'e', b'E', bytes).is_some())
-            && let Some(float) = parse_float(value)
+            && let Some(float) = parse_float(str)
         {
             return Ok(arena.push(Value::Float(float)));
         }
 
-        if let Some(int) = parse_int(value) {
+        if let Some(int) = parse_int(str) {
             return Ok(arena.push(int));
         }
     }
 
-    Ok(arena.push(Value::String(value.to_string())))
+    Ok(arena.push(Value::String(value)))
 }
 
-pub(crate) fn build_from_events(input: &str) -> Result<(Arena, Vec<NodeId>), BuildError> {
+pub(crate) fn build_from_events(input: &'_ str) -> Result<(Arena<'_>, Vec<NodeId>), BuildError> {
     let parser = Parser::new_from_str(input);
 
     let mut arena = Arena::with_capacity((input.len() / 8).max(64));
@@ -292,16 +299,17 @@ pub(crate) fn build_from_events(input: &str) -> Result<(Arena, Vec<NodeId>), Bui
                     .get(&id)
                     .copied()
                     .unwrap_or_else(|| arena.push(Value::Null));
+
                 push_value(node, &mut stack, &mut current_root);
             }
             Event::Scalar(val, style, anchor_id, tag) => {
-                let tag_owned = tag.map(Cow::into_owned);
-                let node = resolve_scalar(&mut arena, &val, style, tag_owned.as_ref())
+                let node = resolve_scalar(&mut arena, val, style, tag.as_deref())
                     .map_err(BuildError::Decode)?;
 
                 if anchor_id != 0 {
                     anchors.insert(anchor_id, node);
                 }
+
                 push_value(node, &mut stack, &mut current_root);
             }
             Event::SequenceStart(anchor_id, _) => {
@@ -313,9 +321,11 @@ pub(crate) fn build_from_events(input: &str) -> Result<(Arena, Vec<NodeId>), Bui
             Event::SequenceEnd => {
                 if let Some(Frame::Seq { anchor, items }) = stack.pop() {
                     let node = arena.push(Value::Seq(items));
+
                     if anchor != 0 {
                         anchors.insert(anchor, node);
                     }
+
                     push_value(node, &mut stack, &mut current_root);
                 }
             }
@@ -329,9 +339,11 @@ pub(crate) fn build_from_events(input: &str) -> Result<(Arena, Vec<NodeId>), Bui
             Event::MappingEnd => {
                 if let Some(Frame::Map { anchor, items, .. }) = stack.pop() {
                     let node = arena.push(Value::Map(items));
+
                     if anchor != 0 {
                         anchors.insert(anchor, node);
                     }
+
                     push_value(node, &mut stack, &mut current_root);
                 }
             }
@@ -341,6 +353,7 @@ pub(crate) fn build_from_events(input: &str) -> Result<(Arena, Vec<NodeId>), Bui
     Ok((arena, docs))
 }
 
+#[inline]
 fn push_value(value: NodeId, stack: &mut [Frame], root: &mut Option<NodeId>) {
     if let Some(top) = stack.last_mut() {
         match top {
@@ -362,7 +375,7 @@ fn push_value(value: NodeId, stack: &mut [Frame], root: &mut Option<NodeId>) {
 
 fn value_to_py<'py>(
     py: Python<'py>,
-    arena: &Arena,
+    arena: &Arena<'_>,
     id: NodeId,
     parse_datetime: bool,
 ) -> PyResult<Bound<'py, PyAny>> {
@@ -372,8 +385,9 @@ fn value_to_py<'py>(
         Value::IntegerI64(int_64) => int_64.into_bound_py_any(py),
         Value::IntegerBig(big_int) => big_int.into_bound_py_any(py),
         Value::Float(float) => float.into_bound_py_any(py),
-        Value::StringExplicit(str_exp) => str_exp.into_bound_py_any(py),
-        Value::String(str) => {
+        Value::StringExplicit(string_exp) => string_exp.into_bound_py_any(py),
+        Value::String(string) => {
+            let str = string.as_ref();
             if parse_datetime && let Ok(Some(dt)) = parse_py_datetime(py, str) {
                 return Ok(dt);
             }
@@ -421,7 +435,7 @@ fn value_to_py<'py>(
 
 fn value_to_hashable<'py>(
     py: Python<'py>,
-    arena: &Arena,
+    arena: &Arena<'_>,
     id: NodeId,
     parse_datetime: bool,
 ) -> PyResult<Bound<'py, PyAny>> {
@@ -453,7 +467,7 @@ fn value_to_hashable<'py>(
 
 pub(crate) fn to_python<'py>(
     py: Python<'py>,
-    arena: &Arena,
+    arena: &Arena<'_>,
     docs: &[NodeId],
     parse_datetime: bool,
 ) -> PyResult<Bound<'py, PyAny>> {
