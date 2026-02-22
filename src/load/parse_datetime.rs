@@ -1,12 +1,19 @@
-use atoi::atoi;
-use memchr::{memchr, memchr3};
 use pyo3::{
-    Bound, PyAny, PyErr, PyResult, Python,
-    exceptions::PyValueError,
+    Bound, PyAny, PyResult, Python,
     types::{PyDate, PyDateTime, PyDelta, PyTzInfo},
 };
 
 use crate::load::rust_dec2flt::parse_digits;
+
+const SEP: u8 = b':';
+const WHITESPACE: u8 = b' ';
+const TAB: u8 = b'\t';
+const T: u8 = b'T';
+const LOWER_T: u8 = b't';
+const Z: u8 = b'Z';
+const LOWER_Z: u8 = b'z';
+const PLUS: u8 = b'+';
+const MINUS: u8 = b'-';
 
 static TABLE: [u8; 256] = {
     let mut table = [255u8; 256];
@@ -18,19 +25,78 @@ static TABLE: [u8; 256] = {
     table
 };
 
+#[inline]
+fn trim_trailing_spaces(bytes: &[u8], min_exclusive: usize, mut end: usize) -> usize {
+    while end > min_exclusive && bytes[end - 1] == WHITESPACE {
+        end -= 1;
+    }
+    end
+}
+
+#[inline]
+fn trim_leading_spaces(bytes: &[u8], mut start: usize) -> usize {
+    while start < bytes.len() && bytes[start] == WHITESPACE {
+        start += 1;
+    }
+    start
+}
+
+#[inline]
+fn parse_ascii_i32(bytes: &[u8]) -> Option<i32> {
+    if bytes.is_empty() {
+        return None;
+    }
+
+    let mut value = 0i32;
+
+    for &byte in bytes {
+        if !byte.is_ascii_digit() {
+            return None;
+        }
+        value = value.checked_mul(10)?.checked_add(i32::from(byte - b'0'))?;
+    }
+    Some(value)
+}
+
+#[inline]
+fn parse_two_digits(a: u8, b: u8) -> Option<i32> {
+    let a_ = TABLE[a as usize];
+    let b_ = TABLE[b as usize];
+    if a_ < 10 && b_ < 10 {
+        Some(i32::from(a_) * 10 + i32::from(b_))
+    } else {
+        None
+    }
+}
+
+#[inline]
+fn parse_tz_hm(offset_bytes: &[u8]) -> Option<(i32, i32)> {
+    match offset_bytes.len() {
+        // -5
+        1 => parse_ascii_i32(offset_bytes).map(|h| (h, 0)),
+        // -05
+        2 => parse_two_digits(offset_bytes[0], offset_bytes[1]).map(|h| (h, 0)),
+        // -5:30
+        4 if offset_bytes[1] == b':' => {
+            let h = parse_ascii_i32(&offset_bytes[..1])?;
+            let m = parse_two_digits(offset_bytes[2], offset_bytes[3])?;
+            Some((h, m))
+        }
+        // -05:30
+        5 if offset_bytes[2] == b':' => {
+            let h = parse_two_digits(offset_bytes[0], offset_bytes[1])?;
+            let m = parse_two_digits(offset_bytes[3], offset_bytes[4])?;
+            Some((h, m))
+        }
+        _ => None,
+    }
+}
+
 pub(crate) fn parse_py_datetime<'py>(
     py: Python<'py>,
     str: &str,
 ) -> PyResult<Option<Bound<'py, PyAny>>> {
     const SECS_IN_DAY: i32 = 86_400;
-    const SEP: u8 = b':';
-    const WHITESPACE: u8 = b' ';
-    const T: u8 = b'T';
-    const LOWER_T: u8 = b't';
-    const Z: u8 = b'Z';
-    const LOWER_Z: u8 = b'z';
-    const PLUS: u8 = b'+';
-    const MINUS: u8 = b'-';
 
     let bytes = str.as_bytes();
 
@@ -54,7 +120,11 @@ pub(crate) fn parse_py_datetime<'py>(
         return Ok(Some(PyDate::new(py, year, month, day)?.into_any()));
     }
 
-    let sep_pos = match memchr3(T, LOWER_T, WHITESPACE, &bytes[10..]).map(|pos| pos + 10) {
+    let sep_pos = match bytes[10..]
+        .iter()
+        .position(|&byte| matches!(byte, T | LOWER_T | WHITESPACE | TAB))
+        .map(|pos| pos + 10)
+    {
         Some(pos) => pos,
         None => return Ok(None),
     };
@@ -67,33 +137,13 @@ pub(crate) fn parse_py_datetime<'py>(
         let b = unsafe { *bytes.get_unchecked(i) };
 
         match b {
-            Z => {
-                let mut actual_dt_end = i;
-                // SAFETY: Loop condition ensures actual_dt_end > sep_pos + 1,
-                // so actual_dt_end - 1 >= sep_pos + 1 > 0, making it a valid index.
-                while actual_dt_end > sep_pos + 1
-                    && unsafe { *bytes.get_unchecked(actual_dt_end - 1) } == WHITESPACE
-                {
-                    actual_dt_end -= 1;
-                }
+            Z | PLUS => {
+                let actual_dt_end = trim_trailing_spaces(bytes, sep_pos + 1, i);
                 dt_end = actual_dt_end;
                 tz_start = Some(i);
                 break;
             }
             LOWER_Z => return Ok(None),
-            PLUS => {
-                let mut actual_dt_end = i;
-                // SAFETY: Loop condition ensures actual_dt_end > sep_pos + 1,
-                // so actual_dt_end - 1 is a valid index.
-                while actual_dt_end > sep_pos + 1
-                    && unsafe { *bytes.get_unchecked(actual_dt_end - 1) } == WHITESPACE
-                {
-                    actual_dt_end -= 1;
-                }
-                dt_end = actual_dt_end;
-                tz_start = Some(i);
-                break;
-            }
             MINUS if i > 10 => {
                 let mut check_pos = i - 1;
                 // SAFETY: Loop condition ensures check_pos > sep_pos >= 0,
@@ -108,14 +158,7 @@ pub(crate) fn parse_py_datetime<'py>(
                 if check_pos > sep_pos
                     && unsafe { *bytes.get_unchecked(check_pos) }.is_ascii_digit()
                 {
-                    let mut actual_dt_end = i;
-                    // SAFETY: Loop condition ensures actual_dt_end > sep_pos + 1,
-                    // so actual_dt_end - 1 is a valid index.
-                    while actual_dt_end > sep_pos + 1
-                        && unsafe { *bytes.get_unchecked(actual_dt_end - 1) } == WHITESPACE
-                    {
-                        actual_dt_end -= 1;
-                    }
+                    let actual_dt_end = trim_trailing_spaces(bytes, sep_pos + 1, i);
                     dt_end = actual_dt_end;
                     tz_start = Some(i);
                     break;
@@ -183,14 +226,7 @@ pub(crate) fn parse_py_datetime<'py>(
             };
 
         let tz_info = if let Some(tz_pos) = tz_start {
-            let mut tz_actual_start = tz_pos;
-            // SAFETY: Loop increments tz_actual_start while checking it's < `bytes.len()`,
-            // ensuring all accesses are within bounds.
-            while tz_actual_start < bytes.len()
-                && *bytes.get_unchecked(tz_actual_start) == WHITESPACE
-            {
-                tz_actual_start += 1;
-            }
+            let tz_actual_start = trim_leading_spaces(bytes, tz_pos);
 
             if tz_actual_start >= bytes.len() {
                 return Ok(None);
@@ -207,31 +243,9 @@ pub(crate) fn parse_py_datetime<'py>(
                     let sign = if first_byte == PLUS { 1 } else { -1 };
                     let offset_bytes = &tz_bytes[1..];
 
-                    let (hours, minutes) = if let Some(colon_pos) = memchr(SEP, offset_bytes) {
-                        let h = atoi::<i32>(&offset_bytes[..colon_pos]).ok_or_else(|| {
-                            PyErr::new::<PyValueError, _>("Invalid timezone hour")
-                        })?;
-                        let m = if colon_pos + 1 < offset_bytes.len() {
-                            atoi::<i32>(&offset_bytes[colon_pos + 1..]).unwrap_or(0)
-                        } else {
-                            0
-                        };
-                        (h, m)
-                    } else if offset_bytes.len() <= 2 {
-                        let h = atoi::<i32>(offset_bytes).ok_or_else(|| {
-                            PyErr::new::<PyValueError, _>("Invalid timezone hour")
-                        })?;
-                        (h, 0)
-                    } else {
-                        // SAFETY: `offset_bytes.len()` > 2 verified by else branch,
-                        // so indices 0..2 and potentially 2..4 are valid.
-                        let h = parse_digits(offset_bytes, 0, 2).cast_signed();
-                        let m = if offset_bytes.len() >= 4 {
-                            parse_digits(offset_bytes, 2, 2).cast_signed()
-                        } else {
-                            0
-                        };
-                        (h, m)
+                    let (hours, minutes) = match parse_tz_hm(offset_bytes) {
+                        Some(hm) => hm,
+                        None => return Ok(None),
                     };
 
                     let total_seconds = sign * (hours * 3600 + minutes * 60);

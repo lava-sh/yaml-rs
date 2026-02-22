@@ -219,6 +219,8 @@ def test_yaml_load_encoding_success(
         # `T` and `t` are allowed
         ("2001-12-15t02:59:43Z", datetime(2001, 12, 15, 2, 59, 43, tzinfo=UTC)),
         ("2001-12-15T02:59:43Z", datetime(2001, 12, 15, 2, 59, 43, tzinfo=UTC)),
+        ("2001-12-15T02:59:43-0530", "2001-12-15T02:59:43-0530"),
+        ("2001-12-15T02:59:43+123456", "2001-12-15T02:59:43+123456"),
         # https://github.com/yaml/yaml-spec/blob/1b1a1be4/spec/1.2/docbook/timestamp.dbk#L143
         # ([ \t]*(Z|[-+][0-9][0-9]?(:[0-9][0-9])?))? <lineannotation># (time zone)</lineannotation>
         # only `Z` allowed
