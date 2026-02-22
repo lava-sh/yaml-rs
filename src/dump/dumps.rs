@@ -1,16 +1,15 @@
 use std::fmt::Write;
 
-use ordered_float::OrderedFloat;
 use pyo3::{
     Bound, PyAny, PyResult, intern,
     types::{
         PyAnyMethods, PyBool, PyBoolMethods, PyDate, PyDateAccess, PyDateTime, PyDelta,
-        PyDeltaAccess, PyDict, PyDictMethods, PyFloat, PyFloatMethods, PyFrozenSet,
-        PyFrozenSetMethods, PyInt, PyList, PyListMethods, PySet, PySetMethods, PyString,
-        PyStringMethods, PyTimeAccess, PyTuple, PyTupleMethods, PyTzInfo, PyTzInfoAccess,
+        PyDeltaAccess, PyDict, PyDictMethods, PyFloat, PyFrozenSet, PyFrozenSetMethods, PyInt,
+        PyList, PyListMethods, PySet, PySetMethods, PyString, PyStringMethods, PyTimeAccess,
+        PyTuple, PyTupleMethods, PyTzInfo, PyTzInfoAccess,
     },
 };
-use saphyr::{MappingOwned, ScalarOwned, YamlOwned, YamlOwned::Value};
+use saphyr::{MappingOwned, ScalarOwned, ScalarStyle, YamlOwned, YamlOwned::Value};
 
 use crate::YAMLEncodeError;
 
@@ -27,12 +26,21 @@ pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
         return Ok(Value(ScalarOwned::Boolean(bool.is_true())));
     }
     if let Ok(int) = obj.cast::<PyInt>() {
-        return Ok(Value(ScalarOwned::Integer(int.extract()?)));
+        return match int.extract::<i64>() {
+            Ok(value) => Ok(Value(ScalarOwned::Integer(value))),
+            Err(_) => Ok(YamlOwned::Representation(
+                int.str()?.to_str()?.to_owned(),
+                ScalarStyle::Plain,
+                None,
+            )),
+        };
     }
     if let Ok(float) = obj.cast::<PyFloat>() {
-        return Ok(Value(ScalarOwned::FloatingPoint(OrderedFloat(
-            float.value(),
-        ))));
+        return Ok(YamlOwned::Representation(
+            to_yaml_float(float)?,
+            ScalarStyle::Plain,
+            None,
+        ));
     }
     if let Ok(datetime) = obj.cast::<PyDateTime>() {
         let year = datetime.get_year();
@@ -172,4 +180,28 @@ pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
             .repr()
             .map_or_else(|_| "<repr failed>".to_string(), |r| r.to_string())
     )))
+}
+
+fn to_yaml_float(float: &Bound<'_, PyFloat>) -> PyResult<String> {
+    let py_str = float.str()?;
+    let repr = py_str.to_str()?;
+    let value = match repr {
+        "inf" => ".inf".to_owned(),
+        "-inf" => "-.inf".to_owned(),
+        "nan" => ".nan".to_owned(),
+        _ => {
+            if let Some(index) = repr.find(['e', 'E']) {
+                let mantissa = &repr[..index];
+                let exponent = &repr[index + 1..];
+                if mantissa.contains('.') {
+                    format!("{mantissa}e{exponent}")
+                } else {
+                    format!("{mantissa}.0e{exponent}")
+                }
+            } else {
+                repr.to_owned()
+            }
+        }
+    };
+    Ok(value)
 }
