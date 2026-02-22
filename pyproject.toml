@@ -1,5 +1,5 @@
 [build-system]
-requires = ["maturin == 1.12.3"]
+requires = ["maturin == 1.12.4"]
 build-backend = "maturin"
 
 [tool.maturin]
@@ -42,9 +42,10 @@ zizmor = ["zizmor == 1.22.0"]
 ci = [
     "pytest == 9.0.2",
     "dirty-equals == 0.11",
-    "maturin == 1.12.3",
+    "maturin == 1.12.4",
     "ruff == 0.15.2",
-    "rumdl == 0.1.23",
+    "rumdl == 0.1.25",
+    "pyyaml == 6.0.3",
 ]
 dev = [
     { include-group = "ci" },

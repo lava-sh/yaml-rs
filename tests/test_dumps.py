@@ -4,6 +4,7 @@ from textwrap import dedent
 from typing import Any
 
 import pytest
+import yaml as pyyaml
 import yaml_rs
 
 from .helpers import VALID_YAMLS, YamlTestSuite
@@ -183,3 +184,47 @@ def test_valid_yamls_dumps_from_test_suite(ts: YamlTestSuite) -> None:
         assert dumped == expected
     except AssertionError:
         pytest.skip(f"dump mismatch: {ts.id}")
+
+
+# https://github.com/lava-sh/yaml-rs/issues/69
+@pytest.mark.parametrize(
+    "data",
+    [
+        {
+            "int": 99999999999999999999999999999999999999999,
+            "float": 99999999999999999999999999999999999999999.9999999,
+            "neg-int": -99999999999999999999999999999999999999999,
+            "neg-float": -99999999999999999999999999999999999999999.9999999,
+        },
+        {
+            "big_pos_int": 10**200,
+            "big_neg_int": -(10**200),
+        },
+        {
+            "radix_2": int("1" * 256, 2),
+            "radix_8": int("7" * 128, 8),
+            "radix_16": int("f" * 96, 16),
+            "radix_36": int("z" * 64, 36),
+        },
+        {
+            "radix_mix_pos": int("deadbeef" * 8, 16),
+            "radix_mix_neg": -int("101010" * 40, 2),
+            "radix_base36": int("abcxyz" * 30, 36),
+        },
+        {
+            "huge_float_pos": 1e308,
+            "huge_float_neg": -1e308,
+            "tiny_float_pos": 1e-308,
+            "tiny_float_neg": -1e-308,
+        },
+        {
+            "special_inf": float("inf"),
+            "special_ninf": float("-inf"),
+            "special_nan": float("nan"),
+        },
+    ],
+)
+def test_dumps_nums(data: dict[str, float | int]) -> None:
+    dumped = yaml_rs.dumps(data).removeprefix("---\n")
+    expected = pyyaml.dump(data, sort_keys=False).rstrip("\n")
+    assert dumped == expected
