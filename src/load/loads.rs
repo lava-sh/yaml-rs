@@ -62,6 +62,204 @@ fn is_bool(str: &str) -> Option<bool> {
 }
 
 #[inline]
+fn is_inf_nan(bytes: &[u8]) -> Option<(SpecialFloat, bool)> {
+    if bytes.is_empty() {
+        return None;
+    }
+
+    let mut i = 0usize;
+    let mut neg = false;
+
+    match bytes[i] {
+        b'+' => {
+            i += 1;
+            if i >= bytes.len() {
+                return None;
+            }
+        }
+        b'-' => {
+            neg = true;
+            i += 1;
+            if i >= bytes.len() {
+                return None;
+            }
+        }
+        _ => {}
+    }
+
+    if bytes[i] == b'.' {
+        i += 1;
+        if i >= bytes.len() {
+            return None;
+        }
+    }
+
+    let rest = &bytes[i..];
+
+    if rest.len() != 3 {
+        return None;
+    }
+
+    let (a, b, c) = (rest[0], rest[1], rest[2]);
+
+    if matches!((a, b, c), (b'i' | b'I', b'n' | b'N', b'f' | b'F')) {
+        return Some((SpecialFloat::Inf, neg));
+    }
+
+    if matches!((a, b, c), (b'n' | b'N', b'a' | b'A', b'n' | b'N')) {
+        return Some((SpecialFloat::Nan, neg));
+    }
+
+    None
+}
+
+#[inline]
+fn is_float(bytes: &[u8]) -> bool {
+    if bytes.is_empty() {
+        return false;
+    }
+
+    if is_inf_nan(bytes).is_some() {
+        return true;
+    }
+
+    let mut i = 0usize;
+    if matches!(bytes[0], b'+' | b'-') {
+        i += 1;
+        if i >= bytes.len() {
+            return false;
+        }
+    }
+
+    let mut has_digit = false;
+    let mut has_dot = false;
+    let mut has_exp = false;
+
+    while i < bytes.len() {
+        match bytes[i] {
+            b'0'..=b'9' => has_digit = true,
+            UNDERSCORE => {}
+            b'.' if !has_dot && !has_exp => has_dot = true,
+            b'e' | b'E' if has_digit && !has_exp => {
+                has_exp = true;
+                has_digit = false;
+                if i + 1 < bytes.len() && matches!(bytes[i + 1], b'+' | b'-') {
+                    i += 1;
+                }
+            }
+            _ => return false,
+        }
+        i += 1;
+    }
+
+    has_digit && (has_dot || has_exp)
+}
+
+#[inline]
+fn is_int(bytes: &[u8]) -> bool {
+    if bytes.is_empty() {
+        return false;
+    }
+
+    let mut i = 0usize;
+    if matches!(bytes[0], b'+' | b'-') {
+        i += 1;
+        if i >= bytes.len() {
+            return false;
+        }
+    }
+
+    if bytes[i] == b'0' && i + 1 < bytes.len() {
+        let pref = bytes[i + 1];
+        if matches!(pref, b'x' | b'X' | b'o' | b'O' | b'b' | b'B') {
+            i += 2;
+            if i >= bytes.len() {
+                return false;
+            }
+
+            let mut has_digit = false;
+            for &byte in &bytes[i..] {
+                return match pref {
+                    b'x' | b'X' => {
+                        if byte == UNDERSCORE {
+                            continue;
+                        }
+                        if byte.is_ascii_hexdigit() {
+                            has_digit = true;
+                            continue;
+                        }
+                        false
+                    }
+                    b'o' | b'O' => {
+                        if byte == UNDERSCORE {
+                            continue;
+                        }
+                        if matches!(byte, b'0'..=b'7') {
+                            has_digit = true;
+                            continue;
+                        }
+                        false
+                    }
+                    _ => {
+                        if byte == UNDERSCORE {
+                            continue;
+                        }
+                        if matches!(byte, b'0' | b'1') {
+                            has_digit = true;
+                            continue;
+                        }
+                        false
+                    }
+                };
+            }
+            return has_digit;
+        }
+    }
+
+    let mut has_digit = false;
+    for &byte in &bytes[i..] {
+        if byte == UNDERSCORE {
+            continue;
+        }
+        if byte.is_ascii_digit() {
+            has_digit = true;
+            continue;
+        }
+        return false;
+    }
+    has_digit
+}
+
+#[inline]
+fn is_datetime(bytes: &[u8]) -> bool {
+    if bytes.len() < 10 {
+        return false;
+    }
+
+    if !(bytes[4] == b'-' && bytes[7] == b'-') {
+        return false;
+    }
+
+    if !bytes[0].is_ascii_digit()
+        || !bytes[1].is_ascii_digit()
+        || !bytes[2].is_ascii_digit()
+        || !bytes[3].is_ascii_digit()
+        || !bytes[5].is_ascii_digit()
+        || !bytes[6].is_ascii_digit()
+        || !bytes[8].is_ascii_digit()
+        || !bytes[9].is_ascii_digit()
+    {
+        return false;
+    }
+
+    if bytes.len() == 10 {
+        return true;
+    }
+
+    matches!(bytes[10], b'T' | b't' | b' ')
+}
+
+#[inline]
 fn normalize_num(str: &str) -> Cow<'_, str> {
     let bytes = str.as_bytes();
 
@@ -126,58 +324,6 @@ fn parse_int<'a>(str: &str) -> Option<Value<'a>> {
 enum SpecialFloat {
     Inf,
     Nan,
-}
-
-#[inline]
-fn is_inf_nan(bytes: &[u8]) -> Option<(SpecialFloat, bool)> {
-    if bytes.is_empty() {
-        return None;
-    }
-
-    let mut i = 0usize;
-    let mut neg = false;
-
-    match bytes[i] {
-        b'+' => {
-            i += 1;
-            if i >= bytes.len() {
-                return None;
-            }
-        }
-        b'-' => {
-            neg = true;
-            i += 1;
-            if i >= bytes.len() {
-                return None;
-            }
-        }
-        _ => {}
-    }
-
-    if bytes[i] == b'.' {
-        i += 1;
-        if i >= bytes.len() {
-            return None;
-        }
-    }
-
-    let rest = &bytes[i..];
-
-    if rest.len() != 3 {
-        return None;
-    }
-
-    let (a, b, c) = (rest[0], rest[1], rest[2]);
-
-    if matches!((a, b, c), (b'i' | b'I', b'n' | b'N', b'f' | b'F')) {
-        return Some((SpecialFloat::Inf, neg));
-    }
-
-    if matches!((a, b, c), (b'n' | b'N', b'a' | b'A', b'n' | b'N')) {
-        return Some((SpecialFloat::Nan, neg));
-    }
-
-    None
 }
 
 fn parse_float(str: &str) -> Option<f64> {
@@ -256,12 +402,15 @@ fn resolve_scalar<'a>(
         if (is_inf_nan(bytes).is_some()
             || memchr(b'.', bytes).is_some()
             || memchr2(b'e', b'E', bytes).is_some())
+            && is_float(bytes)
             && let Some(float) = parse_float(str)
         {
             return Ok(arena.push(Value::Float(float)));
         }
 
-        if let Some(int) = parse_int(str) {
+        if is_int(bytes)
+            && let Some(int) = parse_int(str)
+        {
             return Ok(arena.push(int));
         }
     }
@@ -388,7 +537,10 @@ fn value_to_py<'py>(
         Value::StringExplicit(string_exp) => string_exp.into_bound_py_any(py),
         Value::String(string) => {
             let str = string.as_ref();
-            if parse_datetime && let Ok(Some(dt)) = parse_py_datetime(py, str) {
+            if parse_datetime
+                && is_datetime(str.as_bytes())
+                && let Ok(Some(dt)) = parse_py_datetime(py, str)
+            {
                 return Ok(dt);
             }
             str.into_bound_py_any(py)
