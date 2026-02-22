@@ -10,9 +10,11 @@ on:
       - "*"
     paths-ignore:
       - "README.md"
+      - "scripts/"
   pull_request:
     paths-ignore:
       - "README.md"
+      - "scripts/"
   workflow_dispatch:
 
 concurrency:
