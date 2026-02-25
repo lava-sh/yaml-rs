@@ -44,7 +44,7 @@ ci = [
     "dirty-equals == 0.11",
     "maturin == 1.12.4",
     "ruff == 0.15.2",
-    "rumdl == 0.1.25",
+    "rumdl == 0.1.28",
     "pyyaml == 6.0.3",
 ]
 dev = [
