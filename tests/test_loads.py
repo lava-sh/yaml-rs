@@ -8,7 +8,7 @@ from typing import Any, Literal
 import pytest
 import yaml_rs
 
-from .helpers import INVALID_YAMLS, VALID_YAMLS, YamlTestSuite, _is_nan
+from .helpers import INVALID_YAMLS, SKIPPED_YAMLS, VALID_YAMLS, YamlTestSuite, _is_nan
 
 if sys.version_info >= (3, 11):
     from datetime import UTC
@@ -745,6 +745,13 @@ def test_valid_yamls_from_test_suite(ts: YamlTestSuite) -> None:
         f"\nActual:\n{actual!r}\n"
         f"\nExpected:\n{expected!r}\n"
     )
+
+
+@pytest.mark.parametrize("ts", SKIPPED_YAMLS, ids=lambda ts: ts.id)
+def test_skipped_yamls_from_test_suite(ts: YamlTestSuite) -> None:
+    # For these cases, there are no `.json` files in `yaml-test-suite`,
+    # so we have nothing to compare them to, just check that they load without error.
+    yaml_rs.loads(ts.in_yaml.read_text("utf-8"), parse_datetime=False)
 
 
 @pytest.mark.parametrize("ts", INVALID_YAMLS, ids=lambda ts: ts.id)
