@@ -53,22 +53,37 @@ jobs:
       - run: cargo clippy --all-targets
 
   zizmor:
-    name: ""
-    uses: ./.github/workflows/tool.yml
-    with:
-      tool: "zizmor"
+    name: "zizmor"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/tool
+        with:
+          tool: "zizmor"
 
   typos:
-    name: ""
-    uses: ./.github/workflows/tool.yml
-    with:
-      tool: "typos"
+    name: "typos"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/tool
+        with:
+          tool: "typos"
 
   rumdl:
-    name: ""
-    uses: ./.github/workflows/tool.yml
-    with:
-      tool: "rumdl"
+    name: "rumdl"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/uv-tool
+        with:
+          tool: "rumdl"
 
   tests:
     uses: ./.github/workflows/tests.yml

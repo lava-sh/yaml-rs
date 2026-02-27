@@ -1,4 +1,4 @@
-name: ""
+name: "build sdist"
 
 on:
   workflow_call:

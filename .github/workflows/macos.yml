@@ -5,7 +5,7 @@ on:
 
 jobs:
   macos:
-    name: "macos (macos-latest / ${{ matrix.platform.target }})"
+    name: "macos-latest / ${{ matrix.platform.target }}"
     runs-on: macos-latest
     strategy:
       matrix:

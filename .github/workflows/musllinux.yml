@@ -1,11 +1,11 @@
-name: musllinux
+name: "musllinux"
 
 on:
   workflow_call:
 
 jobs:
   musllinux:
-    name: "musllinux (ubuntu-latest / ${{ matrix.platform.target }})"
+    name: "ubuntu-latest / ${{ matrix.platform.target }}"
     runs-on: ubuntu-latest
     strategy:
       matrix:

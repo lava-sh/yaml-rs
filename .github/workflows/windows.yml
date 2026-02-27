@@ -1,11 +1,11 @@
-name: windows
+name: "windows"
 
 on:
   workflow_call:
 
 jobs:
   windows:
-    name: "windows (windows-latest / ${{ matrix.platform.target }})"
+    name: "windows-latest / ${{ matrix.platform.target }}"
     runs-on: windows-latest
     strategy:
       matrix:

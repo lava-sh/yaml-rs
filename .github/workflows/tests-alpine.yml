@@ -1,4 +1,4 @@
-name: tests-alpine
+name: "tests alpine"
 
 on:
   workflow_call:
