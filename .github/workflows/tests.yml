@@ -5,7 +5,7 @@ on:
 
 jobs:
   tests:
-    name: "tests (${{ matrix.os }} / python ${{ matrix.python-version }})"
+    name: "${{ matrix.os }} / python ${{ matrix.python-version }}"
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     strategy:
