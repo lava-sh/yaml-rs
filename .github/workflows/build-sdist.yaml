@@ -1,0 +1,24 @@
+name: build-sdist
+
+on:
+  workflow_call:
+
+jobs:
+  build-sdist:
+    name: "build sdist"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: "Build sdist"
+        uses: PyO3/maturin-action@b1bd829e37fef14c63f19162034228a2f3dc1021 # v1.50.0
+        with:
+          command: sdist
+          args: --out dist
+          rust-toolchain: nightly
+      - name: "Upload sdist"
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: wheels-sdist
+          path: dist

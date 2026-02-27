@@ -1,0 +1,151 @@
+name: CI
+
+permissions: { }
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "*"
+    paths-ignore:
+      - "README.md"
+      - "scripts/"
+  pull_request:
+    paths-ignore:
+      - "README.md"
+      - "scripts/"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  cargo-fmt:
+    name: "cargo fmt"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: "Install Rust nightly + rustfmt"
+        run: rustup toolchain install nightly --component rustfmt
+      - uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
+        with:
+          lookup-only: true
+      - run: cargo fmt-nightly --check
+
+  cargo-clippy:
+    name: "cargo clippy"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: "Install Rust nightly + clippy"
+        run: rustup toolchain install nightly --component clippy
+      - uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
+        with:
+          lookup-only: true
+      - run: cargo clippy --all-targets
+
+  zizmor:
+    name: "zizmor"
+    uses: ./.github/workflows/tool.yaml
+    with:
+      job-name: "zizmor"
+      group: "zizmor"
+      run-command: "zizmor .github/"
+
+  typos:
+    name: "typos"
+    uses: ./.github/workflows/tool.yaml
+    with:
+      job-name: "typos"
+      group: "typos"
+      run-command: "typos --config .typos.toml"
+
+  rumdl:
+    name: "rumdl"
+    uses: ./.github/workflows/tool.yaml
+    with:
+      job-name: "rumdl"
+      group: "rumdl"
+      run-command: "rumdl check ."
+
+  tests:
+    name: "tests"
+    uses: ./.github/workflows/tests.yaml
+
+  tests-alpine:
+    name: "tests (alpine / python 3.13)"
+    uses: ./.github/workflows/tests-alpine.yaml
+
+  linux:
+    name: "linux (ubuntu-latest / ${{ matrix.platform.target }})"
+    needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, zizmor, typos ]
+    uses: ./.github/workflows/build_wheels/linux.yaml
+
+  musllinux:
+    name: "musllinux (ubuntu-latest / ${{ matrix.platform.target }})"
+    needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, zizmor, typos ]
+    uses: ./.github/workflows/build_wheels/musllinux.yaml
+
+  windows:
+    name: "windows (windows-latest / ${{ matrix.platform.target }})"
+    needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, zizmor, typos ]
+    uses: ./.github/workflows/build_wheels/windows.yaml
+
+  macos:
+    name: "macos (macos-latest / ${{ matrix.platform.target }})"
+    needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, zizmor, typos ]
+    uses: ./.github/workflows/build_wheels/macos.yaml
+
+  build-sdist:
+    name: "build sdist"
+    uses: ./.github/workflows/build-sdist.yaml
+
+  release:
+    name: "Release"
+    runs-on: ubuntu-latest
+    if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
+    environment: pypi
+    needs: [
+      linux,
+      musllinux,
+      windows,
+      macos,
+      build-sdist,
+      tests,
+      tests-alpine,
+      cargo-fmt,
+      cargo-clippy,
+      zizmor,
+      typos,
+    ]
+    permissions:
+      # Use to sign the release artifacts
+      id-token: write
+      # Used to upload release artifacts
+      contents: write
+      # Used to generate artifact attestation
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+      - name: "Generate artifact attestation"
+        uses: actions/attest-build-provenance@96278af6caaf10aea03fd8d33a09a777ca52d62f # v3.2.0
+        with:
+          subject-path: "wheels-*/*"
+      - name: "Install uv"
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
+        with:
+          enable-cache: false
+      - name: "Publish to PyPI"
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        run: uv publish 'wheels-*/*'
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
