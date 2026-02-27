@@ -65,36 +65,29 @@ jobs:
       tool: "typos"
 
   rumdl:
-    name: "rumdl"
     uses: ./.github/workflows/tool.yml
     with:
       tool: "rumdl"
 
   tests:
-    name: "tests"
     uses: ./.github/workflows/tests.yml
 
   tests-alpine:
-    name: "tests (alpine / python 3.13)"
     uses: ./.github/workflows/tests-alpine.yml
 
   linux:
-    name: "linux (ubuntu-latest / ${{ matrix.platform.target }})"
     needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, zizmor, typos ]
     uses: ./.github/workflows/linux.yml
 
   musllinux:
-    name: "musllinux (ubuntu-latest / ${{ matrix.platform.target }})"
     needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, zizmor, typos ]
     uses: ./.github/workflows/musllinux.yml
 
   windows:
-    name: "windows (windows-latest / ${{ matrix.platform.target }})"
     needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, zizmor, typos ]
     uses: ./.github/workflows/windows.yml
 
   macos:
-    name: "macos (macos-latest / ${{ matrix.platform.target }})"
     needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, zizmor, typos ]
     uses: ./.github/workflows/macos.yml
 
