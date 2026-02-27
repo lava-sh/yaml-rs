@@ -93,7 +93,6 @@ jobs:
     uses: ./.github/workflows/macos.yml
 
   build-sdist:
-    name: ""
     uses: ./.github/workflows/build-sdist.yml
 
   release:
