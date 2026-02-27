@@ -111,7 +111,7 @@ pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
                     });
 
                 if let Some((offset_hours, offset_minutes)) = result {
-                    write!(&mut datetime_str, "{offset_hours:+03}:{offset_minutes:02}",).unwrap();
+                    write!(&mut datetime_str, "{offset_hours:+03}:{offset_minutes:02}").unwrap();
                 }
             }
         }

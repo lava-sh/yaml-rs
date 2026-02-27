@@ -19,7 +19,6 @@ pyo3 = {
         "generate-import-lib",
     ]
 }
-atoi = "=2.0.0"
 itoa = "=1.0.17"
 num-bigint = "=0.4.6"
 rustc-hash = "=2.1.1"
