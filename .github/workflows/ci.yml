@@ -59,9 +59,17 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
-      - uses: ./.github/actions/tool
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
-          tool: "zizmor"
+          python-version: "3.13"
+      - name: "Install uv"
+        uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
+        with:
+          enable-cache: ${{ !startsWith(github.ref, 'refs/tags/') }} # zizmor: ignore[cache-poisoning]
+      - name: "Install zizmor"
+        run: uv pip install --group zizmor --system
+      - name: "Run zizmor"
+        run: zizmor .github/
 
   typos:
     name: "typos"
@@ -70,9 +78,17 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
-      - uses: ./.github/actions/tool
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
-          tool: "typos"
+          python-version: "3.13"
+      - name: "Install uv"
+        uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
+        with:
+          enable-cache: ${{ !startsWith(github.ref, 'refs/tags/') }} # zizmor: ignore[cache-poisoning]
+      - name: "Install typos"
+        run: uv pip install --group typos --system
+      - name: "Run typos"
+        run: typos --config .typos.toml
 
   rumdl:
     name: "rumdl"
@@ -81,9 +97,17 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
-      - uses: ./.github/actions/uv-tool
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
-          tool: "rumdl"
+          python-version: "3.13"
+      - name: "Install uv"
+        uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
+        with:
+          enable-cache: ${{ !startsWith(github.ref, 'refs/tags/') }} # zizmor: ignore[cache-poisoning]
+      - name: "Install rumdl"
+        run: uv pip install --group rumdl --system
+      - name: "Run rumdl"
+        run: rumdl check .
 
   tests:
     uses: ./.github/workflows/tests.yml
