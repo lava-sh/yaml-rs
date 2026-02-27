@@ -25,7 +25,7 @@ jobs:
   cargo-fmt:
     name: "cargo fmt"
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -40,7 +40,7 @@ jobs:
   cargo-clippy:
     name: "cargo clippy"
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -53,18 +53,19 @@ jobs:
       - run: cargo clippy --all-targets
 
   zizmor:
-    name: "zizmor"
+    name: ""
     uses: ./.github/workflows/tool.yml
     with:
       tool: "zizmor"
 
   typos:
-    name: "typos"
+    name: ""
     uses: ./.github/workflows/tool.yml
     with:
       tool: "typos"
 
   rumdl:
+    name: ""
     uses: ./.github/workflows/tool.yml
     with:
       tool: "rumdl"
@@ -92,7 +93,7 @@ jobs:
     uses: ./.github/workflows/macos.yml
 
   build-sdist:
-    name: "build sdist"
+    name: ""
     uses: ./.github/workflows/build-sdist.yml
 
   release:
