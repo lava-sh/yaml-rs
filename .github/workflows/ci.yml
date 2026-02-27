@@ -232,17 +232,17 @@ jobs:
           - {
             target: armv7,
             interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
-            maturin-args: ""
+            maturin-args: "--features mimalloc --zig"
           }
           - {
             target: s390x,
             interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
-            maturin-args: ""
+            maturin-args: "--features mimalloc --zig"
           }
           - {
             target: ppc64le,
             interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
-            maturin-args: ""
+            maturin-args: "--features mimalloc --zig"
           }
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
