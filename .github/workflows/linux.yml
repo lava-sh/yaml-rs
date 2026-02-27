@@ -5,7 +5,7 @@ on:
 
 jobs:
   linux:
-    name: "linux (ubuntu-latest / ${{ matrix.platform.target }})"
+    name: "ubuntu-latest / ${{ matrix.platform.target }}"
     runs-on: ubuntu-latest
     strategy:
       matrix:
