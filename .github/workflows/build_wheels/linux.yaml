@@ -28,12 +28,12 @@ jobs:
           - {
             target: armv7,
             interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
-            maturin-args: "--features mimalloc"
+            maturin-args: ""
           }
           - {
             target: s390x,
             interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
-            maturin-args: "--features mimalloc --zig"
+            maturin-args: ""
           }
           - {
             target: ppc64le,
