@@ -3,13 +3,7 @@ name: uv-tool
 on:
   workflow_call:
     inputs:
-      job-name:
-        required: true
-        type: string
-      group:
-        required: true
-        type: string
-      run-command:
+      tool:
         required: true
         type: string
       python-version:
@@ -19,7 +13,7 @@ on:
 
 jobs:
   run:
-    name: ${{ inputs.job-name }}
+    name: ${{ inputs.tool }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -32,7 +26,25 @@ jobs:
         uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
         with:
           enable-cache: ${{ !startsWith(github.ref, 'refs/tags/') }} # zizmor: ignore[cache-poisoning]
-      - name: "Install tool"
-        run: uv pip install --group ${{ inputs.group }} --system
-      - name: "Run tool"
-        run: ${{ inputs.run-command }}
+      - name: "Install and run selected tool"
+        env:
+          TOOL: ${{ inputs.tool }}
+        run: |
+          case "$TOOL" in
+            zizmor)
+              uv pip install --group zizmor --system
+              zizmor .github/
+              ;;
+            typos)
+              uv pip install --group typos --system
+              typos --config .typos.toml
+              ;;
+            rumdl)
+              uv pip install --group rumdl --system
+              rumdl check .
+              ;;
+            *)
+              echo "Unsupported tool input: $TOOL"
+              exit 1
+              ;;
+          esac

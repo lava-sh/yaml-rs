@@ -56,25 +56,19 @@ jobs:
     name: "zizmor"
     uses: ./.github/workflows/tool.yml
     with:
-      job-name: "zizmor"
-      group: "zizmor"
-      run-command: "zizmor .github/"
+      tool: "zizmor"
 
   typos:
     name: "typos"
     uses: ./.github/workflows/tool.yml
     with:
-      job-name: "typos"
-      group: "typos"
-      run-command: "typos --config .typos.toml"
+      tool: "typos"
 
   rumdl:
     name: "rumdl"
     uses: ./.github/workflows/tool.yml
     with:
-      job-name: "rumdl"
-      group: "rumdl"
-      run-command: "rumdl check ."
+      tool: "rumdl"
 
   tests:
     name: "tests"
