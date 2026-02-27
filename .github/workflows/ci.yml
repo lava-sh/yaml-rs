@@ -54,7 +54,7 @@ jobs:
 
   zizmor:
     name: "zizmor"
-    uses: ./.github/workflows/tool.yaml
+    uses: ./.github/workflows/tool\.yml
     with:
       job-name: "zizmor"
       group: "zizmor"
@@ -62,7 +62,7 @@ jobs:
 
   typos:
     name: "typos"
-    uses: ./.github/workflows/tool.yaml
+    uses: ./.github/workflows/tool\.yml
     with:
       job-name: "typos"
       group: "typos"
@@ -70,7 +70,7 @@ jobs:
 
   rumdl:
     name: "rumdl"
-    uses: ./.github/workflows/tool.yaml
+    uses: ./.github/workflows/tool\.yml
     with:
       job-name: "rumdl"
       group: "rumdl"
@@ -78,35 +78,35 @@ jobs:
 
   tests:
     name: "tests"
-    uses: ./.github/workflows/tests.yaml
+    uses: ./.github/workflows/tests\.yml
 
   tests-alpine:
     name: "tests (alpine / python 3.13)"
-    uses: ./.github/workflows/tests-alpine.yaml
+    uses: ./.github/workflows/tests-alpine\.yml
 
   linux:
     name: "linux (ubuntu-latest / ${{ matrix.platform.target }})"
     needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, zizmor, typos ]
-    uses: ./.github/workflows/build_wheels/linux.yaml
+    uses: ./.github/workflows/build_wheels/linux\.yml
 
   musllinux:
     name: "musllinux (ubuntu-latest / ${{ matrix.platform.target }})"
     needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, zizmor, typos ]
-    uses: ./.github/workflows/build_wheels/musllinux.yaml
+    uses: ./.github/workflows/build_wheels/musllinux\.yml
 
   windows:
     name: "windows (windows-latest / ${{ matrix.platform.target }})"
     needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, zizmor, typos ]
-    uses: ./.github/workflows/build_wheels/windows.yaml
+    uses: ./.github/workflows/build_wheels/windows\.yml
 
   macos:
     name: "macos (macos-latest / ${{ matrix.platform.target }})"
     needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, zizmor, typos ]
-    uses: ./.github/workflows/build_wheels/macos.yaml
+    uses: ./.github/workflows/build_wheels/macos\.yml
 
   build-sdist:
     name: "build sdist"
-    uses: ./.github/workflows/build-sdist.yaml
+    uses: ./.github/workflows/build-sdist\.yml
 
   release:
     name: "Release"
