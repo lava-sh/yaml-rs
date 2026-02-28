@@ -63,54 +63,45 @@ fn is_bool(str: &str) -> Option<bool> {
 
 #[inline]
 fn is_inf_nan(bytes: &[u8]) -> Option<(SpecialFloat, bool)> {
-    if bytes.is_empty() {
+    if bytes.len() < 3 || bytes.len() > 5 {
         return None;
     }
 
     let mut i = 0usize;
-    let mut neg = false;
-
-    match bytes[i] {
+    let neg = match bytes[0] {
         b'+' => {
-            i += 1;
-            if i >= bytes.len() {
-                return None;
-            }
+            i = 1;
+            false
         }
         b'-' => {
-            neg = true;
-            i += 1;
-            if i >= bytes.len() {
-                return None;
-            }
+            i = 1;
+            true
         }
-        _ => {}
-    }
+        _ => false,
+    };
 
-    if bytes[i] == b'.' {
+    if i < bytes.len() && bytes[i] == b'.' {
         i += 1;
-        if i >= bytes.len() {
-            return None;
-        }
     }
 
-    let rest = &bytes[i..];
-
-    if rest.len() != 3 {
+    if bytes.len() - i != 3 {
         return None;
     }
 
-    let (a, b, c) = (rest[0], rest[1], rest[2]);
+    // SAFETY: We checked that `bytes.len() - i == 3`, so `i..i+3` is in-bounds.
+    let (a, b, c) = unsafe {
+        (
+            *bytes.get_unchecked(i) | 0x20,
+            *bytes.get_unchecked(i + 1) | 0x20,
+            *bytes.get_unchecked(i + 2) | 0x20,
+        )
+    };
 
-    if matches!((a, b, c), (b'i' | b'I', b'n' | b'N', b'f' | b'F')) {
-        return Some((SpecialFloat::Inf, neg));
+    match (a, b, c) {
+        (b'i', b'n', b'f') => Some((SpecialFloat::Inf, neg)),
+        (b'n', b'a', b'n') => Some((SpecialFloat::Nan, neg)),
+        _ => None,
     }
-
-    if matches!((a, b, c), (b'n' | b'N', b'a' | b'A', b'n' | b'N')) {
-        return Some((SpecialFloat::Nan, neg));
-    }
-
-    None
 }
 
 #[inline]
@@ -123,10 +114,12 @@ fn is_float(bytes: &[u8]) -> bool {
         return true;
     }
 
+    let len = bytes.len();
     let mut i = 0usize;
+
     if matches!(bytes[0], b'+' | b'-') {
-        i += 1;
-        if i >= bytes.len() {
+        i = 1;
+        if i >= len {
             return false;
         }
     }
@@ -135,16 +128,22 @@ fn is_float(bytes: &[u8]) -> bool {
     let mut has_dot = false;
     let mut has_exp = false;
 
-    while i < bytes.len() {
-        match bytes[i] {
+    while i < len {
+        // SAFETY: The loop invariant ensures `i < len` for each access.
+        let byte = unsafe { *bytes.get_unchecked(i) };
+        match byte {
             b'0'..=b'9' => has_digit = true,
             UNDERSCORE => {}
             b'.' if !has_dot && !has_exp => has_dot = true,
             b'e' | b'E' if has_digit && !has_exp => {
                 has_exp = true;
                 has_digit = false;
-                if i + 1 < bytes.len() && matches!(bytes[i + 1], b'+' | b'-') {
-                    i += 1;
+                if i + 1 < len {
+                    // SAFETY: Guarded by `i + 1 < len`.
+                    let next = unsafe { *bytes.get_unchecked(i + 1) };
+                    if matches!(next, b'+' | b'-') {
+                        i += 1;
+                    }
                 }
             }
             _ => return false,
@@ -157,67 +156,47 @@ fn is_float(bytes: &[u8]) -> bool {
 
 #[inline]
 fn is_int(bytes: &[u8]) -> bool {
+    let bytes = if let [b'+' | b'-', rest @ ..] = bytes {
+        rest
+    } else {
+        bytes
+    };
+
     if bytes.is_empty() {
         return false;
     }
 
-    let mut i = 0usize;
-    if matches!(bytes[0], b'+' | b'-') {
-        i += 1;
-        if i >= bytes.len() {
+    if let [
+        b'0',
+        pref @ (b'x' | b'X' | b'o' | b'O' | b'b' | b'B'),
+        rest @ ..,
+    ] = bytes
+    {
+        if rest.is_empty() {
             return false;
         }
-    }
+        let mut has_digit = false;
 
-    if bytes[i] == b'0' && i + 1 < bytes.len() {
-        let pref = bytes[i + 1];
-        if matches!(pref, b'x' | b'X' | b'o' | b'O' | b'b' | b'B') {
-            i += 2;
-            if i >= bytes.len() {
+        for &byte in rest {
+            if byte == UNDERSCORE {
+                continue;
+            }
+            let valid = match pref {
+                b'x' | b'X' => byte.is_ascii_hexdigit(),
+                b'o' | b'O' => matches!(byte, b'0'..=b'7'),
+                _ => matches!(byte, b'0' | b'1'),
+            };
+            if !valid {
                 return false;
             }
-
-            let mut has_digit = false;
-            for &byte in &bytes[i..] {
-                return match pref {
-                    b'x' | b'X' => {
-                        if byte == UNDERSCORE {
-                            continue;
-                        }
-                        if byte.is_ascii_hexdigit() {
-                            has_digit = true;
-                            continue;
-                        }
-                        false
-                    }
-                    b'o' | b'O' => {
-                        if byte == UNDERSCORE {
-                            continue;
-                        }
-                        if matches!(byte, b'0'..=b'7') {
-                            has_digit = true;
-                            continue;
-                        }
-                        false
-                    }
-                    _ => {
-                        if byte == UNDERSCORE {
-                            continue;
-                        }
-                        if matches!(byte, b'0' | b'1') {
-                            has_digit = true;
-                            continue;
-                        }
-                        false
-                    }
-                };
-            }
-            return has_digit;
+            has_digit = true;
         }
+        return has_digit;
     }
 
     let mut has_digit = false;
-    for &byte in &bytes[i..] {
+
+    for &byte in bytes {
         if byte == UNDERSCORE {
             continue;
         }
@@ -267,15 +246,10 @@ fn normalize_num(str: &str) -> Cow<'_, str> {
         return Cow::Borrowed(str);
     }
 
-    let mut num = String::with_capacity(str.len());
-
-    for &byte in bytes {
-        if byte != UNDERSCORE {
-            num.push(byte as char);
-        }
-    }
-
-    Cow::Owned(num)
+    let mut vec = bytes.to_vec();
+    vec.retain(|&byte| byte != UNDERSCORE);
+    // SAFETY: Input is valid UTF-8 and only ASCII underscores are removed.
+    Cow::Owned(unsafe { String::from_utf8_unchecked(vec) })
 }
 
 fn parse_int<'a>(str: &str) -> Option<Value<'a>> {
