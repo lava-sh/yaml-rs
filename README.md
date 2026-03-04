@@ -28,6 +28,9 @@ pip install yaml-rs
 uv pip install yaml-rs
 ```
 
+## [Playground](https://lava-sh.github.io/yaml-rs-online/)
+Link: https://lava-sh.github.io/yaml-rs-online/
+
 ## Examples
 
 ```python
