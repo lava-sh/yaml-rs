@@ -74,7 +74,6 @@ jobs:
           maturin build --release \
             --target wasm32-unknown-emscripten \
             --interpreter python${{ matrix.platform.python-version }} \
-            --features mimalloc \
             --out dist
       - name: "Upload wasm wheel"
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
