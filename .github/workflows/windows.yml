@@ -26,6 +26,10 @@ jobs:
         with:
           python-version: 3.x
           architecture: ${{ matrix.platform.target }}
+      - uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
+        with:
+          key: windows-${{ matrix.platform.target }}
+          save-if: ${{ !startsWith(github.ref, 'refs/tags/') }}
       - name: "Build wheels"
         uses: PyO3/maturin-action@b1bd829e37fef14c63f19162034228a2f3dc1021 # v1.50.0
         with:
