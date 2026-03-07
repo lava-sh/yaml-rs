@@ -14,7 +14,7 @@ jobs:
         platform:
           - python-version: "3.10"
             emsdk-version: "3.1.27"
-            rust-toolchain: "nightly"
+            rust-toolchain: "nightly-2025-02-17"
             rustflags: >-
               -C link-arg=-sSIDE_MODULE=2
               -C link-arg=-sWASM_BIGINT
@@ -22,7 +22,7 @@ jobs:
 
           - python-version: "3.11"
             emsdk-version: "3.1.46"
-            rust-toolchain: "nightly"
+            rust-toolchain: "nightly-2025-02-17"
             rustflags: >-
               -C link-arg=-sSIDE_MODULE=2
               -C link-arg=-sWASM_BIGINT
@@ -30,7 +30,7 @@ jobs:
 
           - python-version: "3.12"
             emsdk-version: "3.1.58"
-            rust-toolchain: "nightly"
+            rust-toolchain: "nightly-2025-02-17"
             rustflags: >-
               -C link-arg=-sSIDE_MODULE=2
               -C link-arg=-sWASM_BIGINT
@@ -38,7 +38,7 @@ jobs:
 
           - python-version: "3.13"
             emsdk-version: "4.0.9"
-            rust-toolchain: "nightly"
+            rust-toolchain: "nightly-2026-03-06"
             rustflags: >-
               -Z emscripten-wasm-eh
               -C link-arg=-sSIDE_MODULE=2
