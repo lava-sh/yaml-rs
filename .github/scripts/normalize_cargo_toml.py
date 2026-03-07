@@ -2,9 +2,14 @@ import re
 from pathlib import Path
 
 
+def _strip_comment(line: str) -> str:
+    idx = line.find("#")
+    return line[:idx] if idx != -1 else line
+
+
 def normalize(text: str) -> str:
     lines = text.splitlines()
-    out = []
+    out: list[str] = []
     in_dependencies = False
     i = 0
 
@@ -25,29 +30,33 @@ def normalize(text: str) -> str:
             match = re.match(r"^([A-Za-z0-9_-]+)\s*=\s*\{\s*$", stripped)
             if match:
                 dep_name = match.group(1)
-                out.append(f"[dependencies.{dep_name}]")
+                body_parts: list[str] = []
                 i += 1
-                array_depth = 0
                 while i < len(lines):
-                    body_line = lines[i].rstrip()
-                    body_stripped = body_line.strip()
+                    body_stripped = lines[i].strip()
                     if body_stripped == "}":
                         break
-                    if array_depth == 0 and body_stripped.endswith(","):
-                        body_line = body_line.rstrip(",")
-                    out.append(body_line)
-                    array_depth += body_line.count("[") - body_line.count("]")
+                    part = _strip_comment(lines[i]).strip()
+                    if part:
+                        body_parts.append(part)
                     i += 1
+
+                inner = " ".join(body_parts)
+                inner = re.sub(r"\s+", " ", inner).strip()
+                inner = re.sub(r",\s*$", "", inner)
+                out.append(f"{dep_name} = {{ {inner} }}")
                 i += 1
                 continue
 
         out.append(line)
         i += 1
+
     return "\n".join(out) + ("\n" if text.endswith("\n") else "")
 
 
-path = Path("Cargo.toml")
-path.write_text(
-    normalize(path.read_text(encoding="utf-8")),
-    encoding="utf-8",
-)
+if __name__ == "__main__":
+    path = Path("Cargo.toml")
+    path.write_text(
+        normalize(path.read_text(encoding="utf-8")),
+        encoding="utf-8",
+    )
