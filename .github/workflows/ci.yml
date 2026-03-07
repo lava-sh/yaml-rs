@@ -110,9 +110,6 @@ jobs:
   tests:
     uses: ./.github/workflows/tests.yml
 
-  wasm:
-    uses: ./.github/workflows/wasm.yml
-
   tests-alpine:
     name: "tests / alpine / python 3.13"
     runs-on: ubuntu-latest
@@ -161,6 +158,10 @@ jobs:
   macos:
     needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, zizmor, typos ]
     uses: ./.github/workflows/macos.yml
+
+  wasm:
+    needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, zizmor, typos ]
+    uses: ./.github/workflows/wasm.yml
 
   build-sdist:
     name: "build-sdist"
