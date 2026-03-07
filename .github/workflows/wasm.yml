@@ -29,7 +29,7 @@ jobs:
               -C relocation-model=pic
 
           - python-version: "3.12"
-            emsdk-version: "3.1.58"
+            emsdk-version: "4.0.9"
             rust-toolchain: "nightly"
             rustflags: >-
               -C link-arg=-sSIDE_MODULE=2
@@ -60,13 +60,6 @@ jobs:
         uses: mymindstorm/setup-emsdk@6ab9eb1bda2574c4ddb79809fc9247783eaf9021 # v14
         with:
           version: ${{ matrix.platform.emsdk-version }}
-      - name: "Install sysroot"
-        if: ${{ matrix.platform.python-version == '3.13' }}
-        run: |
-          TOOLCHAIN_ROOT=$(rustup run nightly rustc --print sysroot)
-          RUSTLIB=$TOOLCHAIN_ROOT/lib/rustlib
-          wget -q https://github.com/pyodide/rust-emscripten-wasm-eh-sysroot/releases/download/emcc-4.0.9_nightly-2025-02-01/emcc-4.0.9_nightly-2025-02-01.tar.bz2
-          tar -xf emcc-4.0.9_nightly-2025-02-01.tar.bz2 --directory=$RUSTLIB
       - name: "Install uv"
         uses: astral-sh/setup-uv@5a095e7a2014a4212f075830d4f7277575a9d098 # v7.3.1
         with:
