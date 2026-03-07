@@ -13,7 +13,7 @@ jobs:
       matrix:
         platform:
           - python-version: "3.10"
-            emsdk-version: "3.1.13"
+            emsdk-version: "3.1.14"
             rust-toolchain: "nightly"
             rustflags: >-
               -C link-arg=-sSIDE_MODULE=2
@@ -21,7 +21,7 @@ jobs:
               -C relocation-model=pic
 
           - python-version: "3.11"
-            emsdk-version: "3.1.44"
+            emsdk-version: "3.1.46"
             rust-toolchain: "nightly"
             rustflags: >-
               -C link-arg=-sSIDE_MODULE=2
@@ -37,7 +37,7 @@ jobs:
               -C relocation-model=pic
 
           - python-version: "3.13"
-            emsdk-version: "5.0.2"
+            emsdk-version: "4.0.9"
             rust-toolchain: "nightly"
             rustflags: >-
               -Z emscripten-wasm-eh
