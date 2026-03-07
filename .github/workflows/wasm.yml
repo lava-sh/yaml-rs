@@ -9,46 +9,42 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
+      fail-fast: false
       matrix:
         platform:
-          - {
-            python-version: "3.10",
-            emsdk-version: "3.1.13",
-            rust-toolchain: "nightly",
+          - python-version: "3.10"
+            emsdk-version: "3.1.13"
+            rust-toolchain: "nightly"
             rustflags: >-
               -C link-arg=-sSIDE_MODULE=2
               -C link-arg=-sWASM_BIGINT
               -C relocation-model=pic
-          }
-          - {
-            python-version: "3.11",
-            emsdk-version: "3.1.45",
-            rust-toolchain: "nightly",
+
+          - python-version: "3.11"
+            emsdk-version: "3.1.45"
+            rust-toolchain: "nightly"
             rustflags: >-
               -C link-arg=-sSIDE_MODULE=2
               -C link-arg=-sWASM_BIGINT
               -C relocation-model=pic
-          }
-          - {
-            python-version: "3.12",
-            emsdk-version: "3.1.58",
-            rust-toolchain: "nightly",
+
+          - python-version: "3.12"
+            emsdk-version: "3.1.58"
+            rust-toolchain: "nightly"
             rustflags: >-
               -C link-arg=-sSIDE_MODULE=2
               -C link-arg=-sWASM_BIGINT
               -C relocation-model=pic
-          }
-          - {
-            python-version: "3.13",
-            emsdk-version: "4.0.9",
-            rust-toolchain: "nightly-2025-02-01",
+
+          - python-version: "3.13"
+            emsdk-version: "4.0.9"
+            rust-toolchain: "nightly-2025-02-01"
             rustflags: >-
               -Z emscripten-wasm-eh
               -C link-arg=-sSIDE_MODULE=2
               -C link-arg=-sWASM_BIGINT
               -C relocation-model=pic
               -Z link-native-libraries=no
-          }
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -57,10 +53,9 @@ jobs:
         with:
           python-version: ${{ matrix.platform.python-version }}
       - name: "Install Rust toolchain"
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ matrix.platform.rust-toolchain }}
-          targets: wasm32-unknown-emscripten
+        run: |
+          rustup toolchain install ${{ matrix.platform.rust-toolchain }}
+          rustup target add wasm32-unknown-emscripten --toolchain ${{ matrix.platform.rust-toolchain }}
       - name: "Install Emscripten SDK"
         uses: mymindstorm/setup-emsdk@95b5f188f0fda7f973ca6f2bd4e8a31cda5f3cf2 # v14
         with:
@@ -68,7 +63,7 @@ jobs:
       - name: "Install 2025 sysroot"
         if: ${{ matrix.platform.python-version == '3.13' }}
         run: |
-          TOOLCHAIN_ROOT=$(rustup run nightly-2025-02-01 rustc --print sysroot)
+          TOOLCHAIN_ROOT=$(rustup run nightly rustc --print sysroot)
           RUSTLIB=$TOOLCHAIN_ROOT/lib/rustlib
           wget -q https://github.com/pyodide/rust-emscripten-wasm-eh-sysroot/releases/download/emcc-4.0.9_nightly-2025-02-01/emcc-4.0.9_nightly-2025-02-01.tar.bz2
           tar -xf emcc-4.0.9_nightly-2025-02-01.tar.bz2 --directory=$RUSTLIB
