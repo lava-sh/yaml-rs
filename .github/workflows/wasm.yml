@@ -57,7 +57,7 @@ jobs:
           rustup toolchain install ${{ matrix.platform.rust-toolchain }}
           rustup target add wasm32-unknown-emscripten --toolchain ${{ matrix.platform.rust-toolchain }}
       - name: "Install Emscripten SDK"
-        uses: mymindstorm/setup-emsdk@95b5f188f0fda7f973ca6f2bd4e8a31cda5f3cf2 # v14
+        uses: mymindstorm/setup-emsdk@6ab9eb1bda2574c4ddb79809fc9247783eaf9021 # v14
         with:
           version: ${{ matrix.platform.emsdk-version }}
       - name: "Install 2025 sysroot"
