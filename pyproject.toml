@@ -40,12 +40,13 @@ classifiers = [
 typos = ["typos == 1.44.0"]
 zizmor = ["zizmor == 1.22.0"]
 rumdl = ["rumdl == 0.1.42"]
+maturin = ["maturin == 1.12.6"]
 ci = [
     "pytest == 9.0.2",
     "dirty-equals == 0.11",
-    "maturin == 1.12.6",
     "ruff == 0.15.5",
     "pyyaml == 6.0.3",
+    { include-group = "maturin" },
 ]
 dev = [
     { include-group = "ci" },

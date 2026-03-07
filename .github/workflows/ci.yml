@@ -110,6 +110,9 @@ jobs:
   tests:
     uses: ./.github/workflows/tests.yml
 
+  wasm:
+    uses: ./.github/workflows/wasm.yml
+
   tests-alpine:
     name: "tests / alpine / python 3.13"
     runs-on: ubuntu-latest
