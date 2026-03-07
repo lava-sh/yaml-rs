@@ -51,7 +51,7 @@ jobs:
       - name: "Run maturin (--release)"
         run: |
           rustc --version --verbose
-          maturin develop --release --features mimalloc
+          maturin develop --features mimalloc
       - name: "Run Ruff"
         run: |
           ruff check
