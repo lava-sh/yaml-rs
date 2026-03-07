@@ -13,7 +13,7 @@ jobs:
       matrix:
         platform:
           - python-version: "3.10"
-            emsdk-version: "3.1.27"
+            emsdk-version: "3.1.14"
             rust-toolchain: "nightly-2025-02-17"
             rustflags: >-
               -C link-arg=-sSIDE_MODULE=2
