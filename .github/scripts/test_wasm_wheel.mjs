@@ -1,5 +1,4 @@
 import { readFile } from "node:fs/promises";
-import { loadPyodide } from "pyodide";
 
 const { WHEEL_PATH, PYODIDE_VERSION } = process.env;
 
@@ -11,13 +10,15 @@ if (!PYODIDE_VERSION) {
   throw new Error("PYODIDE_VERSION is required");
 }
 
-const pyodide = await loadPyodide();
-await pyodide.loadPackage("micropip");
+try {
+  const { loadPyodide } = await import("pyodide");
+  const pyodide = await loadPyodide();
+  await pyodide.loadPackage("micropip");
 
-const wheelBytes = new Uint8Array(await readFile(WHEEL_PATH));
-pyodide.FS.writeFile("/tmp/yaml_rs.whl", wheelBytes);
+  const wheelBytes = new Uint8Array(await readFile(WHEEL_PATH));
+  pyodide.FS.writeFile("/tmp/yaml_rs.whl", wheelBytes);
 
-const installed = await pyodide.runPythonAsync(`
+  const installed = await pyodide.runPythonAsync(`
 import micropip
 
 await micropip.install("emfs:/tmp/yaml_rs.whl")
@@ -26,8 +27,13 @@ import yaml_rs
 yaml_rs.__version__
 `);
 
-if (!installed) {
-  throw new Error(`yaml_rs.__version__ is empty for pyodide ${PYODIDE_VERSION}`);
-}
+  if (!installed) {
+    throw new Error(`yaml_rs.__version__ is empty for pyodide ${PYODIDE_VERSION}`);
+  }
 
-console.log(`ok pyodide=${PYODIDE_VERSION} yaml_rs=${installed}`);
+  console.log(`ok pyodide=${PYODIDE_VERSION} yaml_rs=${installed}`);
+} catch (error) {
+  const message = error instanceof Error ? error.message : String(error);
+  console.error(`fail pyodide=${PYODIDE_VERSION} message=${message}`);
+  process.exit(1);
+}
