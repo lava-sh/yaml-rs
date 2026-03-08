@@ -34,7 +34,7 @@ jobs:
               -Z crate-attr=feature(let_chains,integer_sign_cast)
               -C link-arg=-sSIDE_MODULE=2
               -C link-arg=-sWASM_BIGINT
-              -C relocation-model=pic1
+              -C relocation-model=pic
 
           - python-version: "3.12"
             # pyodide:
