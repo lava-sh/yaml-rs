@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { basename } from "node:path";
+import { basename, resolve } from "node:path";
 
 const { WHEEL_PATH, PYODIDE_VERSION } = process.env;
 
@@ -13,7 +13,8 @@ if (!PYODIDE_VERSION) {
 
 try {
   const { loadPyodide } = await import("pyodide");
-  const pyodide = await loadPyodide();
+  const indexURL = `${resolve("node_modules/pyodide").replace(/\\/g, "/")}/`;
+  const pyodide = await loadPyodide({ indexURL });
   await pyodide.loadPackage("micropip");
 
   const wheelBytes = new Uint8Array(await readFile(WHEEL_PATH));
