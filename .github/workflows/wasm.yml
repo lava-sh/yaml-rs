@@ -105,7 +105,7 @@ jobs:
 
           mkdir -p .__tmp-pyodide-check__
           cd .__tmp-pyodide-check__
-          npm init -y >/dev/null 2>&1
+          printf '%s\n' '{"name":"wasm-pyodide-check","private":true,"type":"module"}' > package.json
           cp ../.github/scripts/test_wasm_wheel.mjs ./test_wasm_wheel.mjs
 
           IFS=',' read -ra raw_versions <<< "${PYODIDE_VERSIONS}"
