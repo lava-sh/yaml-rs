@@ -99,12 +99,15 @@ jobs:
           PYODIDE_VERSIONS: ${{ matrix.platform.pyodide-version }}
         run: |
           set -euo pipefail
+          set -x
           wheel_path="$(realpath "$(ls dist/*.whl | head -n1)")"
+          test -f "${wheel_path}"
 
           rm -rf .tmp-pyodide-check
           mkdir -p .tmp-pyodide-check
           cd .tmp-pyodide-check
           npm init -y >/dev/null 2>&1
+          cp ../.github/scripts/test_wasm_wheel.mjs ./test_wasm_wheel.mjs
 
           IFS=',' read -ra raw_versions <<< "${PYODIDE_VERSIONS}"
           for raw_version in "${raw_versions[@]}"; do
@@ -115,11 +118,12 @@ jobs:
             fi
             echo "Testing pyodide ${pyodide_version} (npm: ${pyodide_npm_version})"
             rm -rf node_modules package-lock.json
+            npm view "pyodide@${pyodide_npm_version}" version
             npm install --no-fund --no-audit "pyodide@${pyodide_npm_version}"
           
             PYODIDE_VERSION="${pyodide_version}" \
             WHEEL_PATH="${wheel_path}" \
-            node ../.github/scripts/test_wasm_wheel.mjs
+            node ./test_wasm_wheel.mjs
           done
       - name: "Upload wasm wheel"
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
