@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { basename } from "node:path";
 
 const { WHEEL_PATH, PYODIDE_VERSION } = process.env;
 
@@ -16,12 +17,14 @@ try {
   await pyodide.loadPackage("micropip");
 
   const wheelBytes = new Uint8Array(await readFile(WHEEL_PATH));
-  pyodide.FS.writeFile("/tmp/yaml_rs.whl", wheelBytes);
+  const wheelName = basename(WHEEL_PATH);
+  const wheelInFs = `/tmp/${wheelName}`;
+  pyodide.FS.writeFile(wheelInFs, wheelBytes);
 
   const installed = await pyodide.runPythonAsync(`
 import micropip
 
-await micropip.install("emfs:/tmp/yaml_rs.whl")
+await micropip.install("emfs:${wheelInFs}")
 
 import yaml_rs
 yaml_rs.__version__
