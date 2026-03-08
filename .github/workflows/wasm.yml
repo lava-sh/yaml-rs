@@ -116,28 +116,10 @@ jobs:
             echo "Testing pyodide ${pyodide_version} (npm: ${pyodide_npm_version})"
             rm -rf node_modules package-lock.json
             npm install --no-fund --no-audit "pyodide@${pyodide_npm_version}"
-
-            PYODIDE_VERSION="${pyodide_version}" WHEEL_PATH="${wheel_path}" node --input-type=module <<'JS'
-            import { readFile } from "node:fs/promises";
-            import { loadPyodide } from "pyodide";
-
-            const pyodide = await loadPyodide();
-            await pyodide.loadPackage("micropip");
-            const wheelBytes = new Uint8Array(await readFile(process.env.WHEEL_PATH));
-            pyodide.FS.writeFile("/tmp/yaml_rs.whl", wheelBytes);
-            const installed = await pyodide.runPythonAsync(`
-            import micropip
-            
-            await micropip.install("emfs:/tmp/yaml_rs.whl")
-            
-            import yaml_rs
-            yaml_rs.__version__
-            `);
-            if (!installed) {
-              throw new Error(`yaml_rs.__version__ is empty for pyodide ${process.env.PYODIDE_VERSION}`);
-            }
-            console.log(`ok pyodide=${process.env.PYODIDE_VERSION} yaml_rs=${installed}`);
-            JS
+          
+            PYODIDE_VERSION="${pyodide_version}" \
+            WHEEL_PATH="${wheel_path}" \
+            node ../.github/scripts/test_wasm_wheel.mjs
           done
       - name: "Upload wasm wheel"
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
