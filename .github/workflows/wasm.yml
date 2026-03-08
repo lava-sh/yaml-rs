@@ -13,15 +13,21 @@ jobs:
       matrix:
         platform:
           - python-version: "3.10"
-            emsdk-version: "3.1.14"
-            rust-toolchain: "nightly-2026-03-06"
+            # pyodide: 0.22.0 - ???
+            pyodide-version: "0.22.0"
+            emsdk-version: "3.1.27"
+            rust-toolchain: "nightly-2025-02-17"
             rustflags: >-
+              -Z allow-features=let_chains,integer_sign_cast
+              -Z crate-attr=feature(let_chains,integer_sign_cast)
               -C link-arg=-sSIDE_MODULE=2
               -C link-arg=-sWASM_BIGINT
               -C relocation-model=pic
 
           - python-version: "3.11"
-            emsdk-version: "4.0.9"
+            # pyodide: 0.25.0 - 0.25.1
+            pyodide-version: "0.25.0, 0.25.1"
+            emsdk-version: "3.1.46"
             rust-toolchain: "nightly-2025-02-17"
             rustflags: >-
               -Z allow-features=let_chains,integer_sign_cast
@@ -31,6 +37,10 @@ jobs:
               -C relocation-model=pic
 
           - python-version: "3.12"
+            # pyodide:
+            # 0.26.0a1 - 0.26.0a4 (emscripten 3.1.52)
+            # 0.26.0a5 - 0.27.7 (emscripten 3.1.58)
+            pyodide-version: "0.26.0a5, 0.27.7"
             emsdk-version: "3.1.58"
             rust-toolchain: "nightly-2025-02-17"
             rustflags: >-
@@ -41,6 +51,11 @@ jobs:
               -C relocation-model=pic
 
           - python-version: "3.13"
+            # pyodide:
+            # 0.28.0a1 (emscripten 4.0.6)
+            # 0.28.0a2 (emscripten 4.0.8)
+            # 0.28.0a3 - 0.29.3 (emscripten 4.0.9)
+            pyodide-version: "0.28.0a3, 0.29.3"
             emsdk-version: "4.0.9"
             rust-toolchain: "nightly-2026-03-06"
             rustflags: >-
@@ -81,6 +96,36 @@ jobs:
             --target wasm32-unknown-emscripten \
             --interpreter python${{ matrix.platform.python-version }} \
             --out dist
+      - name: "Test wasm wheel"
+        env:
+          PYODIDE_VERSIONS: ${{ matrix.platform.pyodide-version }}
+        run: |
+          set -euo pipefail
+          set -x
+          wheel_path="$(realpath "$(ls dist/*.whl | head -n1)")"
+          test -f "${wheel_path}"
+
+          mkdir -p .__tmp-pyodide-check__
+          cd .__tmp-pyodide-check__
+          printf '%s\n' '{"name":"wasm-pyodide-check","private":true,"type":"module"}' > package.json
+          cp ../.github/scripts/test_wasm_wheel.mjs ./test_wasm_wheel.mjs
+
+          IFS=',' read -ra raw_versions <<< "${PYODIDE_VERSIONS}"
+          for raw_version in "${raw_versions[@]}"; do
+            pyodide_version="$(echo "${raw_version}" | xargs)"
+            pyodide_npm_version="${pyodide_version}"
+            if [[ "${pyodide_npm_version}" =~ ^([0-9]+\.[0-9]+\.[0-9]+)a([0-9]+)$ ]]; then
+              pyodide_npm_version="${BASH_REMATCH[1]}-alpha.${BASH_REMATCH[2]}"
+            fi
+            echo "Testing pyodide ${pyodide_version} (npm: ${pyodide_npm_version})"
+            rm -rf node_modules package-lock.json
+            npm view "pyodide@${pyodide_npm_version}" version
+            npm install --no-fund --no-audit "pyodide@${pyodide_npm_version}"
+          
+            PYODIDE_VERSION="${pyodide_version}" \
+            WHEEL_PATH="${wheel_path}" \
+            node ./test_wasm_wheel.mjs
+          done
       - name: "Upload wasm wheel"
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
