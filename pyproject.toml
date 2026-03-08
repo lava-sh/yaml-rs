@@ -38,8 +38,8 @@ classifiers = [
 
 [dependency-groups]
 typos = ["typos == 1.44.0"]
-zizmor = ["zizmor == 1.22.0"]
-rumdl = ["rumdl == 0.1.42"]
+zizmor = ["zizmor == 1.23.0"]
+rumdl = ["rumdl == 0.1.43"]
 maturin = ["maturin == 1.12.6"]
 ci = [
     "pytest == 9.0.2",
