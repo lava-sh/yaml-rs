@@ -103,9 +103,8 @@ jobs:
           wheel_path="$(realpath "$(ls dist/*.whl | head -n1)")"
           test -f "${wheel_path}"
 
-          rm -rf .tmp-pyodide-check
-          mkdir -p .tmp-pyodide-check
-          cd .tmp-pyodide-check
+          mkdir -p .__tmp-pyodide-check__
+          cd .__tmp-pyodide-check__
           npm init -y >/dev/null 2>&1
           cp ../.github/scripts/test_wasm_wheel.mjs ./test_wasm_wheel.mjs
 
