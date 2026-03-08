@@ -109,8 +109,13 @@ jobs:
           IFS=',' read -ra raw_versions <<< "${PYODIDE_VERSIONS}"
           for raw_version in "${raw_versions[@]}"; do
             pyodide_version="$(echo "${raw_version}" | xargs)"
+            pyodide_npm_version="${pyodide_version}"
+            if [[ "${pyodide_npm_version}" =~ ^([0-9]+\.[0-9]+\.[0-9]+)a([0-9]+)$ ]]; then
+              pyodide_npm_version="${BASH_REMATCH[1]}-alpha.${BASH_REMATCH[2]}"
+            fi
+            echo "Testing pyodide ${pyodide_version} (npm: ${pyodide_npm_version})"
             rm -rf node_modules package-lock.json
-            npm install --silent --no-fund --no-audit "pyodide@${pyodide_version}"
+            npm install --no-fund --no-audit "pyodide@${pyodide_npm_version}"
 
             PYODIDE_VERSION="${pyodide_version}" WHEEL_PATH="${wheel_path}" node --input-type=module <<'JS'
             import { readFile } from "node:fs/promises";
