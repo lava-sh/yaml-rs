@@ -236,8 +236,9 @@ jobs:
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         run: |
           tag="${GITHUB_REF#refs/tags/}"
-          gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --title "$tag" --notes ""
+          gh release view "$tag" >/dev/null 2>&1 || \
+          gh release create "$tag" --title "$tag" --notes ""
           gh release upload "$tag" wasm/*.whl --clobber
         env:
+          GH_REPO: ${{ github.repository }}
           GH_TOKEN: ${{ github.token }}
-
