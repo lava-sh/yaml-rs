@@ -3,8 +3,8 @@ target-version = "py310"
 line-length = 90
 
 include = [
-    "python/**.py",
-    "python/**.pyi",
+    "py-src/**.py",
+    "py-src/**.pyi",
     "tests/**.py",
     "examples/**.py",
     "benchmark/**.py",
@@ -29,14 +29,15 @@ ignore = [
     "D",
     "TD",
     "FIX",
-    "DOC",
-    "ANN",
+    #______#
+    "ANN401",
+    "ISC004",
+    #______#
     "CPY001",
-    "S101",
     "ARG001",
+    #______#
     "PLR2004",
     "PLR6201",
-    "ISC004",
 ]
 
 [lint.extend-per-file-ignores]
@@ -46,16 +47,19 @@ ignore = [
     "T203",
     "PLC3002",
 ]
-"tests/test_loads.py" = [
+"tests/**.py" = [
+    "S101",
     "E501",
     "ERA001",
 ]
 "tests/test_dumps.py" = [
-    "E501",
+    "DTZ01",
     "DTZ001",
-    "DTZ01"
 ]
 "benchmark/run.py" = [
     "INP001",
     "PLC3002",
 ]
+
+[lint.flake8-tidy-imports.banned-api]
+"contextlib.suppress" = { msg = "Use `try-except-pass` instead" }

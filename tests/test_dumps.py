@@ -47,7 +47,7 @@ dt = datetime(
         ),
     ],
 )
-def test_incorrect_dumps(v, pattern):
+def test_incorrect_dumps(v: Any, pattern: str) -> None:
     with pytest.raises(yaml_rs.YAMLEncodeError, match=pattern):
         yaml_rs.dumps(v)
 
