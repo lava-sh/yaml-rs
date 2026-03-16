@@ -118,7 +118,6 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
-      - uses: ./.github/actions/git-tag-version
       - name: "0.2.1"
         run: |
           docker run --rm ghcr.io/astral-sh/uv:python3.13-alpine sh -c "
@@ -171,7 +170,6 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
-      - uses: ./.github/actions/git-tag-version
       - name: "Build sdist"
         uses: PyO3/maturin-action@04ac600d27cdf7a9a280dadf7147097c42b757ad # v1.50.1
         with:
