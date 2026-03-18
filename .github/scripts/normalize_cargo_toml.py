@@ -1,5 +1,5 @@
 # /// script
-# requires-python = ">=3.12"
+# requires-python = ">=3.10"
 # dependencies = ["toml-rs == 0.3.6"]
 # ///
 
