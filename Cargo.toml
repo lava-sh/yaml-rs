@@ -36,12 +36,12 @@ simdutf8 = {
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 saphyr = {
     git = "https://github.com/bourumir-wyngs/saphyr",
-    rev = "2f6bfa10691da6b838902ee78814724f6122b5d9",
+    rev = "d29453169c552d046d3493eda0c1e9bf32a33200",
 }
 saphyr-parser = {
     package = "saphyr-parser-bw",
     git = "https://github.com/bourumir-wyngs/saphyr",
-    rev = "2f6bfa10691da6b838902ee78814724f6122b5d9",
+    rev = "d29453169c552d046d3493eda0c1e9bf32a33200",
 }
 
 lexical-core = {

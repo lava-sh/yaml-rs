@@ -39,7 +39,7 @@ classifiers = [
 [dependency-groups]
 typos = ["typos == 1.44.0"]
 zizmor = ["zizmor == 1.23.1"]
-rumdl = ["rumdl == 0.1.51"]
+rumdl = ["rumdl == 0.1.54"]
 maturin = ["maturin == 1.12.6"]
 ci = [
     "pytest == 9.0.2",
@@ -59,7 +59,7 @@ bench = [
     "pyyaml",
     "ryaml",
     "ruamel-yaml",
-    "polars == 1.39.0",
+    "polars == 1.39.2",
     "altair == 6.0.0",
     "py-cpuinfo == 9.0.0",
     "vl-convert-python == 1.9.0.post1",
