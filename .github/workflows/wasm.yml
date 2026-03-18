@@ -86,7 +86,7 @@ jobs:
       - name: "Install maturin"
         run: uv pip install --group maturin --system
       - name: "Convert Cargo.toml from TOML 1.1 to TOML 1.0"
-        run: python .github/scripts/normalize_cargo_toml.py
+        run: uv run .github/scripts/normalize_cargo_toml.py
       - name: "Build wasm wheel"
         env:
           RUSTUP_TOOLCHAIN: ${{ matrix.platform.rust-toolchain }}
