@@ -4,12 +4,11 @@
 
 *A High-Performance YAML parser for Python written in Rust*
 
-[![PyPI License](https://img.shields.io/pypi/l/yaml_rs.svg?style=flat-square)](https://pypi.org/project/yaml_rs/)
-[![Python version](https://img.shields.io/pypi/pyversions/yaml_rs.svg?style=flat-square)](https://pypi.org/project/yaml_rs/)
-[![Implementation](https://img.shields.io/pypi/implementation/yaml_rs.svg?style=flat-square)](https://pypi.org/project/yaml_rs/)
-
-[![Monthly downloads](https://img.shields.io/pypi/dm/yaml_rs.svg?style=)](https://pypi.org/project/yaml_rs/)
-[![Github Repository size](https://img.shields.io/github/repo-size/lava-sh/yaml-rs?style=flat-square)](https://github.com/lava-sh/yaml-rs)
+| 🐍 PyPI                                                                             | 🐙 GitHub                                                                                   |
+|-------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------|
+| ![License](https://img.shields.io/pypi/l/yaml_rs?style=flat-square)                 | ![Stars](https://img.shields.io/github/stars/lava-sh/yaml-rs?style=flat-square)             |
+| ![Downloads](https://img.shields.io/pypi/dm/yaml_rs?style=flat-square)              | ![Repo size](https://img.shields.io/github/repo-size/lava-sh/yaml-rs?style=flat-square)     |
+| ![Python Version](https://img.shields.io/pypi/pyversions/yaml_rs?style=flat-square) | ![Last Commit](https://img.shields.io/github/last-commit/lava-sh/yaml-rs?style=flat-square) |
 
 </div>
 
@@ -32,7 +31,7 @@ uv pip install yaml-rs
 
 Link: <https://lava-sh.github.io/yaml-rs-online/>
 
-## Examples
+## Example
 
 ```python
 from pprint import pprint
@@ -72,7 +71,8 @@ pprint(yaml_rs.loads(yaml))
 
 ## Why not [pyyaml](https://pypi.org/project/PyYAML), [ruamel.yaml](https://pypi.org/project/ruamel.yaml), [strictyaml](https://pypi.org/project/strictyaml)?
 
-`PyYAML` and `ruamel.yaml` сan't parse example 2.23, 2.24, 2.27, 2.28, etc. from [YAML spec](https://yaml.org/spec/1.2.2)
+`PyYAML` and `ruamel.yaml` сan't parse example 2.23, 2.24, 2.27, 2.28, etc.
+from [YAML spec](https://yaml.org/spec/1.2.2)
 and also do not pass all tests from [yaml-test-suite](https://github.com/yaml/yaml-test-suite).
 
 `strictyaml` use `ruamel.yaml` as parser so all the bugs are repeated too.
@@ -97,7 +97,6 @@ application specific tag: !something |
 """
 print(pyyaml.safe_load(example_2_23))  # yaml.constructor.ConstructorError
 ```
-
 
 ```python
 import yaml as pyyaml
