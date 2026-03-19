@@ -8,25 +8,8 @@ disable = ["MD012", "MD013", "MD029", "MD033", "MD036", "MD041"]
 # enable = ["MD001", "MD003", "MD004"]
 
 # List of file/directory patterns to include for linting (if provided, only these will be linted)
-# include = [
-#    "docs/*.md",
-#    "src/**/*.md",
-#    "README.md"
-# ]
-
-# List of file/directory patterns to exclude from linting
-exclude = [
-    # Common directories to exclude
-    ".git",
-    ".github",
-    "node_modules",
-    "vendor",
-    "dist",
-    "build",
-
-    # Specific files or patterns
-    "CHANGELOG.md",
-    "LICENSE.md",
+include = [
+   "README.md"
 ]
 
 # Respect .gitignore files when scanning directories (default: true)
