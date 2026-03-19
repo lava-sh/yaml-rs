@@ -4,11 +4,11 @@
 
 *A High-Performance YAML parser for Python written in Rust*
 
-| 🐍 PyPI                                                                             | 🐙 GitHub                                                                                   |
-|-------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------|
-| ![License](https://img.shields.io/pypi/l/yaml_rs?style=flat-square)                 | ![Stars](https://img.shields.io/github/stars/lava-sh/yaml-rs?style=flat-square)             |
-| ![Downloads](https://img.shields.io/pypi/dm/yaml_rs?style=flat-square)              | ![Repo size](https://img.shields.io/github/repo-size/lava-sh/yaml-rs?style=flat-square)     |
-| ![Python Version](https://img.shields.io/pypi/pyversions/yaml_rs?style=flat-square) | ![Last Commit](https://img.shields.io/github/last-commit/lava-sh/yaml-rs?style=flat-square) |
+| 🐍 PyPI                                                                                          | 🐙 GitHub                                                                                                |
+|--------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------|
+| ![License](https://img.shields.io/pypi/l/yaml_rs?style=flat-square&color=007ec6)                 | ![Stars](https://img.shields.io/github/stars/lava-sh/yaml-rs?style=flat-square&color=007ec6)             |
+| ![Downloads](https://img.shields.io/pypi/dm/yaml_rs?style=flat-square&color=007ec6)              | ![Repo size](https://img.shields.io/github/repo-size/lava-sh/yaml-rs?style=flat-square&color=007ec6)     |
+| ![Python Version](https://img.shields.io/pypi/pyversions/yaml_rs?style=flat-square&color=007ec6) | ![Last Commit](https://img.shields.io/github/last-commit/lava-sh/yaml-rs?style=flat-square&color=007ec6) |
 
 </div>
 
