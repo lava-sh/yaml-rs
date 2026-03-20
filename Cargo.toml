@@ -19,7 +19,7 @@ pyo3 = {
         "generate-import-lib",
     ]
 }
-itoa = "=1.0.17"
+itoa = "=1.0.18"
 num-bigint = "=0.4.6"
 rustc-hash = "=2.1.1"
 memchr = {
