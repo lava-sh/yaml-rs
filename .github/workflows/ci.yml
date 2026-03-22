@@ -61,7 +61,7 @@ jobs:
         with:
           python-version: "3.14"
       - name: "Install uv"
-        uses: astral-sh/setup-uv@e06108dd0aef18192324c70427afc47652e63a82 # v7.5.0
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
         with:
           enable-cache: ${{ !startsWith(github.ref, 'refs/tags/') }} # zizmor: ignore[cache-poisoning]
       - name: "Install zizmor"
@@ -80,7 +80,7 @@ jobs:
         with:
           python-version: "3.14"
       - name: "Install uv"
-        uses: astral-sh/setup-uv@e06108dd0aef18192324c70427afc47652e63a82 # v7.5.0
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
         with:
           enable-cache: ${{ !startsWith(github.ref, 'refs/tags/') }} # zizmor: ignore[cache-poisoning]
       - name: "Install typos"
@@ -99,7 +99,7 @@ jobs:
         with:
           python-version: "3.14"
       - name: "Install uv"
-        uses: astral-sh/setup-uv@e06108dd0aef18192324c70427afc47652e63a82 # v7.5.0
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
         with:
           enable-cache: ${{ !startsWith(github.ref, 'refs/tags/') }} # zizmor: ignore[cache-poisoning]
       - name: "Install rumdl"
@@ -216,7 +216,7 @@ jobs:
           subject-path: "wheels-*/*"
       - name: "Install uv"
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
-        uses: astral-sh/setup-uv@e06108dd0aef18192324c70427afc47652e63a82 # v7.5.0
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
         with:
           enable-cache: false
       - name: "Publish to PyPI"
