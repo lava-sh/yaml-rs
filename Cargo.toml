@@ -46,7 +46,7 @@ saphyr-parser = {
 
 lexical-core = {
     git = "https://github.com/Alexhuszagh/rust-lexical",
-    rev = "59382e249f8fd0dd384ed1f180b38d168cf9fcbb",
+    rev = "afb2efa651f42f63415a3bf3d51ced6143132b2b",
     default-features = false,
     features = [
         "radix",
