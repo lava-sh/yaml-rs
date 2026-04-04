@@ -55,12 +55,14 @@ dev = [
     { include-group = "zizmor" },
 ]
 bench = [
-    "oyaml",
-    "pyyaml",
-    "ryaml",
-    "ruamel-yaml",
+    "oyaml == 1.0",
+    "pyyaml == 6.0.3",
+    "ryaml == 0.5.1",
+    "ruamel-yaml == 0.19.1",
+    "ruamel.yaml.clibz == 0.3.7",
+    ##################
     "polars == 1.39.3",
-    "altair == 6.0.0",
+    "altair == 6.1.0.dev20260330 ",
     "py-cpuinfo == 9.0.0",
     "vl-convert-python == 1.9.0.post1",
 ]
