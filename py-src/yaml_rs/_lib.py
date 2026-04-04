@@ -2,13 +2,10 @@ from pathlib import Path
 from typing import Any, BinaryIO, Literal, TextIO
 
 from ._yaml_rs import (
-    _VERSION,
     _dumps,
     _load,
     _loads,
 )
-
-__version__: str = _VERSION
 
 
 def load(

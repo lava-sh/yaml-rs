@@ -9,13 +9,13 @@ __all__ = (
 )
 
 from ._lib import (
-    __version__,
     dump,
     dumps,
     load,
     loads,
 )
 from ._yaml_rs import (
+    _VERSION as __version__,  # noqa: N811
     YAMLDecodeError,
     YAMLEncodeError,
 )
