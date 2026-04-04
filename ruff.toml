@@ -8,6 +8,8 @@ include = [
     "tests/**.py",
     "examples/**.py",
     "benchmark/**.py",
+    "pyproject.toml",
+    "README.md",
 ]
 
 [lint.isort]
@@ -26,18 +28,21 @@ allowed-confusables = [
 ]
 select = ["ALL"]
 ignore = [
-    "D",
-    "TD",
-    "FIX",
-    #______#
-    "ANN401",
-    "ISC004",
-    #______#
-    "CPY001",
-    "ARG001",
-    #______#
-    "PLR2004",
-    "PLR6201",
+    "ARG",     # Unused method argument
+    "D",       # Docstring's
+    ########
+    "CPY001",  # Check copyright notices within Python files
+    "S311",    # Force `random` -> `secrets`
+    "ANN401",  # Check `typing.Any`
+    "SIM105",  # Force `try-except-pass` -> `contextlib.suppress`
+    "ISC004",  # Check for implicitly concatenated strings inside list, tuple, and set literals.
+    #######
+    "PLR6201", # Check for membership tests on list and tuple literals.
+    ########
+    "TC001",   # \
+    "TC002",   #  ==> `typing.TYPE_CHECKING` block's
+    "TC003",   # /
+    "TC006",   # Add quotes to type expression in `typing.cast()`
 ]
 
 [lint.extend-per-file-ignores]
@@ -53,8 +58,13 @@ ignore = [
     "ERA001",
 ]
 "tests/test_dumps.py" = [
-    "DTZ01",
-    "DTZ001",
+    "DTZ001", # Check for datetime instantiations that do not specify a timezone
+    "FIX001", # Check for "FIXME" comments
+    ########
+    "TD001",  # Check that a TODO comment is labelled with "TODO"
+    "TD003",  # Check that a TODO comment is associated with a link to a relevant issue or ticket
+    "TD004",  # Check that a "TODO" tag is followed by a colon.
+    "TD005",  # Check that a "TODO" tag contains a description of the issue following the tag itself.
 ]
 "benchmark/run.py" = [
     "INP001",
@@ -63,3 +73,4 @@ ignore = [
 
 [lint.flake8-tidy-imports.banned-api]
 "contextlib.suppress" = { msg = "Use `try-except-pass` instead" }
+"__future__.annotations" = { msg = "Directly quote annotations instead" }
