@@ -1,6 +1,6 @@
 # /// script
 # requires-python = ">=3.10"
-# dependencies = ["toml-rs == 0.3.6"]
+# dependencies = ["toml-rs == 0.3.7"]
 # ///
 
 from pathlib import Path
