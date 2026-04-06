@@ -13,12 +13,12 @@ jobs:
           - {
             # ARM64 (iPhone/iPad)
             target: aarch64-apple-ios,
-            maturin_build_args: "--features mimalloc,abi3-py310"
+            maturin_build_args: "--features mimalloc pyo3/abi3-py310"
           }
           - {
             # x86_64 (Simulator)
             target: x86_64-apple-ios,
-            maturin_build_args: "--features mimalloc,abi3-py310"
+            maturin_build_args: "--features mimalloc pyo3/abi3-py310"
           }
 
     steps:

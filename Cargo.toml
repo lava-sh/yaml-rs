@@ -72,7 +72,6 @@ mimalloc = {
 [features]
 default = []
 mimalloc = ["dep:mimalloc"]
-abi3-py310 = ["pyo3/abi3-py310"]
 
 [profile.release]
 lto = "fat"
