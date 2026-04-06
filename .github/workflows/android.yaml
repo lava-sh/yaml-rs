@@ -13,25 +13,25 @@ jobs:
           - {
             # ARM64
             target: aarch64-linux-android,
-            interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
+            interpreter: "3.13 3.13t 3.14 3.14t",
             maturin_build_args: "--features mimalloc"
           }
           - {
             # ARMv7 (32-bit)
             target: armv7-linux-androideabi,
-            interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
+            interpreter: "3.13 3.13t 3.14 3.14t",
             maturin_build_args: "--features mimalloc"
           }
           - {
             # x86 (32-bit)
             target: i686-linux-android,
-            interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
+            interpreter: "3.13 3.13t 3.14 3.14t",
             maturin_build_args: ""
           }
           - {
             # x86_64
             target: x86_64-linux-android,
-            interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
+            interpreter: "3.13 3.13t 3.14 3.14t",
             maturin_build_args: "--features mimalloc"
           }
 
@@ -53,6 +53,7 @@ jobs:
             --release
             --out dist
             --interpreter ${{ matrix.platform.interpreter }}
+            ${{ matrix.platform.maturin_build_args }}
             --compatibility pypi
         env:
           ANDROID_API_LEVEL: 21
