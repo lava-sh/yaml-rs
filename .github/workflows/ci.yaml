@@ -160,28 +160,32 @@ jobs:
           "
 
   linux:
-    needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, zizmor, typos ]
+    needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, zizmor, typos, rumdl ]
     uses: ./.github/workflows/linux.yaml
 
   musllinux:
-    needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, zizmor, typos ]
+    needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, zizmor, typos, rumdl ]
     uses: ./.github/workflows/musllinux.yaml
 
   windows:
-    needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, zizmor, typos ]
+    needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, zizmor, typos, rumdl ]
     uses: ./.github/workflows/windows.yaml
 
   macos:
-    needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, zizmor, typos ]
+    needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, zizmor, typos, rumdl ]
     uses: ./.github/workflows/macos.yaml
 
   wasm:
-    needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, zizmor, typos ]
+    needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, zizmor, typos, rumdl ]
     uses: ./.github/workflows/wasm.yaml
 
-  wasm:
-    needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, zizmor, typos ]
-    uses: ./.github/workflows/wasm.yaml
+  android:
+    needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, zizmor, typos, rumdl ]
+    uses: ./.github/workflows/android.yaml
+
+  ios:
+    needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, zizmor, typos, rumdl ]
+    uses: ./.github/workflows/ios.yaml
 
   build-sdist:
     name: "build-sdist"
@@ -210,18 +214,21 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
     environment: pypi
     needs: [
+      cargo-fmt,
+      cargo-clippy,
+      zizmor,
+      typos,
+      rumdl,
+      tests,
+      tests-alpine,
+      build-sdist,
       linux,
       musllinux,
       windows,
       macos,
       wasm,
-      build-sdist,
-      tests,
-      tests-alpine,
-      cargo-fmt,
-      cargo-clippy,
-      zizmor,
-      typos,
+      android,
+      ios,
     ]
     permissions:
       # Use to sign the release artifacts
