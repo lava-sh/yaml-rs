@@ -4,12 +4,12 @@
 
 *A High-Performance YAML v1.2 parser for Python written in Rust*
 
-| 🐍 PyPI                                                                                          | 🐙 GitHub                                                                                             |
-|--------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------|
-| ![Version](https://img.shields.io/pypi/v/yaml_rs?style=flat-square&color=007ec6)                 | ![Stars](https://img.shields.io/github/stars/lava-sh/yaml-rs?style=flat-square&color=007ec6)          |
-| ![License](https://img.shields.io/pypi/l/yaml_rs?style=flat-square&color=007ec6)                 | ![CI](https://img.shields.io/github/actions/workflow/status/lava-sh/yaml-rs/ci.yml?style=flat-square) |
-| ![Downloads](https://img.shields.io/pypi/dm/yaml_rs?style=flat-square&color=007ec6)              | ![Repo size](https://img.shields.io/github/repo-size/lava-sh/yaml-rs?style=flat-square&color=007ec6)  |
-| ![Python Version](https://img.shields.io/pypi/pyversions/yaml_rs?style=flat-square&color=007ec6) | ![Last Commit](https://img.shields.io/github/last-commit/lava-sh/yaml-rs?style=flat-square)           |
+| 🐍 PyPI                                                                                          | 🐙 GitHub                                                                                              |
+|--------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------|
+| ![Version](https://img.shields.io/pypi/v/yaml_rs?style=flat-square&color=007ec6)                 | ![Stars](https://img.shields.io/github/stars/lava-sh/yaml-rs?style=flat-square&color=007ec6)           |
+| ![License](https://img.shields.io/pypi/l/yaml_rs?style=flat-square&color=007ec6)                 | ![CI](https://img.shields.io/github/actions/workflow/status/lava-sh/yaml-rs/ci.yaml?style=flat-square) |
+| ![Downloads](https://img.shields.io/pypi/dm/yaml_rs?style=flat-square&color=007ec6)              | ![Repo size](https://img.shields.io/github/repo-size/lava-sh/yaml-rs?style=flat-square&color=007ec6)   |
+| ![Python Version](https://img.shields.io/pypi/pyversions/yaml_rs?style=flat-square&color=007ec6) | ![Last Commit](https://img.shields.io/github/last-commit/lava-sh/yaml-rs?style=flat-square)            |
 
 </div>
 

@@ -11,14 +11,17 @@ jobs:
       matrix:
         platform:
           - {
+            # Intel Mac
             target: x86_64,
             interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11"
           }
           - {
+            # Apple Silicon M1-M4
             target: aarch64,
             interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11"
           }
           - {
+            # Universal binary (Intel + Apple Silicon)
             target: universal2,
             interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11"
           }
@@ -38,9 +41,9 @@ jobs:
           target: ${{ matrix.platform.target }}
           sccache: ${{ !startsWith(github.ref, 'refs/tags/') }} # zizmor: ignore[cache-poisoning]
           args: >
-            --release 
+            --release
             --out dist
-            --interpreter ${{ matrix.platform.interpreter }} 
+            --interpreter ${{ matrix.platform.interpreter }}
             --features mimalloc
             --compatibility pypi
 

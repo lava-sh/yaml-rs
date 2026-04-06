@@ -1,42 +1,54 @@
-name: "musllinux"
+name: "linux"
 
 on:
   workflow_call:
 
 jobs:
-  musllinux:
+  linux:
     name: "ubuntu-latest / ${{ matrix.platform.target }}"
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # PyPI does not support Rust target loongarch64-unknown-linux-gnu
+        # PyPI does not support Rust target `loongarch64-unknown-linux-gnu`
         platform:
           - {
+            # AMD64
             target: x86_64,
             interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
             maturin_build_args: "--features mimalloc"
           }
           - {
+            # x86 (32-bit)
             target: x86,
             interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
             maturin_build_args: "--features mimalloc"
           }
           - {
+            # ARM64
             target: aarch64,
             interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
-            maturin_build_args: "--features mimalloc"
+            maturin_build_args: "--features mimalloc --zig"
           }
           - {
+            # ARMv7 (32-bit)
             target: armv7,
             interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
-            maturin_build_args: "--features mimalloc"
+            maturin_build_args: ""
           }
           - {
+            # IBM System z (s390x)
+            target: s390x,
+            interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
+            maturin_build_args: ""
+          }
+          - {
+            # PowerPC64 Little Endian
             target: ppc64le,
             interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
-            maturin_build_args: "--features mimalloc"
+            maturin_build_args: ""
           }
           - {
+            # RISC-V 64-bit
             target: riscv64,
             interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
             maturin_build_args: "--features mimalloc"
@@ -56,16 +68,16 @@ jobs:
         with:
           target: ${{ matrix.platform.target }}
           sccache: ${{ !startsWith(github.ref, 'refs/tags/') }} # zizmor: ignore[cache-poisoning]
-          manylinux: musllinux_1_2
+          manylinux: auto
           args: >
-            --release 
+            --release
             --out dist
-            --interpreter ${{ matrix.platform.interpreter }} 
-            ${{ matrix.platform.maturin_build_args }} 
+            --interpreter ${{ matrix.platform.interpreter }}
+            ${{ matrix.platform.maturin_build_args }}
             --compatibility pypi
 
       - name: "Upload wheels"
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
-          name: wheels-musllinux-${{ matrix.platform.target }}
+          name: wheels-linux-${{ matrix.platform.target }}
           path: dist
