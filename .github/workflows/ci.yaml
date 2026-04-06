@@ -124,7 +124,7 @@ jobs:
         run: rumdl check .
 
   tests:
-    uses: ./.github/workflows/tests.yml
+    uses: ./.github/workflows/tests.yaml
 
   tests-alpine:
     name: "tests / alpine / python 3.13"
@@ -161,23 +161,27 @@ jobs:
 
   linux:
     needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, zizmor, typos ]
-    uses: ./.github/workflows/linux.yml
+    uses: ./.github/workflows/linux.yaml
 
   musllinux:
     needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, zizmor, typos ]
-    uses: ./.github/workflows/musllinux.yml
+    uses: ./.github/workflows/musllinux.yaml
 
   windows:
     needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, zizmor, typos ]
-    uses: ./.github/workflows/windows.yml
+    uses: ./.github/workflows/windows.yaml
 
   macos:
     needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, zizmor, typos ]
-    uses: ./.github/workflows/macos.yml
+    uses: ./.github/workflows/macos.yaml
 
   wasm:
     needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, zizmor, typos ]
-    uses: ./.github/workflows/wasm.yml
+    uses: ./.github/workflows/wasm.yaml
+
+  wasm:
+    needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, zizmor, typos ]
+    uses: ./.github/workflows/wasm.yaml
 
   build-sdist:
     name: "build-sdist"
