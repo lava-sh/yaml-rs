@@ -13,14 +13,14 @@ jobs:
           - {
             # ARM64 (iPhone/iPad)
             target: aarch64-apple-ios,
-            interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t",
-            maturin_build_args: "--features mimalloc"
+            interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
+            maturin_build_args: ""
           }
           - {
             # x86_64 (Simulator)
             target: x86_64-apple-ios,
-            interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t",
-            maturin_build_args: "--features mimalloc"
+            interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
+            maturin_build_args: ""
           }
 
     steps:
