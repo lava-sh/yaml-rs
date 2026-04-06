@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # PyPI does not support Rust target loongarch64-unknown-linux-gnu
+        # PyPI does not support Rust target `loongarch64-unknown-linux-gnu`
         platform:
           - {
             # AMD64
