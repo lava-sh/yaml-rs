@@ -13,22 +13,22 @@ jobs:
           - {
             # ARM64
             target: aarch64-linux-android,
-            maturin_build_args: "--features mimalloc pyo3/abi3-py310"
+            maturin_build_args: "--features mimalloc,pyo3/abi3-py310"
           }
           - {
             # ARMv7 (32-bit)
             target: armv7-linux-androideabi,
-            maturin_build_args: "--features mimalloc pyo3/abi3-py310"
+            maturin_build_args: "--features mimalloc,pyo3/abi3-py310"
           }
           - {
             # x86 (32-bit)
             target: i686-linux-android,
-            maturin_build_args: "--features mimalloc pyo3/abi3-py310"
+            maturin_build_args: "--features mimalloc,pyo3/abi3-py310"
           }
           - {
             # x86_64
             target: x86_64-linux-android,
-            maturin_build_args: "--features mimalloc pyo3/abi3-py310"
+            maturin_build_args: "--features mimalloc,pyo3/abi3-py310"
           }
 
     steps:
