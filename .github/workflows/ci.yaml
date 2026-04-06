@@ -219,7 +219,6 @@ jobs:
       windows,
       macos,
       wasm,
-      android,
     ]
     permissions:
       # Use to sign the release artifacts
