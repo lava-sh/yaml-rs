@@ -10,6 +10,8 @@ jobs:
     strategy:
       matrix:
         # PyPI does not support Rust target `loongarch64-unknown-linux-gnu`
+        # `s390x-unknown-linux-musl` is not available as prebuilt target for cross-compilation
+        # `s390x` is only supported for manylinux (gnu), not musllinux
         platform:
           - {
             # AMD64
@@ -44,12 +46,6 @@ jobs:
           - {
             # RISC-V 64-bit
             target: riscv64,
-            interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
-            maturin_build_args: "--features mimalloc"
-          }
-          - {
-            # IBM System z (s390x)
-            target: s390x-unknown-linux-musl,
             interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
             maturin_build_args: "--features mimalloc"
           }
