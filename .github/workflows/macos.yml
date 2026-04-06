@@ -16,7 +16,7 @@ jobs:
             interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11"
           }
           - {
-            # Apple Silicon (M1/M2/M3)
+            # Apple Silicon M1-M4
             target: aarch64,
             interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11"
           }
