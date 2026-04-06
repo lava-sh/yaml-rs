@@ -40,7 +40,7 @@ jobs:
           args: >
             --release   
             --out dist  
-            --find-interpreter   
+            --interpreter ${{ matrix.platform.interpreter }}   
             ${{ matrix.platform.maturin_build_args }}   
             --compatibility pypi
         env:
