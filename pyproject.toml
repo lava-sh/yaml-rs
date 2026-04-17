@@ -1,5 +1,5 @@
 [build-system]
-requires = ["maturin == 1.12.6"]
+requires = ["maturin == 1.13.1"]
 build-backend = "maturin"
 
 [tool.maturin]
@@ -37,14 +37,14 @@ classifiers = [
 ]
 
 [dependency-groups]
-typos = ["typos == 1.45.0"]
-zizmor = ["zizmor == 1.23.1"]
-rumdl = ["rumdl == 0.1.66"]
-maturin = ["maturin == 1.12.6"]
+typos = ["typos == 1.45.1"]
+zizmor = ["zizmor == 1.24.1"]
+rumdl = ["rumdl == 0.1.73"]
+maturin = ["maturin == 1.13.1"]
 ci = [
-    "pytest == 9.0.2",
+    "pytest == 9.0.3",
     "dirty-equals == 0.11",
-    "ruff == 0.15.9",
+    "ruff == 0.15.11",
     "pyyaml == 6.0.3",
     { include-group = "maturin" },
 ]
