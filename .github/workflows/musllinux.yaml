@@ -17,47 +17,43 @@ jobs:
             # AMD64
             target: x86_64,
             interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
-            maturin_build_args: "--features mimalloc"
+            maturin-build-args: "--features mimalloc"
           }
           - {
             # x86 (32-bit)
             target: x86,
             interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
-            maturin_build_args: "--features mimalloc"
+            maturin-build-args: "--features mimalloc"
           }
           - {
             # ARM64
             target: aarch64,
             interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
-            maturin_build_args: "--features mimalloc"
+            maturin-build-args: "--features mimalloc"
           }
           - {
             # ARMv7 (32-bit)
             target: armv7,
             interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
-            maturin_build_args: "--features mimalloc"
+            maturin-build-args: "--features mimalloc"
           }
           - {
             # PowerPC64 Little Endian
             target: ppc64le,
             interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
-            maturin_build_args: "--features mimalloc"
+            maturin-build-args: "--features mimalloc"
           }
           - {
             # RISC-V 64-bit
             target: riscv64,
             interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
-            maturin_build_args: "--features mimalloc"
+            maturin-build-args: "--features mimalloc"
           }
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
-
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-        with:
-          python-version: 3.x
 
       - name: "Build wheels"
         uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
@@ -69,7 +65,7 @@ jobs:
             --release
             --out dist
             --interpreter ${{ matrix.platform.interpreter }}
-            ${{ matrix.platform.maturin_build_args }}
+            ${{ matrix.platform.maturin-build-args }}
             --compatibility pypi
 
       - name: "Upload wheels"
