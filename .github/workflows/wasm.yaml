@@ -12,18 +12,6 @@ jobs:
     strategy:
       matrix:
         platform:
-          - python-version: "3.10"
-            # pyodide: 0.22.0 - ???
-            pyodide-version: "0.22.0"
-            emsdk-version: "3.1.27"
-            rust-toolchain: "nightly-2025-02-17"
-            rustflags: >-
-              -Z allow-features=let_chains,integer_sign_cast
-              -Z crate-attr=feature(let_chains,integer_sign_cast)
-              -C link-arg=-sSIDE_MODULE=2
-              -C link-arg=-sWASM_BIGINT
-              -C relocation-model=pic
-
           - python-version: "3.11"
             # pyodide: 0.25.0 - 0.25.1
             pyodide-version: "0.25.0, 0.25.1"
