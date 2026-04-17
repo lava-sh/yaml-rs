@@ -102,18 +102,16 @@ jobs:
 
       - name: "Build WASM wheel"
         uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
+        env:
+          CARGO_TARGET_WASM32_UNKNOWN_EMSCRIPTEN_RUSTFLAGS: ${{ matrix.platform.rustflags }}
         with:
+          container: off
+          rust-toolchain: ${{ matrix.platform.rust-toolchain }}
           args: >
             --out dist
-            --release 
-            --target wasm32-unknown-emscripten 
+            --release
+            --target wasm32-unknown-emscripten
             --interpreter python${{ matrix.platform.python-version }}
-
-          rust-toolchain: ${{ matrix.platform.rust-toolchain }}
-          container: off
-          docker-options: |
-            -e RUSTUP_TOOLCHAIN=${{ matrix.platform.rust-toolchain }}  
-            -e CARGO_TARGET_WASM32_UNKNOWN_EMSCRIPTEN_RUSTFLAGS=${{ matrix.platform.rustflags }}
 
       - name: "Test wasm wheel"
         env:
