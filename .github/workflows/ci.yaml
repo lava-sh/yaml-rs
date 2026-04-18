@@ -140,6 +140,7 @@ jobs:
 
       - name: "Setup build environment"
         if: matrix.version == 'latest'
+        shell: bash
         run: |
           mkdir -p /tmp/__build__
           cp -r py-src src Cargo.toml pyproject.toml README.md /tmp/__build__/
