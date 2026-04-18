@@ -48,7 +48,7 @@ main() {
   if [[ "$VERSION" == "0.2.1" ]]; then
     run_prebuilt
   else
-    echo "Building from source..."
+    run_build_from_source
   fi
 }
 
