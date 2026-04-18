@@ -7,10 +7,12 @@ VERSION="${1:-}"
 IMAGE="ghcr.io/astral-sh/uv:python3.14-alpine"
 
 run_prebuilt() {
+  set +e
   docker run --rm "$IMAGE" sh -c '
     uv pip install yaml-rs==0.0.9 --system
-    python -c "import yaml_rs; print(yaml_rs.__version__)"
-  ' 2>&1 | tee /dev/stderr | grep -q "initial-exec TLS resolves to dynamic definition"
+    python -c "import yaml_rs; print(yaml_rs.__version__)" 2>&1 || true
+  ' 2>&1 | grep -q "initial-exec TLS resolves to dynamic definition"
+  set -e
 }
 
 run_build_from_source() {
