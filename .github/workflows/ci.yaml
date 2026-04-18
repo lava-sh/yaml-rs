@@ -132,7 +132,7 @@ jobs:
     timeout-minutes: 10
     strategy:
       matrix:
-        version: ["0.2.1", "latest"]
+        version: [ "0.2.1", "latest" ]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -140,12 +140,14 @@ jobs:
 
       - name: "Setup build environment"
         if: matrix.version == 'latest'
-        run: |  
+        run: |
           mkdir -p /tmp/__build__
           cp -r py-src src Cargo.toml pyproject.toml README.md /tmp/__build__/
 
       - name: "Test version ${{ matrix.version }}"
-        run: .github/scripts/test_alpine.sh ${{ matrix.version }}
+        run: |
+          chmod +x .github/scripts/test_alpine.sh
+          .github/scripts/test_alpine.sh ${{ matrix.version }}
 
   linux:
     needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, zizmor, typos, rumdl ]
