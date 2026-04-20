@@ -12,7 +12,7 @@ dynamic = ["version"]
 requires-python = ">=3.10"
 description = "A High-Performance YAML Parser for Python written in Rust"
 readme = "README.md"
-license = "UNLICENSE"
+license = "Unlicense"
 license-files = ["UNLICENSE"]
 authors = [
     { name = "chirizxc", email = "chirizxc@proton.me" }
@@ -39,7 +39,7 @@ classifiers = [
 [dependency-groups]
 typos = ["typos == 1.45.1"]
 zizmor = ["zizmor == 1.24.1"]
-rumdl = ["rumdl == 0.1.73"]
+rumdl = ["rumdl == 0.1.76"]
 maturin = ["maturin == 1.13.1"]
 ci = [
     "pytest == 9.0.3",
@@ -61,7 +61,7 @@ bench = [
     "ruamel-yaml == 0.19.1",
     "ruamel.yaml.clibz == 0.3.7",
     ##################
-    "polars == 1.39.3",
+    "polars == 1.40.0",
     "altair == 6.1.0.dev20260330 ",
     "py-cpuinfo == 9.0.0",
     "vl-convert-python == 1.9.0.post1",
