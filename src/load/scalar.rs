@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use crate::load::value::Value;
+use crate::{from_rust::dec2flt::is_8digits, load::value::Value};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub(crate) enum SpecialFloat {
@@ -36,15 +36,11 @@ pub(crate) fn is_datetime(bytes: &[u8]) -> bool {
         return false;
     }
 
-    if !bytes[0].is_ascii_digit()
-        || !bytes[1].is_ascii_digit()
-        || !bytes[2].is_ascii_digit()
-        || !bytes[3].is_ascii_digit()
-        || !bytes[5].is_ascii_digit()
-        || !bytes[6].is_ascii_digit()
-        || !bytes[8].is_ascii_digit()
-        || !bytes[9].is_ascii_digit()
-    {
+    let digits = u64::from_le_bytes([
+        bytes[0], bytes[1], bytes[2], bytes[3], bytes[5], bytes[6], bytes[8], bytes[9],
+    ]);
+
+    if !is_8digits(digits) {
         return false;
     }
 
@@ -63,8 +59,12 @@ pub(crate) fn normalize_num(str: &str) -> Cow<'_, str> {
         return Cow::Borrowed(str);
     }
 
-    let mut vec = bytes.to_vec();
-    vec.retain(|&byte| byte != b'_');
+    let mut vec = Vec::with_capacity(bytes.len());
+    for &b in bytes {
+        if b != b'_' {
+            vec.push(b);
+        }
+    }
     // SAFETY: Input is valid UTF-8 and only ASCII underscores are removed.
     Cow::Owned(unsafe { String::from_utf8_unchecked(vec) })
 }
