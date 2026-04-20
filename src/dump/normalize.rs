@@ -189,17 +189,17 @@ pub(crate) fn normalize_decimal(repr: &str) -> PyResult<Cow<'_, str>> {
     let mut start = 0usize;
     let mut end = bytes.len();
 
-    // SAFETY: `start < end <= bytes.len()` is maintained by the loop conditions.
+    // SAFETY: bounds checked by loop condition
     while start < end && unsafe { bytes.get_unchecked(start) }.is_ascii_whitespace() {
         start += 1;
     }
 
-    // SAFETY: `end - 1 < bytes.len()` whenever the loop condition holds.
+    // SAFETY: bounds checked by loop condition
     while start < end && unsafe { bytes.get_unchecked(end - 1) }.is_ascii_whitespace() {
         end -= 1;
     }
 
-    // SAFETY: `start..end` stays within the original string bounds.
+    // SAFETY: start..end is within original string
     let trimmed = unsafe { repr.get_unchecked(start..end) };
     let bytes = trimmed.as_bytes();
 
@@ -207,7 +207,7 @@ pub(crate) fn normalize_decimal(repr: &str) -> PyResult<Cow<'_, str>> {
     let mut neg = false;
 
     if !bytes.is_empty() {
-        // SAFETY: `bytes` is non-empty in this branch, so index `0` is valid.
+        // SAFETY: bytes is non-empty
         match unsafe { *bytes.get_unchecked(0) } {
             b'-' => {
                 neg = true;
@@ -220,7 +220,7 @@ pub(crate) fn normalize_decimal(repr: &str) -> PyResult<Cow<'_, str>> {
         }
     }
 
-    // SAFETY: `offset` is either 0 or 1 and never exceeds `bytes.len()`.
+    // SAFETY: offset <= bytes.len()
     let rest = unsafe { bytes.get_unchecked(offset..) };
     let len = rest.len();
 
@@ -264,6 +264,7 @@ pub(crate) fn normalize_decimal(repr: &str) -> PyResult<Cow<'_, str>> {
         let inf = b"infinity";
         let mut matches = true;
         let mut i = 0usize;
+
         while i < 8 {
             // SAFETY: `len == 8`, so `i < 8` keeps both reads in bounds.
             if (unsafe { *rest.get_unchecked(i) } | 0x20) != unsafe { *inf.get_unchecked(i) } {
@@ -287,7 +288,7 @@ pub(crate) fn normalize_decimal(repr: &str) -> PyResult<Cow<'_, str>> {
     let mut i = 0usize;
 
     while i < bytes.len() {
-        // SAFETY: the loop condition guarantees `i < bytes.len()`.
+        // SAFETY: loop guarantees i < bytes.len()
         match unsafe { *bytes.get_unchecked(i) } {
             b'.' => has_dot = true,
             b'e' | b'E' => has_exp = true,
