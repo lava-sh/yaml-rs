@@ -23,30 +23,6 @@ pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
         obj if let Ok(bool) = obj.cast::<PyBool>() => {
             Ok(Value(ScalarOwned::Boolean(bool.is_true())))
         }
-        obj if get_isinstance(obj.py())?
-            .call1((obj, get_decimal_type(obj.py())?))?
-            .is_truthy()? =>
-        {
-            let py_str = obj.str()?;
-            Ok(YamlOwned::Representation(
-                normalize_decimal(py_str.to_str()?)?.into_owned(),
-                ScalarStyle::Plain,
-                None,
-            ))
-        }
-        obj if let Ok(int) = obj.cast::<PyInt>() => match int.extract::<i64>() {
-            Ok(value) => Ok(Value(ScalarOwned::Integer(value))),
-            Err(_) => Ok(YamlOwned::Representation(
-                int.str()?.to_str()?.to_owned(),
-                ScalarStyle::Plain,
-                None,
-            )),
-        },
-        obj if let Ok(float) = obj.cast::<PyFloat>() => Ok(YamlOwned::Representation(
-            to_yaml_float(float)?,
-            ScalarStyle::Plain,
-            None,
-        )),
         obj if let Ok(datetime) = obj.cast::<PyDateTime>() => {
             let year = datetime.get_year();
             let month = datetime.get_month();
@@ -193,6 +169,30 @@ pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
             }
             Ok(YamlOwned::Mapping(mapping))
         }
+        obj if get_isinstance(obj.py())?
+            .call1((obj, get_decimal_type(obj.py())?))?
+            .is_truthy()? =>
+        {
+            let py_str = obj.str()?;
+            Ok(YamlOwned::Representation(
+                normalize_decimal(py_str.to_str()?)?.into_owned(),
+                ScalarStyle::Plain,
+                None,
+            ))
+        }
+        obj if let Ok(int) = obj.cast::<PyInt>() => match int.extract::<i64>() {
+            Ok(value) => Ok(Value(ScalarOwned::Integer(value))),
+            Err(_) => Ok(YamlOwned::Representation(
+                int.str()?.to_str()?.to_owned(),
+                ScalarStyle::Plain,
+                None,
+            )),
+        },
+        obj if let Ok(float) = obj.cast::<PyFloat>() => Ok(YamlOwned::Representation(
+            to_yaml_float(float)?,
+            ScalarStyle::Plain,
+            None,
+        )),
         _ => Err(YAMLEncodeError::new_err(format!(
             "Cannot serialize {obj_type} ({obj_repr}) to YAML",
             obj_type = obj.get_type(),
@@ -378,8 +378,7 @@ fn normalize_decimal(repr: &str) -> PyResult<Cow<'_, str>> {
         // SAFETY: the loop condition guarantees `i < bytes.len()`.
         match unsafe { *bytes.get_unchecked(i) } {
             b'.' => has_dot = true,
-            b'e' => has_exp = true,
-            b'E' => has_exp = true,
+            b'e' | b'E' => has_exp = true,
             _ => {}
         }
         i += 1;
