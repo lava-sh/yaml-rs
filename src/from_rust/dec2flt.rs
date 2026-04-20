@@ -7,7 +7,6 @@ pub(crate) fn is_8digits(v: u64) -> bool {
 }
 
 // https://github.com/rust-lang/rust/blob/1.95.0/library/core/src/num/dec2flt/parse.rs#L17-L26
-#[inline]
 #[allow(clippy::cast_lossless)]
 fn parse_8digits(mut v: u64) -> u64 {
     const MASK: u64 = 0x0000_00FF_0000_00FF;
