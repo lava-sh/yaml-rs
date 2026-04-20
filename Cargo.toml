@@ -12,7 +12,10 @@ crate-type = ["cdylib"]
 [dependencies]
 pyo3 = {
     version = "=0.28.3",
-    features = ["num-bigint"]
+    features = [
+        "num-bigint",
+        "generate-import-lib",
+    ]
 }
 itoa = "=1.0.18"
 num-bigint = "=0.4.6"

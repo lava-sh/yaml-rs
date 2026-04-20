@@ -9,9 +9,9 @@ pub(crate) struct Arena<'a> {
 
 impl<'a> Arena<'a> {
     #[inline]
-    pub(crate) fn with_capacity(cap: usize) -> Self {
+    pub(crate) fn with_capacity(c: usize) -> Self {
         Self {
-            nodes: Vec::with_capacity(cap),
+            nodes: Vec::with_capacity(c),
         }
     }
 
