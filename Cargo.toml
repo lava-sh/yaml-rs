@@ -5,7 +5,6 @@ edition = "2024"
 license = "Unlicense"
 repository = "https://github.com/lava-sh/yaml-rs"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
 name = "_yaml_rs"
 crate-type = ["cdylib"]

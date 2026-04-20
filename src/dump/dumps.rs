@@ -1,17 +1,18 @@
-use std::{fmt::Write, str::from_utf8};
+use std::{borrow::Cow, fmt::Write, str::from_utf8};
 
 use pyo3::{
-    Bound, PyAny, PyResult, intern,
+    Bound, Py, PyAny, PyResult, Python, intern,
+    sync::PyOnceLock,
     types::{
         PyAnyMethods, PyBool, PyBoolMethods, PyDate, PyDateAccess, PyDateTime, PyDelta,
         PyDeltaAccess, PyDict, PyDictMethods, PyFloat, PyFrozenSet, PyFrozenSetMethods, PyInt,
-        PyList, PyListMethods, PySet, PySetMethods, PyString, PyStringMethods, PyTimeAccess,
-        PyTuple, PyTupleMethods, PyTzInfo, PyTzInfoAccess,
+        PyList, PyListMethods, PySet, PySetMethods, PyString, PyStringMethods, PyTime,
+        PyTimeAccess, PyTuple, PyTupleMethods, PyType, PyTzInfo, PyTzInfoAccess,
     },
 };
 use saphyr::{MappingOwned, ScalarOwned, ScalarStyle, YamlOwned, YamlOwned::Value};
 
-use crate::{YAMLEncodeError, dump::helpers::normalize_float_repr};
+use crate::{YAMLEncodeError, dump::helpers::normalize_float};
 
 pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
     match obj {
@@ -21,6 +22,17 @@ pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
         obj if obj.is_none() => Ok(Value(ScalarOwned::Null)),
         obj if let Ok(bool) = obj.cast::<PyBool>() => {
             Ok(Value(ScalarOwned::Boolean(bool.is_true())))
+        }
+        obj if get_isinstance(obj.py())?
+            .call1((obj, get_decimal_type(obj.py())?))?
+            .is_truthy()? =>
+        {
+            let py_str = obj.str()?;
+            Ok(YamlOwned::Representation(
+                normalize_decimal(py_str.to_str()?)?.into_owned(),
+                ScalarStyle::Plain,
+                None,
+            ))
         }
         obj if let Ok(int) = obj.cast::<PyInt>() => match int.extract::<i64>() {
             Ok(value) => Ok(Value(ScalarOwned::Integer(value))),
@@ -87,7 +99,7 @@ pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
                     datetime_str.push('Z');
                 } else {
                     let result = tz
-                        .call_method1(intern!(py, "utcoffset"), (py.None(),))
+                        .call_method1(intern!(py, "utcoffset"), (datetime,))
                         .ok()
                         .filter(|d| !d.is_none())
                         .and_then(|offset_delta| {
@@ -109,6 +121,22 @@ pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
             }
 
             Ok(Value(ScalarOwned::String(datetime_str)))
+        }
+        obj if let Ok(time) = obj.cast::<PyTime>() => {
+            let hour = time.get_hour();
+            let minute = time.get_minute();
+            let second = time.get_second();
+            let microsecond = time.get_microsecond();
+
+            let mut time_str = String::with_capacity(16);
+
+            write!(&mut time_str, "{hour:02}:{minute:02}:{second:02}").unwrap();
+
+            if microsecond > 0 {
+                write!(&mut time_str, ".{microsecond:06}").unwrap();
+            }
+
+            Ok(Value(ScalarOwned::String(time_str)))
         }
         obj if let Ok(date) = obj.cast::<PyDate>() => {
             let year = date.get_year();
@@ -165,7 +193,6 @@ pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
             }
             Ok(YamlOwned::Mapping(mapping))
         }
-
         _ => Err(YAMLEncodeError::new_err(format!(
             "Cannot serialize {obj_type} ({obj_repr}) to YAML",
             obj_type = obj.get_type(),
@@ -179,5 +206,211 @@ pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
 fn to_yaml_float(float: &Bound<'_, PyFloat>) -> PyResult<String> {
     let py_str = float.str()?;
     let repr = py_str.to_str()?;
-    Ok(normalize_float_repr(repr))
+    Ok(normalize_float(repr))
+}
+
+fn get_decimal_type(py: Python<'_>) -> PyResult<&Bound<'_, PyType>> {
+    static DECIMAL_TYPE: PyOnceLock<Py<PyType>> = PyOnceLock::new();
+
+    DECIMAL_TYPE.import(py, "decimal", "Decimal")
+}
+
+fn get_isinstance(py: Python<'_>) -> PyResult<&Bound<'_, PyAny>> {
+    static ISINSTANCE: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
+
+    ISINSTANCE
+        .get_or_try_init(py, || {
+            py.import("builtins")?
+                .getattr("isinstance")
+                .map(Bound::unbind)
+        })
+        .map(|f| f.bind(py))
+}
+
+fn normalize_decimal(repr: &str) -> PyResult<Cow<'_, str>> {
+    let bytes = repr.as_bytes();
+    let mut start = 0usize;
+    let mut end = bytes.len();
+
+    // SAFETY: `start < end <= bytes.len()` is maintained by the loop conditions.
+    while start < end && unsafe { bytes.get_unchecked(start) }.is_ascii_whitespace() {
+        start += 1;
+    }
+
+    // SAFETY: `end - 1 < bytes.len()` whenever the loop condition holds.
+    while start < end && unsafe { bytes.get_unchecked(end - 1) }.is_ascii_whitespace() {
+        end -= 1;
+    }
+
+    // SAFETY: `start..end` stays within the original string bounds.
+    let trimmed = unsafe { repr.get_unchecked(start..end) };
+    let bytes = trimmed.as_bytes();
+
+    let mut offset = 0usize;
+    let mut neg = false;
+
+    if !bytes.is_empty() {
+        // SAFETY: `bytes` is non-empty in this branch, so index `0` is valid.
+        match unsafe { *bytes.get_unchecked(0) } {
+            b'-' => {
+                neg = true;
+                offset = 1;
+            }
+            b'+' => {
+                offset = 1;
+            }
+            _ => {}
+        }
+    }
+
+    // SAFETY: `offset` is either 0 or 1 and never exceeds `bytes.len()`.
+    let rest = unsafe { bytes.get_unchecked(offset..) };
+    let len = rest.len();
+
+    if len == 3 {
+        // SAFETY: `len == 3`, so indices `0..3` are valid.
+        let a = unsafe { *rest.get_unchecked(0) } | 0x20;
+        let b = unsafe { *rest.get_unchecked(1) } | 0x20;
+        let c = unsafe { *rest.get_unchecked(2) } | 0x20;
+
+        if (a, b, c) == (b'n', b'a', b'n') {
+            return Ok(Cow::Borrowed(".nan"));
+        }
+        if (a, b, c) == (b'i', b'n', b'f') {
+            return Ok(if neg {
+                Cow::Borrowed("-.inf")
+            } else {
+                Cow::Borrowed(".inf")
+            });
+        }
+    }
+
+    if len == 4 {
+        // SAFETY: `len == 4`, so indices `0..4` are valid.
+        let a = unsafe { *rest.get_unchecked(0) } | 0x20;
+        let b = unsafe { *rest.get_unchecked(1) } | 0x20;
+        let c = unsafe { *rest.get_unchecked(2) } | 0x20;
+        let d = unsafe { *rest.get_unchecked(3) } | 0x20;
+
+        if (a, b, c, d) == (b's', b'n', b'a', b'n') {
+            return Ok(Cow::Borrowed(".nan"));
+        }
+    }
+
+    if len > 3
+        && (
+            // SAFETY: `len > 3`, so indices `0..3` are valid.
+            unsafe { *rest.get_unchecked(0) } | 0x20,
+            unsafe { *rest.get_unchecked(1) } | 0x20,
+            unsafe { *rest.get_unchecked(2) } | 0x20,
+        ) == (b'n', b'a', b'n')
+    {
+        let mut all_digits = true;
+        let mut i = 3usize;
+        while i < len {
+            // SAFETY: the loop condition guarantees `i < len`.
+            if !unsafe { rest.get_unchecked(i) }.is_ascii_digit() {
+                all_digits = false;
+                break;
+            }
+            i += 1;
+        }
+        if all_digits {
+            return Err(YAMLEncodeError::new_err(format!(
+                "Cannot serialize invalid decimal.Decimal('{trimmed}') to YAML"
+            )));
+        }
+    }
+
+    if len > 4
+        && (
+            // SAFETY: `len > 4`, so indices `0..4` are valid.
+            unsafe { *rest.get_unchecked(0) } | 0x20,
+            unsafe { *rest.get_unchecked(1) } | 0x20,
+            unsafe { *rest.get_unchecked(2) } | 0x20,
+            unsafe { *rest.get_unchecked(3) } | 0x20,
+        ) == (b's', b'n', b'a', b'n')
+    {
+        let mut all_digits = true;
+        let mut i = 4usize;
+        while i < len {
+            // SAFETY: the loop condition guarantees `i < len`.
+            if !unsafe { rest.get_unchecked(i) }.is_ascii_digit() {
+                all_digits = false;
+                break;
+            }
+            i += 1;
+        }
+        if all_digits {
+            return Err(YAMLEncodeError::new_err(format!(
+                "Cannot serialize invalid decimal.Decimal('{trimmed}') to YAML"
+            )));
+        }
+    }
+
+    if len == 8 {
+        let inf = b"infinity";
+        let mut matches = true;
+        let mut i = 0usize;
+        while i < 8 {
+            // SAFETY: `len == 8`, so `i < 8` keeps both reads in bounds.
+            if (unsafe { *rest.get_unchecked(i) } | 0x20) != unsafe { *inf.get_unchecked(i) } {
+                matches = false;
+                break;
+            }
+            i += 1;
+        }
+
+        if matches {
+            return Ok(if neg {
+                Cow::Borrowed("-.inf")
+            } else {
+                Cow::Borrowed(".inf")
+            });
+        }
+    }
+
+    let mut has_dot = false;
+    let mut has_exp = false;
+    let mut has_upper_exp = false;
+    let mut i = 0usize;
+
+    while i < bytes.len() {
+        // SAFETY: the loop condition guarantees `i < bytes.len()`.
+        match unsafe { *bytes.get_unchecked(i) } {
+            b'.' => has_dot = true,
+            b'e' => has_exp = true,
+            b'E' => {
+                has_exp = true;
+                has_upper_exp = true;
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+
+    if !has_dot && !has_exp {
+        let mut normalized = String::with_capacity(trimmed.len() + 2);
+        normalized.push_str(trimmed);
+        normalized.push_str(".0");
+        return Ok(Cow::Owned(normalized));
+    }
+
+    if has_upper_exp {
+        let mut normalized = Vec::with_capacity(trimmed.len());
+        let mut i = 0usize;
+        while i < bytes.len() {
+            // SAFETY: the loop condition guarantees `i < bytes.len()`.
+            let byte = unsafe { *bytes.get_unchecked(i) };
+            normalized.push(if byte == b'E' { b'e' } else { byte });
+            i += 1;
+        }
+
+        // SAFETY: source bytes are valid ASCII and only `E` is replaced by `e`.
+        return Ok(Cow::Owned(unsafe {
+            String::from_utf8_unchecked(normalized)
+        }));
+    }
+
+    Ok(Cow::Borrowed(trimmed))
 }

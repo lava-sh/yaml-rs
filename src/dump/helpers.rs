@@ -47,7 +47,7 @@ unsafe fn contains_dot(bytes: &[u8]) -> bool {
     bytes[offset..].contains(&b'.')
 }
 
-pub(crate) fn normalize_float_repr(repr: &str) -> String {
+pub(crate) fn normalize_float(repr: &str) -> String {
     let bytes = repr.as_bytes();
 
     match bytes {

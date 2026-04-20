@@ -1,0 +1,109 @@
+# https://github.com/pydantic/pydantic/blob/main/.github/actions/core-build-pgo-wheel/action.yml
+
+name: "Build PGO wheel"
+description: "Builds a PGO-optimized wheel"
+
+inputs:
+  python-arch:
+    description: "Python architecture for interpreter resolution on Windows"
+    required: false
+    default: ""
+
+  target:
+    description: "Rust target to build the wheel for"
+    required: true
+
+  interpreter:
+    description: "Interpreter to build the wheel for"
+    required: true
+
+  rust-toolchain:
+    description: "Rust toolchain to use"
+    required: true
+
+  maturin-build-args:
+    description: "Additional arguments to pass to maturin build"
+    required: false
+    default: ""
+
+  working-directory:
+    description: "Working directory to run the action in"
+    required: false
+    default: "."
+
+outputs:
+  wheel:
+    description: "Path to the built wheel"
+    value: ${{ steps.find_wheel.outputs.path }}
+
+runs:
+  using: composite
+  steps:
+    - name: "Prepare profiling directory"
+      shell: bash
+      # making this ahead of the compile ensures that the local user can write to this
+      # directory; the maturin action (on linux) runs in docker so would create as root
+      run: mkdir -p ${{ github.workspace }}/profdata
+
+    - name: "Install uv"
+      uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+      with:
+        enable-cache: ${{ !startsWith(github.ref, 'refs/tags/') }} # zizmor: ignore[cache-poisoning]
+
+    - name: "Build initial wheel"
+      uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
+      with:
+        working-directory: ${{ inputs.working-directory }}
+        target: ${{ inputs.target }}
+        manylinux: auto
+        args: >
+          --release
+          --out initial-wheel
+          --interpreter ${{ inputs.interpreter }}
+          --compatibility pypi
+          ${{ inputs.maturin-build-args }}
+        rust-toolchain: ${{ inputs.rust-toolchain }}
+        docker-options: -e CI
+      env:
+        RUSTFLAGS: "-Cprofile-generate=${{ github.workspace }}/profdata"
+
+    - name: "Generate pgo data"
+      working-directory: ${{ inputs.working-directory }}
+      run: bash "$GITHUB_ACTION_PATH/pgo.sh"
+      shell: bash
+      env:
+        INPUTS_INTERPRETER: ${{ inputs.interpreter }}
+        INPUTS_PYTHON_ARCH: ${{ inputs.python-arch }}
+        INPUTS_TARGET: ${{ inputs.target }}
+
+    - name: "Merge pgo data"
+      run: ${{ env.LLVM_PROFDATA }} merge -o ${{ github.workspace }}/merged.profdata ${{ github.workspace }}/profdata # zizmor: ignore[template-injection]
+      shell: pwsh # because it handles paths on windows better, and works well enough on unix for this step
+
+    - name: "Build pgo-optimized wheel"
+      uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
+      with:
+        working-directory: ${{ inputs.working-directory }}
+        target: ${{ inputs.target }}
+        manylinux: auto
+        args: >
+          --release
+          --out dist
+          --interpreter ${{ inputs.interpreter }}
+          --compatibility pypi
+          ${{ inputs.maturin-build-args }}
+        rust-toolchain: ${{inputs.rust-toolchain}}
+        docker-options: -e CI
+      env:
+        RUSTFLAGS: "-Cprofile-use=${{ github.workspace }}/merged.profdata"
+
+    - name: "Find built wheel"
+      id: find_wheel
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        {
+          echo "path<<EOF"
+          ls dist/*.whl
+          echo "EOF"
+        } | tee -a "$GITHUB_OUTPUT"
+      shell: bash

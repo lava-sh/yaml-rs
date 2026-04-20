@@ -1,5 +1,6 @@
 import sys
 from datetime import date, datetime, timedelta, timezone
+from decimal import Decimal
 from textwrap import dedent
 from typing import Any
 
@@ -228,3 +229,24 @@ def test_dumps_nums(data: dict[str, float | int]) -> None:
     dumped = yaml_rs.dumps(data).removeprefix("---\n")
     expected = pyyaml.dump(data, sort_keys=False).rstrip("\n")
     assert dumped == expected
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (Decimal("1"), "value: 1.0"),
+        (Decimal("1E+3"), "value: 1.0e+3"),
+        (Decimal("Infinity"), "value: .inf"),
+        (Decimal("-Infinity"), "value: -.inf"),
+        (Decimal("NaN"), "value: .nan"),
+        (Decimal("sNaN"), "value: .nan"),
+    ],
+)
+def test_dumps_decimal(value: Decimal, expected: str) -> None:
+    assert yaml_rs.dumps({"value": value}).removeprefix("---\n") == expected
+def test_dumps_decimal_nan_payload_error() -> None:
+    with pytest.raises(
+        yaml_rs.YAMLEncodeError,
+        match=r"Cannot serialize invalid decimal.Decimal\('NaN42'\) to YAML",
+    ):
+        yaml_rs.dumps({"value": Decimal("NaN42")})

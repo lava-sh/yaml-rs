@@ -1,4 +1,4 @@
-name: "macos"
+name: "macOS"
 
 on:
   workflow_call:
@@ -8,25 +8,29 @@ jobs:
     name: "macos-latest / ${{ matrix.platform.target }}"
     runs-on: macos-latest
     strategy:
+      fail-fast: false
       matrix:
         platform:
           - {
             # Intel Mac
             target: x86_64,
             interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
-            maturin-build-args: "--features mimalloc"
+            maturin-build-args: "--features mimalloc",
+            use-pgo: true,
           }
           - {
             # Apple Silicon M1-M4
             target: aarch64,
             interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
-            maturin-build-args: "--features mimalloc"
+            maturin-build-args: "--features mimalloc",
+            use-pgo: true,
           }
           - {
             # Universal binary (Intel + Apple Silicon)
             target: universal2,
             interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
-            maturin-build-args: "--features mimalloc"
+            maturin-build-args: "--features mimalloc",
+            use-pgo: false,
           }
 
     steps:
@@ -34,7 +38,13 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: "Install uv"
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          enable-cache: ${{ !startsWith(github.ref, 'refs/tags/') }} # zizmor: ignore[cache-poisoning]
+
       - name: "Build wheels"
+        if: matrix.platform.use-pgo == false
         uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
         with:
           target: ${{ matrix.platform.target }}
@@ -45,6 +55,23 @@ jobs:
             --interpreter ${{ matrix.platform.interpreter }}
             ${{ matrix.platform.maturin-build-args }}
             --compatibility pypi
+
+      - name: "Install rust stable + llvm-tools"
+        if: matrix.platform.use-pgo == true
+        id: rust-toolchain
+        uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
+        with:
+          components: llvm-tools
+          toolchain: nightly
+
+      - name: "Build PGO wheel"
+        if: matrix.platform.use-pgo == true
+        uses: ./.github/actions/build-pgo-wheel
+        with:
+          target: ${{ matrix.platform.target }}
+          interpreter: ${{ matrix.platform.interpreter }}
+          rust-toolchain: ${{ steps.rust-toolchain.outputs.name }}
+          maturin-build-args: ${{ matrix.platform.maturin-build-args }}
 
       - name: "Upload wheels"
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
