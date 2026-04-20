@@ -1,6 +1,6 @@
 [package]
 name = "yaml-rs"
-version = "0.0.16"
+version = "0.0.17"
 edition = "2024"
 license = "Unlicense"
 repository = "https://github.com/lava-sh/yaml-rs"
@@ -13,11 +13,7 @@ crate-type = ["cdylib"]
 [dependencies]
 pyo3 = {
     version = "=0.28.3",
-    features = [
-        "num-bigint",
-        "extension-module",
-        "generate-import-lib",
-    ]
+    features = ["num-bigint"]
 }
 itoa = "=1.0.18"
 num-bigint = "=0.4.6"
@@ -56,14 +52,10 @@ lexical-core = {
 }
 mimalloc = {
     optional = true,
-    # version = "=0.1.48",
-    git = "https://github.com/bluecatengineering/mimalloc_rust",
-    rev = "8b86a87995e0c2d2fd11e2a15c7f26bc74005d74",
-    package = "bc-mimalloc",
+    version = "=0.1.49",
     features = [
         # mimalloc v3
         # See: https://github.com/microsoft/mimalloc/tree/dev3?tab=readme-ov-file#branches
-        "v3",
         "override",
         "local_dynamic_tls",
     ]
