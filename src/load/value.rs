@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use crate::load::arena::NodeId;
+use crate::load::types::NodeId;
 
 #[derive(Clone, Debug)]
 pub(crate) enum Value<'a> {

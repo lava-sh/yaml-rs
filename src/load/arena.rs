@@ -1,6 +1,4 @@
-use crate::load::value::Value;
-
-pub(crate) type NodeId = usize;
+use crate::load::{types::NodeId, value::Value};
 
 #[derive(Debug)]
 pub(crate) struct Arena<'a> {
@@ -17,7 +15,8 @@ impl<'a> Arena<'a> {
 
     #[inline]
     pub(crate) fn push(&mut self, value: Value<'a>) -> NodeId {
-        let id = self.nodes.len();
+        let id = self.nodes.len() as u32;
+        debug_assert!(id < u32::MAX, "Arena capacity exceeded");
         self.nodes.push(value);
         id
     }
@@ -26,6 +25,6 @@ impl<'a> Arena<'a> {
     pub(crate) fn get(&self, id: NodeId) -> &Value<'_> {
         // SAFETY: `id` is produced by `push` and nodes are never removed,
         // so it is always a valid index.
-        unsafe { self.nodes.get_unchecked(id) }
+        unsafe { self.nodes.get_unchecked(id as usize) }
     }
 }

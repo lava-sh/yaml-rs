@@ -33,13 +33,13 @@ mod yaml_rs {
     const _VERSION: &str = env!("CARGO_PKG_VERSION");
 
     #[pyfunction(name = "_load")]
-    fn load(
-        py: Python,
+    fn load<'py>(
+        py: Python<'py>,
         obj: &Bound<'_, PyAny>,
         parse_datetime: bool,
         encoding: Option<&str>,
         encoder_errors: Option<&str>,
-    ) -> PyResult<Py<PyAny>> {
+    ) -> PyResult<Bound<'py, PyAny>> {
         let data: Cow<[u8]> = if let Ok(string) = obj.cast::<PyString>() {
             let path = string.to_str()?;
             Cow::Owned(py.detach(|| std::fs::read(path))?)
@@ -59,11 +59,11 @@ mod yaml_rs {
     }
 
     #[pyfunction(name = "_loads")]
-    fn load_yaml_from_string(
-        py: Python,
+    fn load_yaml_from_string<'py>(
+        py: Python<'py>,
         yaml_string: &str,
         parse_datetime: bool,
-    ) -> PyResult<Py<PyAny>> {
+    ) -> PyResult<Bound<'py, PyAny>> {
         let (arena, docs) = py
             .detach(|| build_from_events(yaml_string))
             .map_err(|error| match error {
@@ -71,7 +71,7 @@ mod yaml_rs {
                 BuildError::Decode(msg) => YAMLDecodeError::new_err(msg),
             })?;
 
-        Ok(to_python(py, &arena, &docs, parse_datetime)?.unbind())
+        to_python(py, &arena, &docs, parse_datetime)
     }
 
     #[pyfunction(name = "_dumps")]

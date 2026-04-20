@@ -10,9 +10,10 @@ use rustc_hash::FxHashMap;
 use saphyr_parser::{Event, Parser, ScalarStyle, ScanError, Tag};
 
 use crate::load::{
-    arena::{Arena, NodeId},
+    arena::Arena,
     parse_datetime::parse_py_datetime,
     scalar::{is_bool, is_datetime, is_float, is_inf_nan, is_int, is_null, parse_float, parse_int},
+    types::NodeId,
     value::Value,
 };
 

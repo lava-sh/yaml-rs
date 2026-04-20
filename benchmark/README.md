@@ -6,7 +6,9 @@
 # Linux / MacOS
 python3 -m venv .venv
 source .venv/bin/activate
+```
 
+```bash
 # Windows
 py -m venv .venv
 .venv\scripts\activate
@@ -17,7 +19,9 @@ py -m venv .venv
 ```bash
 # Using pip
 pip install . --group bench
+```
 
+```bash
 # Using uv
 uv pip install . --group bench
 ```

@@ -15,8 +15,7 @@ use crate::{
     YAMLEncodeError,
     dump::{
         helpers::{
-            format_ms, get_decimal_type, get_isinstance, get_utc_offset, sequence_to_yaml,
-            set_to_yaml, to_yaml_float,
+            format_ms, get_decimal, get_utc_offset, sequence_to_yaml, set_to_yaml, to_yaml_float,
         },
         normalize::normalize_decimal,
     },
@@ -27,11 +26,26 @@ pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
         obj if let Ok(str) = obj.cast::<PyString>() => Ok(Value(ScalarOwned::String(
             str.to_string_lossy().into_owned(),
         ))),
-        obj if obj.is_none() => Ok(Value(ScalarOwned::Null)),
         obj if let Ok(bool) = obj.cast::<PyBool>() => {
             Ok(Value(ScalarOwned::Boolean(bool.is_true())))
         }
+        obj if let Ok(int) = obj.cast::<PyInt>() => match int.extract::<i64>() {
+            Ok(value) => Ok(Value(ScalarOwned::Integer(value))),
+            Err(_) => Ok(YamlOwned::Representation(
+                int.str()?.to_str()?.to_owned(),
+                ScalarStyle::Plain,
+                None,
+            )),
+        },
+        obj if let Ok(float) = obj.cast::<PyFloat>() => Ok(YamlOwned::Representation(
+            to_yaml_float(float)?,
+            ScalarStyle::Plain,
+            None,
+        )),
+        obj if obj.is_none() => Ok(Value(ScalarOwned::Null)),
         obj if let Ok(datetime) = obj.cast::<PyDateTime>() => {
+            const DATETIME_BASE_LEN: usize = 19;
+
             let year = datetime.get_year();
             let month = datetime.get_month();
             let day = datetime.get_day();
@@ -42,7 +56,10 @@ pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
 
             let tzinfo = datetime.get_tzinfo();
 
-            let capacity = if tzinfo.is_some() { 35 } else { 26 };
+            let capacity = DATETIME_BASE_LEN
+                + usize::from(microsecond > 0) * 7
+                + usize::from(tzinfo.is_some()) * 6;
+
             let mut datetime_str = String::with_capacity(capacity);
 
             let py = datetime.py();
@@ -69,7 +86,7 @@ pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
                 if is_utc {
                     datetime_str.push('Z');
                 } else if let Some((offset_hours, offset_minutes)) =
-                    get_utc_offset(datetime.py(), &tz, datetime)
+                    get_utc_offset(py, &tz, datetime)
                 {
                     write!(&mut datetime_str, "{offset_hours:+03}:{offset_minutes:02}").unwrap();
                 }
@@ -119,9 +136,11 @@ pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
             }
             Ok(YamlOwned::Mapping(mapping))
         }
-        obj if get_isinstance(obj.py())?
-            .call1((obj, get_decimal_type(obj.py())?))?
-            .is_truthy()? =>
+        obj if {
+            let py = obj.py();
+            let (isinstance, decimal) = get_decimal(py)?;
+            isinstance.call1((obj, decimal))?.is_truthy()?
+        } =>
         {
             let py_str = obj.str()?;
             Ok(YamlOwned::Representation(
@@ -130,19 +149,7 @@ pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
                 None,
             ))
         }
-        obj if let Ok(int) = obj.cast::<PyInt>() => match int.extract::<i64>() {
-            Ok(value) => Ok(Value(ScalarOwned::Integer(value))),
-            Err(_) => Ok(YamlOwned::Representation(
-                int.str()?.to_str()?.to_owned(),
-                ScalarStyle::Plain,
-                None,
-            )),
-        },
-        obj if let Ok(float) = obj.cast::<PyFloat>() => Ok(YamlOwned::Representation(
-            to_yaml_float(float)?,
-            ScalarStyle::Plain,
-            None,
-        )),
+
         _ => Err(YAMLEncodeError::new_err(format!(
             "Cannot serialize {obj_type} ({obj_repr}) to YAML",
             obj_type = obj.get_type(),
