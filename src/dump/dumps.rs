@@ -372,7 +372,6 @@ fn normalize_decimal(repr: &str) -> PyResult<Cow<'_, str>> {
 
     let mut has_dot = false;
     let mut has_exp = false;
-    let mut has_upper_exp = false;
     let mut i = 0usize;
 
     while i < bytes.len() {
@@ -380,10 +379,7 @@ fn normalize_decimal(repr: &str) -> PyResult<Cow<'_, str>> {
         match unsafe { *bytes.get_unchecked(i) } {
             b'.' => has_dot = true,
             b'e' => has_exp = true,
-            b'E' => {
-                has_exp = true;
-                has_upper_exp = true;
-            }
+            b'E' => has_exp = true,
             _ => {}
         }
         i += 1;
@@ -394,22 +390,6 @@ fn normalize_decimal(repr: &str) -> PyResult<Cow<'_, str>> {
         normalized.push_str(trimmed);
         normalized.push_str(".0");
         return Ok(Cow::Owned(normalized));
-    }
-
-    if has_upper_exp {
-        let mut normalized = Vec::with_capacity(trimmed.len());
-        let mut i = 0usize;
-        while i < bytes.len() {
-            // SAFETY: the loop condition guarantees `i < bytes.len()`.
-            let byte = unsafe { *bytes.get_unchecked(i) };
-            normalized.push(if byte == b'E' { b'e' } else { byte });
-            i += 1;
-        }
-
-        // SAFETY: source bytes are valid ASCII and only `E` is replaced by `e`.
-        return Ok(Cow::Owned(unsafe {
-            String::from_utf8_unchecked(normalized)
-        }));
     }
 
     Ok(Cow::Borrowed(trimmed))

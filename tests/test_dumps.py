@@ -234,16 +234,18 @@ def test_dumps_nums(data: dict[str, float | int]) -> None:
 @pytest.mark.parametrize(
     ("value", "expected"),
     [
-        (Decimal("1"), "value: 1.0"),
-        (Decimal("1E+3"), "value: 1.0e+3"),
-        (Decimal("Infinity"), "value: .inf"),
-        (Decimal("-Infinity"), "value: -.inf"),
-        (Decimal("NaN"), "value: .nan"),
-        (Decimal("sNaN"), "value: .nan"),
+        (Decimal(1), "x: 1.0"),
+        (Decimal("1E+3"), "x: 1E+3"),
+        (Decimal("Infinity"), "x: .inf"),
+        (Decimal("-Infinity"), "x: -.inf"),
+        (Decimal("NaN"), "x: .nan"),
+        (Decimal("sNaN"), "x: .nan"),
     ],
 )
 def test_dumps_decimal(value: Decimal, expected: str) -> None:
-    assert yaml_rs.dumps({"value": value}).removeprefix("---\n") == expected
+    assert yaml_rs.dumps({"x": value}).removeprefix("---\n") == expected
+
+
 def test_dumps_decimal_nan_payload_error() -> None:
     with pytest.raises(
         yaml_rs.YAMLEncodeError,
