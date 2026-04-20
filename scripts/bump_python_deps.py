@@ -1,8 +1,8 @@
 # /// script
 # dependencies = [
-#   "packaging == 26.0",
-#   "pyreqwest == 0.11.0",
-#   "rich == 14.3.3",
+#   "packaging == 26.1",
+#   "pyreqwest == 0.11.7",
+#   "rich == 15.0.0",
 # ]
 # ///
 
