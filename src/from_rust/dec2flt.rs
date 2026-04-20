@@ -1,23 +1,14 @@
-// Determine if all characters in an 8-byte byte string (represented as a `u64`) are all decimal
-// digits.
-//
-// This does not care about the order in which the bytes were loaded.
+// https://github.com/rust-lang/rust/blob/1.95.0/library/core/src/num/dec2flt/common.rs#L56-L64
 #[inline]
-fn is_8digits(v: u64) -> bool {
+pub(crate) fn is_8digits(v: u64) -> bool {
     let a = v.wrapping_add(0x4646_4646_4646_4646);
     let b = v.wrapping_sub(0x3030_3030_3030_3030);
     (a | b) & 0x8080_8080_8080_8080 == 0
 }
 
-// Parse 8 digits, loaded as bytes in little-endian order.
-//
-// This uses the trick where every digit is in [0x030, 0x39],
-// and therefore can be parsed in 3 multiplications, much
-// faster than the normal 8.
-//
-// This is based off the algorithm described in "Fast numeric string to
-// int", available here: https://johnnylee-sde.github.io/Fast-numeric-string-to-int.
+// https://github.com/rust-lang/rust/blob/1.95.0/library/core/src/num/dec2flt/parse.rs#L17-L26
 #[inline]
+#[allow(clippy::cast_lossless)]
 fn parse_8digits(mut v: u64) -> u64 {
     const MASK: u64 = 0x0000_00FF_0000_00FF;
     const MUL1: u64 = 0x000F_4240_0000_0064;
@@ -27,7 +18,7 @@ fn parse_8digits(mut v: u64) -> u64 {
     v = (v * 10) + (v >> 8); // will not overflow, fits in 63 bits
     let v1 = (v & MASK).wrapping_mul(MUL1);
     let v2 = ((v >> 16) & MASK).wrapping_mul(MUL2);
-    u64::from((v1.wrapping_add(v2) >> 32) as u32)
+    ((v1.wrapping_add(v2) >> 32) as u32) as u64
 }
 
 unsafe fn parse_digits_unsafe(bytes: &[u8], start: usize, count: usize) -> u32 {
