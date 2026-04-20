@@ -306,8 +306,8 @@ fn normalize_decimal(repr: &str) -> PyResult<Cow<'_, str>> {
         }
     }
 
-    if has_nan_payload(rest, 3, [b'n', b'a', b'n'])
-        || has_nan_payload(rest, 4, [b's', b'n', b'a', b'n'])
+    if has_nan_payload(rest, 3, *b"nan")
+        || has_nan_payload(rest, 4, *b"snan")
     {
         return Err(YAMLEncodeError::new_err(format!(
             "Cannot serialize invalid decimal.Decimal('{trimmed}') to YAML"
