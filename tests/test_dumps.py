@@ -167,10 +167,7 @@ def test_dumps_with_options(
 
 @pytest.mark.parametrize(
     "ts",
-    [
-        ts for ts in VALID_YAMLS
-        if ts.out_yaml is not None
-    ],
+    [ts for ts in VALID_YAMLS if ts.out_yaml is not None],
     ids=lambda ts: ts.id,
 )
 def test_valid_yamls_dumps_from_test_suite(ts: YamlTestSuite) -> None:
@@ -235,23 +232,37 @@ def test_dumps_nums(data: dict[str, float | int]) -> None:
 
 
 @pytest.mark.parametrize(
-    ("value", "expected"),
+    ("v", "expected"),
     [
+        (Decimal(0), "x: 0.0"),
         (Decimal(1), "x: 1.0"),
-        (Decimal("1E+3"), "x: 1E+3"),
+        (Decimal(-1), "x: -1.0"),
+        # # #
+        (Decimal("1E+3"), "x: 1e+3"),
+        (Decimal("1e3"), "x: 1e+3"),
+        (Decimal("-1e-3"), "x: -0.001"),
+        # # #
+        (Decimal("1.5"), "x: 1.5"),
+        (Decimal("-0.25"), "x: -0.25"),
+        # # #
+        (Decimal(42), "x: 42.0"),
+        (Decimal(-42), "x: -42.0"),
+        # # #
+        (Decimal("1.000"), "x: 1.000"),
+        (Decimal("0.0001"), "x: 0.0001"),
+        # # #
         (Decimal("Infinity"), "x: .inf"),
+        (Decimal("+Infinity"), "x: .inf"),
         (Decimal("-Infinity"), "x: -.inf"),
+        # # #
         (Decimal("NaN"), "x: .nan"),
         (Decimal("sNaN"), "x: .nan"),
+        (Decimal("+NaN"), "x: .nan"),
+        (Decimal("-NaN"), "x: .nan"),
+        # # #
+        (Decimal(" 1 "), "x: 1.0"),  # noqa: FURB157
+        (Decimal("  -2.5  "), "x: -2.5"),
     ],
 )
-def test_dumps_decimal(value: Decimal, expected: str) -> None:
-    assert yaml_rs.dumps({"x": value}).removeprefix("---\n") == expected
-
-
-def test_dumps_decimal_nan_payload_error() -> None:
-    with pytest.raises(
-        yaml_rs.YAMLEncodeError,
-        match=r"Cannot serialize invalid decimal.Decimal\('NaN42'\) to YAML",
-    ):
-        yaml_rs.dumps({"value": Decimal("NaN42")})
+def test_dumps_decimal(v: Decimal, expected: str) -> None:
+    assert yaml_rs.dumps({"x": v}).removeprefix("---\n") == expected

@@ -285,13 +285,18 @@ pub(crate) fn normalize_decimal(repr: &str) -> PyResult<Cow<'_, str>> {
 
     let mut has_dot = false;
     let mut has_exp = false;
+    let mut has_upper_exp = false;
     let mut i = 0usize;
 
     while i < bytes.len() {
         // SAFETY: loop guarantees i < bytes.len()
         match unsafe { *bytes.get_unchecked(i) } {
             b'.' => has_dot = true,
-            b'e' | b'E' => has_exp = true,
+            b'e' => has_exp = true,
+            b'E' => {
+                has_exp = true;
+                has_upper_exp = true;
+            }
             _ => {}
         }
         i += 1;
@@ -301,6 +306,13 @@ pub(crate) fn normalize_decimal(repr: &str) -> PyResult<Cow<'_, str>> {
         let mut normalized = String::with_capacity(trimmed.len() + 2);
         normalized.push_str(trimmed);
         normalized.push_str(".0");
+        return Ok(Cow::Owned(normalized));
+    }
+
+    if has_upper_exp {
+        let mut normalized = String::with_capacity(trimmed.len());
+        normalized.push_str(trimmed);
+        normalized.make_ascii_lowercase();
         return Ok(Cow::Owned(normalized));
     }
 
