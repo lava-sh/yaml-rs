@@ -44,7 +44,7 @@ pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
         )),
         obj if obj.is_none() => Ok(Value(ScalarOwned::Null)),
         obj if let Ok(datetime) = obj.cast::<PyDateTime>() => {
-            const DATETIME_BASE_LEN: usize = 20;
+            const DATETIME_BASE_LEN: usize = 19;
 
             let year = datetime.get_year();
             let month = datetime.get_month();
