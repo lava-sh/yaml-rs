@@ -1,5 +1,5 @@
 import sys
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal
 from textwrap import dedent
 from typing import Any
@@ -68,6 +68,9 @@ def test_incorrect_dumps(v: Any, pattern: str) -> None:
          '"2025-01-01T00:00:00-08:00"'),
         (datetime(2025, 1, 1, 0, 0, 0, tzinfo=timezone(timedelta(hours=3))),
          '"2025-01-01T00:00:00+03:00"'),
+        (time(10, 30, 0, 100000), '"10:30:00.1"'),
+        (time(10, 30, 0, 120000), '"10:30:00.12"'),
+        (time(10, 30, 0, 123400), '"10:30:00.1234"'),
     ],
 )
 def test_datetime_dumps(data: Any, dumped: str) -> None:

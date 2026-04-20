@@ -109,7 +109,20 @@ pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
             write!(&mut time_str, "{hour:02}:{minute:02}:{second:02}").unwrap();
 
             if microsecond > 0 {
-                write!(&mut time_str, ".{microsecond:06}").unwrap();
+                let mut buffer = itoa::Buffer::new();
+                let formatted = buffer.format(microsecond);
+
+                let padding = 6 - formatted.len();
+                let mut padded = [b'0'; 6];
+                padded[padding..].copy_from_slice(formatted.as_bytes());
+
+                let mut padded_len = 6;
+                while padded_len > 1 && padded[padded_len - 1] == b'0' {
+                    padded_len -= 1;
+                }
+
+                time_str.push('.');
+                time_str.push_str(from_utf8(&padded[..padded_len])?);
             }
 
             Ok(Value(ScalarOwned::String(time_str)))
