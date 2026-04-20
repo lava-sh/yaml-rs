@@ -69,7 +69,7 @@ fn resolve_scalar<'a>(
                     }
                 }
                 "binary" => Value::String(value),
-                "str" => Value::StringExplicit(value),
+                "str" => Value::TaggedString(value),
                 _ => return Err(format!("Invalid tag: '!!{}'", tag.suffix)),
             };
             return Ok(arena.push(v));
@@ -223,10 +223,10 @@ fn value_to_py<'py>(
     match arena.get(id) {
         Value::Null => Ok(py.None().into_bound(py)),
         Value::Boolean(bool) => bool.into_bound_py_any(py),
-        Value::IntegerI64(int_64) => int_64.into_bound_py_any(py),
-        Value::IntegerBig(big_int) => big_int.into_bound_py_any(py),
+        Value::Integer64(int_64) => int_64.into_bound_py_any(py),
+        Value::BigInteger(big_int) => big_int.into_bound_py_any(py),
         Value::Float(float) => float.into_bound_py_any(py),
-        Value::StringExplicit(string_exp) => string_exp.into_bound_py_any(py),
+        Value::TaggedString(string_tagged) => string_tagged.into_bound_py_any(py),
         Value::String(string) => {
             let str = string.as_ref();
             if parse_datetime
@@ -237,13 +237,9 @@ fn value_to_py<'py>(
             }
             str.into_bound_py_any(py)
         }
-        Value::Seq(items) => {
-            let py_list = PyList::empty(py);
-            for &child in items {
-                py_list.append(value_to_py(py, arena, child, parse_datetime)?)?;
-            }
-            Ok(py_list.into_any())
-        }
+        Value::Seq(items) => to_py_list(py, items, |child| {
+            value_to_py(py, arena, child, parse_datetime)
+        }),
         Value::Map(pairs) => {
             let mut all_nulls = true;
             let mut has_null_key = false;
@@ -309,6 +305,18 @@ fn value_to_hashable<'py>(
     }
 }
 
+fn to_py_list<'py, T, F>(py: Python<'py>, items: &[T], mut f: F) -> PyResult<Bound<'py, PyAny>>
+where
+    T: Copy,
+    F: FnMut(T) -> PyResult<Bound<'py, PyAny>>,
+{
+    let py_list = PyList::empty(py);
+    for &item in items {
+        py_list.append(f(item)?)?;
+    }
+    Ok(py_list.into_any())
+}
+
 pub(crate) fn to_python<'py>(
     py: Python<'py>,
     arena: &Arena<'_>,
@@ -318,12 +326,6 @@ pub(crate) fn to_python<'py>(
     match docs.len() {
         0 => Ok(py.None().into_bound(py)),
         1 => value_to_py(py, arena, docs[0], parse_datetime),
-        _ => {
-            let py_list = PyList::empty(py);
-            for &doc in docs {
-                py_list.append(value_to_py(py, arena, doc, parse_datetime)?)?;
-            }
-            Ok(py_list.into_any())
-        }
+        _ => to_py_list(py, docs, |doc| value_to_py(py, arena, doc, parse_datetime)),
     }
 }

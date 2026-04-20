@@ -1,6 +1,7 @@
 mod load;
 
 mod dump;
+mod from_rust;
 
 #[cfg(feature = "mimalloc")]
 #[global_allocator]

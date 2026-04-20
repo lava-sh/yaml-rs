@@ -1,5 +1,6 @@
 import sys
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
+from decimal import Decimal
 from textwrap import dedent
 from typing import Any
 
@@ -67,6 +68,9 @@ def test_incorrect_dumps(v: Any, pattern: str) -> None:
          '"2025-01-01T00:00:00-08:00"'),
         (datetime(2025, 1, 1, 0, 0, 0, tzinfo=timezone(timedelta(hours=3))),
          '"2025-01-01T00:00:00+03:00"'),
+        (time(10, 30, 0, 100000), '"10:30:00.1"'),
+        (time(10, 30, 0, 120000), '"10:30:00.12"'),
+        (time(10, 30, 0, 123400), '"10:30:00.1234"'),
     ],
 )
 def test_datetime_dumps(data: Any, dumped: str) -> None:
@@ -163,10 +167,7 @@ def test_dumps_with_options(
 
 @pytest.mark.parametrize(
     "ts",
-    [
-        ts for ts in VALID_YAMLS
-        if ts.out_yaml is not None
-    ],
+    [ts for ts in VALID_YAMLS if ts.out_yaml is not None],
     ids=lambda ts: ts.id,
 )
 def test_valid_yamls_dumps_from_test_suite(ts: YamlTestSuite) -> None:
@@ -228,3 +229,40 @@ def test_dumps_nums(data: dict[str, float | int]) -> None:
     dumped = yaml_rs.dumps(data).removeprefix("---\n")
     expected = pyyaml.dump(data, sort_keys=False).rstrip("\n")
     assert dumped == expected
+
+
+@pytest.mark.parametrize(
+    ("v", "expected"),
+    [
+        (Decimal(0), "x: 0.0"),
+        (Decimal(1), "x: 1.0"),
+        (Decimal(-1), "x: -1.0"),
+        # # #
+        (Decimal("1E+3"), "x: 1e+3"),
+        (Decimal("1e3"), "x: 1e+3"),
+        (Decimal("-1e-3"), "x: -0.001"),
+        # # #
+        (Decimal("1.5"), "x: 1.5"),
+        (Decimal("-0.25"), "x: -0.25"),
+        # # #
+        (Decimal(42), "x: 42.0"),
+        (Decimal(-42), "x: -42.0"),
+        # # #
+        (Decimal("1.000"), "x: 1.000"),
+        (Decimal("0.0001"), "x: 0.0001"),
+        # # #
+        (Decimal("Infinity"), "x: .inf"),
+        (Decimal("+Infinity"), "x: .inf"),
+        (Decimal("-Infinity"), "x: -.inf"),
+        # # #
+        (Decimal("NaN"), "x: .nan"),
+        (Decimal("sNaN"), "x: .nan"),
+        (Decimal("+NaN"), "x: .nan"),
+        (Decimal("-NaN"), "x: .nan"),
+        # # #
+        (Decimal(" 1 "), "x: 1.0"),  # noqa: FURB157
+        (Decimal("  -2.5  "), "x: -2.5"),
+    ],
+)
+def test_dumps_decimal(v: Decimal, expected: str) -> None:
+    assert yaml_rs.dumps({"x": v}).removeprefix("---\n") == expected

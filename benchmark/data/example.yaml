@@ -1,0 +1,122 @@
+metadata:
+  version: 1.0
+  generated_at: 2024-01-01T12:00:00Z
+  author: benchmark
+
+users:
+  - id: 1
+    name: Alice
+    active: true
+    balance: 12345.67
+    tags: [admin, user, test]
+    preferences:
+      theme: dark
+      language: en
+      notifications:
+        email: true
+        sms: false
+    history:
+      - action: login
+        timestamp: 2024-01-01T10:00:00Z
+      - action: purchase
+        amount: 99.99
+        timestamp: 2024-01-01T10:05:00Z
+
+  - id: 2
+    name: Bob
+    active: false
+    balance: 987654321.123
+    tags: [user]
+    preferences:
+      theme: light
+      language: fr
+      notifications:
+        email: false
+        sms: true
+    history:
+      - action: login
+        timestamp: 2024-01-02T09:00:00Z
+
+products:
+  - id: 1001
+    name: Laptop
+    price: 1999.99
+    specs:
+      cpu: "Intel i7"
+      ram: "32GB"
+      storage: "1TB SSD"
+      features:
+        - bluetooth
+        - wifi
+        - usb-c
+
+  - id: 1002
+    name: Phone
+    price: 999.99
+    specs:
+      cpu: "ARM"
+      ram: "8GB"
+      storage: "256GB"
+      features:
+        - 5g
+        - nfc
+        - dual-sim
+
+transactions:
+  - id: tx1
+    user_id: 1
+    product_id: 1001
+    quantity: 1
+    total: 1999.99
+    created_at: 2024-01-01T10:05:00Z
+
+  - id: tx2
+    user_id: 2
+    product_id: 1002
+    quantity: 2
+    total: 1999.98
+    created_at: 2024-01-02T09:30:00Z
+
+analytics:
+  daily:
+    - date: 2024-01-01
+      users: 1200
+      revenue: 15000.55
+    - date: 2024-01-02
+      users: 980
+      revenue: 12345.67
+
+  metrics:
+    cpu_usage: 0.85
+    memory_usage: 0.73
+    disk_usage: 0.91
+
+deep:
+  level1:
+    level2:
+      level3:
+        level4:
+          level5:
+            value: "deep nested value"
+            numbers:
+              - 1
+              - 2
+              - 3
+              - 4
+              - 5
+            map:
+              a: 1
+              b: 2
+              c: 3
+
+big_list:
+  - 0
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  - 9

@@ -3,7 +3,7 @@ use pyo3::{
     types::{PyDate, PyDateTime, PyDelta, PyTzInfo},
 };
 
-use crate::load::rust_dec2flt::parse_digits;
+use crate::from_rust::dec2flt::parse_digits;
 
 const SEP: u8 = b':';
 const WHITESPACE: u8 = b' ';
@@ -225,7 +225,7 @@ pub(crate) fn parse_py_datetime<'py>(
                 (0, 0)
             };
 
-        let tz_info = if let Some(tz_pos) = tz_start {
+        if let Some(tz_pos) = tz_start {
             let tz_actual_start = trim_leading_spaces(bytes, tz_pos);
 
             if tz_actual_start >= bytes.len() {
@@ -237,8 +237,16 @@ pub(crate) fn parse_py_datetime<'py>(
             // so tz_bytes is non-empty and index 0 is valid.
             let first_byte = *tz_bytes.get_unchecked(0);
 
-            match first_byte {
-                Z => Some(PyTzInfo::utc(py)?.to_owned()),
+            return match first_byte {
+                Z => {
+                    let py_tz_info = PyTzInfo::utc(py)?;
+                    make_py_datetime(
+                        py,
+                        (year, month, day),
+                        (hour, minute, second, microsecond),
+                        Some(&py_tz_info),
+                    )
+                }
                 PLUS | MINUS => {
                     let sign = if first_byte == PLUS { 1 } else { -1 };
                     let offset_bytes = &tz_bytes[1..];
@@ -252,27 +260,47 @@ pub(crate) fn parse_py_datetime<'py>(
                     let days = total_seconds.div_euclid(SECS_IN_DAY);
                     let seconds = total_seconds.rem_euclid(SECS_IN_DAY);
                     let py_delta = PyDelta::new(py, days, seconds, 0, false)?;
-                    Some(PyTzInfo::fixed_offset(py, py_delta)?)
+                    let py_tz_info = PyTzInfo::fixed_offset(py, py_delta)?;
+                    make_py_datetime(
+                        py,
+                        (year, month, day),
+                        (hour, minute, second, microsecond),
+                        Some(&py_tz_info),
+                    )
                 }
-                _ => return Ok(None),
-            }
-        } else {
-            None
-        };
+                _ => Ok(None),
+            };
+        }
 
-        Ok(Some(
-            PyDateTime::new(
-                py,
-                year,
-                month,
-                day,
-                hour,
-                minute,
-                second,
-                microsecond,
-                tz_info.as_ref(),
-            )?
-            .into_any(),
-        ))
+        make_py_datetime(
+            py,
+            (year, month, day),
+            (hour, minute, second, microsecond),
+            None,
+        )
     }
+}
+
+fn make_py_datetime<'py>(
+    py: Python<'py>,
+    date: (i32, u8, u8),
+    time: (u8, u8, u8, u32),
+    tzinfo: Option<&Bound<'py, PyTzInfo>>,
+) -> PyResult<Option<Bound<'py, PyAny>>> {
+    let (year, month, day) = date;
+    let (hour, minute, second, microsecond) = time;
+    Ok(Some(
+        PyDateTime::new(
+            py,
+            year,
+            month,
+            day,
+            hour,
+            minute,
+            second,
+            microsecond,
+            tzinfo,
+        )?
+        .into_any(),
+    ))
 }
