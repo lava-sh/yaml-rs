@@ -1,128 +1,100 @@
-use crate::from_rust::memchr::{contains_zero_byte, repeat_u8};
+use pyo3::{
+    Bound, Py, PyAny, PyResult, Python, intern,
+    prelude::{PyAnyMethods, PyStringMethods},
+    sync::PyOnceLock,
+    types::{PyDateTime, PyDelta, PyDeltaAccess, PyFloat, PyType, PyTzInfo},
+};
+use saphyr::{MappingOwned, ScalarOwned, YamlOwned, YamlOwned::Value};
+use simdutf8::basic::from_utf8;
 
-#[inline]
-fn find_exp_index(bytes: &[u8]) -> Option<usize> {
-    let mut index = 0usize;
-    while index < bytes.len() {
-        let byte = bytes[index];
-        if byte == b'e' || byte == b'E' {
-            return Some(index);
-        }
-        index += 1;
-    }
-    None
+use crate::{
+    YAMLEncodeError,
+    dump::{dumps::python_to_yaml, normalize::normalize_float},
+};
+
+pub(crate) fn get_isinstance(py: Python<'_>) -> PyResult<&Bound<'_, PyAny>> {
+    static ISINSTANCE: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
+
+    ISINSTANCE
+        .get_or_try_init(py, || {
+            py.import("builtins")?
+                .getattr("isinstance")
+                .map(Bound::unbind)
+        })
+        .map(|f| f.bind(py))
 }
 
-#[inline]
-unsafe fn contains_dot(bytes: &[u8]) -> bool {
-    const DOT_REPEATED: usize = repeat_u8(b'.');
+pub(crate) fn get_decimal_type(py: Python<'_>) -> PyResult<&Bound<'_, PyType>> {
+    static DECIMAL_TYPE: PyOnceLock<Py<PyType>> = PyOnceLock::new();
 
-    let len = bytes.len();
-
-    if len < size_of::<usize>() {
-        return bytes.contains(&b'.');
-    }
-
-    let ptr = bytes.as_ptr();
-    let mut offset = ptr.align_offset(size_of::<usize>());
-
-    if offset > 0 {
-        offset = offset.min(len);
-        if bytes[..offset].contains(&b'.') {
-            return true;
-        }
-    }
-
-    while offset <= len - size_of::<usize>() {
-        // SAFETY: the loop condition guarantees the full word lies within
-        // `bytes`, so reading an unaligned `usize` from this position is safe
-        let word = unsafe { ptr.add(offset).cast::<usize>().read_unaligned() };
-
-        if contains_zero_byte(word ^ DOT_REPEATED) {
-            return bytes[offset..offset + size_of::<usize>()].contains(&b'.');
-        }
-        offset += size_of::<usize>();
-    }
-
-    bytes[offset..].contains(&b'.')
+    DECIMAL_TYPE.import(py, "decimal", "Decimal")
 }
 
-pub(crate) fn normalize_float(repr: &str) -> String {
-    let bytes = repr.as_bytes();
-
-    match bytes {
-        b"inf" => return String::from(".inf"),
-        b"-inf" => return String::from("-.inf"),
-        b"nan" => return String::from(".nan"),
-        _ => {}
-    }
-
-    let Some(exp_index) = find_exp_index(bytes) else {
-        return repr.to_owned();
-    };
-
-    let mantissa = &bytes[..exp_index];
-    let exp = &bytes[exp_index + 1..];
-    let has_dot = unsafe {
-        // SAFETY: `mantissa` is a subslice of `repr.as_bytes()` and contains only valid reads.
-        contains_dot(mantissa)
-    };
-
-    let mut out = vec![0; bytes.len() + if has_dot { 0 } else { 2 }];
-    let ptr = out.as_mut_ptr();
-
-    // SAFETY: source and destination pointers are valid and don't overlap.
-    unsafe {
-        std::ptr::copy_nonoverlapping(mantissa.as_ptr(), ptr, mantissa.len());
-    }
-
-    let mut cursor = mantissa.len();
-
-    // SAFETY: `ptr.add(cursor)` is within bounds of out allocation.
-    unsafe {
-        if has_dot {
-            *ptr.add(cursor) = b'e';
-            cursor += 1;
-        } else {
-            *ptr.add(cursor) = b'.';
-            *ptr.add(cursor + 1) = b'0';
-            *ptr.add(cursor + 2) = b'e';
-            cursor += 3;
-        }
-    }
-
-    // SAFETY: source and destination pointers are valid and don't overlap.
-    unsafe {
-        std::ptr::copy_nonoverlapping(exp.as_ptr(), ptr.add(cursor), exp.len());
-    }
-
-    // SAFETY: All bytes are ASCII from valid UTF-8 input + '.', '0', and 'e'.
-    unsafe { String::from_utf8_unchecked(out) }
+pub(crate) fn get_utc_offset<'py>(
+    py: Python<'py>,
+    tz: &Bound<'py, PyTzInfo>,
+    datetime: &Bound<'py, PyDateTime>,
+) -> Option<(i32, i32)> {
+    tz.call_method1(intern!(py, "utcoffset"), (datetime,))
+        .ok()
+        .filter(|d| !d.is_none())
+        .and_then(|offset_delta| {
+            let delta = offset_delta.cast::<PyDelta>().ok()?;
+            let days = delta.get_days();
+            let seconds = delta.get_seconds();
+            let total_seconds = days * 86400 + seconds;
+            let total_minutes = total_seconds / 60;
+            Some((total_minutes / 60, (total_minutes % 60).abs()))
+        })
 }
 
-#[inline]
-pub(crate) fn has_nan_payload<const N: usize>(bytes: &[u8], start: usize, prefix: [u8; N]) -> bool {
-    if bytes.len() <= start || start != N {
-        return false;
+pub(crate) fn to_yaml_float(float: &Bound<'_, PyFloat>) -> PyResult<String> {
+    let py_str = float.str()?;
+    let repr = py_str.to_str()?;
+    Ok(normalize_float(repr))
+}
+
+pub(crate) fn format_ms(buf: &mut String, microsecond: u32, min_len: usize) -> PyResult<()> {
+    let mut buffer = itoa::Buffer::new();
+    let formatted = buffer.format(microsecond);
+
+    let padding = 6 - formatted.len();
+    let mut padded = [b'0'; 6];
+    padded[padding..].copy_from_slice(formatted.as_bytes());
+
+    let mut padded_len = 6;
+    while padded_len > min_len && padded[padded_len - 1] == b'0' {
+        padded_len -= 1;
     }
 
-    let mut i = 0usize;
-    while i < N {
-        // SAFETY: `start == N` and `bytes.len() > start`, so indices `0..N` are in bounds.
-        if (unsafe { *bytes.get_unchecked(i) } | 0x20) != unsafe { *prefix.get_unchecked(i) } {
-            return false;
-        }
-        i += 1;
+    let value = from_utf8(&padded[..padded_len])
+        .map_err(|err| YAMLEncodeError::new_err(err.to_string()))?;
+    buf.push_str(value);
+    Ok(())
+}
+
+pub(crate) fn sequence_to_yaml<'py, I>(items: I, len: usize) -> PyResult<YamlOwned>
+where
+    I: IntoIterator<Item = Bound<'py, PyAny>>,
+{
+    if len == 0 {
+        return Ok(YamlOwned::Sequence(Vec::new()));
     }
 
-    let mut i = start;
-    while i < bytes.len() {
-        // SAFETY: loop condition guarantees `i < bytes.len()`.
-        if !unsafe { bytes.get_unchecked(i) }.is_ascii_digit() {
-            return false;
-        }
-        i += 1;
+    let mut sequence = Vec::with_capacity(len);
+    for item in items {
+        sequence.push(python_to_yaml(&item)?);
     }
+    Ok(YamlOwned::Sequence(sequence))
+}
 
-    true
+pub(crate) fn set_to_yaml<'py, I>(items: I, len: usize) -> PyResult<YamlOwned>
+where
+    I: IntoIterator<Item = Bound<'py, PyAny>>,
+{
+    let mut mapping = MappingOwned::with_capacity(len);
+    for item in items {
+        mapping.insert(python_to_yaml(&item)?, Value(ScalarOwned::Null));
+    }
+    Ok(YamlOwned::Mapping(mapping))
 }

@@ -20,7 +20,7 @@ fn parse_8digits(mut v: u64) -> u64 {
     ((v1.wrapping_add(v2) >> 32) as u32) as u64
 }
 
-unsafe fn parse_digits_unsafe(bytes: &[u8], start: usize, count: usize) -> u32 {
+unsafe fn try_parse_digits(bytes: &[u8], start: usize, count: usize) -> u32 {
     let mut d = 0u32;
     let mut i = 0;
 
@@ -64,6 +64,5 @@ pub(crate) fn parse_digits(bytes: &[u8], start: usize, count: usize) -> u32 {
             .checked_add(count)
             .is_some_and(|end| end <= bytes.len())
     );
-    // SAFETY: see `parse_digits_unsafe`.
-    unsafe { parse_digits_unsafe(bytes, start, count) }
+    unsafe { try_parse_digits(bytes, start, count) }
 }
