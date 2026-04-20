@@ -23,7 +23,9 @@
 ```bash
 # Using pip
 pip install yaml-rs
+```
 
+```bash
 # Using uv
 uv pip install yaml-rs
 ```

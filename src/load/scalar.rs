@@ -1,7 +1,5 @@
 use std::borrow::Cow;
 
-use num_bigint::BigInt;
-
 use crate::load::value::Value;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -367,7 +365,7 @@ pub(crate) fn parse_int<'a>(str: &str) -> Option<Value<'a>> {
         return None;
     }
 
-    BigInt::parse_bytes(digits.as_bytes(), radix).map(|big_int| {
+    num_bigint::BigInt::parse_bytes(digits.as_bytes(), radix).map(|big_int| {
         if neg {
             Value::BigInteger(-big_int)
         } else {
