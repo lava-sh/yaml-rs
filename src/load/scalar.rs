@@ -269,12 +269,12 @@ fn parse_i64(bytes: &[u8], radix: u32, neg: bool) -> Option<i64> {
         i64::MAX as u64
     };
 
-    for &b in bytes {
-        if b == b'_' {
+    for &byte in bytes {
+        if byte == b'_' {
             continue;
         }
 
-        let digit = CHAR_TO_DIGIT[b as usize];
+        let digit = CHAR_TO_DIGIT[byte as usize];
         if digit == 0xFF || digit >= radix as u8 {
             return None;
         }
