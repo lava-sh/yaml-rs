@@ -3,7 +3,7 @@ use pyo3::{
     types::{PyDate, PyDateTime, PyDelta, PyTzInfo},
 };
 
-use crate::load::rust_dec2flt::parse_digits;
+use crate::from_rust::dec2flt::parse_digits;
 
 const SEP: u8 = b':';
 const WHITESPACE: u8 = b' ';
@@ -252,7 +252,7 @@ pub(crate) fn parse_py_datetime<'py>(
                             microsecond,
                             Some(&py_tz_info),
                         )?
-                            .into_any(),
+                        .into_any(),
                     ))
                 }
                 PLUS | MINUS => {
@@ -281,11 +281,11 @@ pub(crate) fn parse_py_datetime<'py>(
                             microsecond,
                             Some(&py_tz_info),
                         )?
-                            .into_any(),
+                        .into_any(),
                     ))
                 }
                 _ => Ok(None),
-            }
+            };
         }
 
         Ok(Some(
