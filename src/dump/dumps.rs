@@ -1,4 +1,4 @@
-use std::{borrow::Cow, fmt::Write, str::from_utf8};
+use std::{borrow::Cow, fmt::Write};
 
 use pyo3::{
     Bound, Py, PyAny, PyResult, Python, intern,
@@ -11,8 +11,12 @@ use pyo3::{
     },
 };
 use saphyr::{MappingOwned, ScalarOwned, ScalarStyle, YamlOwned, YamlOwned::Value};
+use simdutf8::basic::from_utf8;
 
-use crate::{YAMLEncodeError, dump::helpers::normalize_float};
+use crate::{
+    YAMLEncodeError,
+    dump::helpers::{has_nan_payload, normalize_float},
+};
 
 pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
     match obj {
@@ -53,46 +57,17 @@ pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
             .unwrap();
 
             if microsecond > 0 {
-                let mut buffer = itoa::Buffer::new();
-                let formatted = buffer.format(microsecond);
-
-                let padding = 6 - formatted.len();
-                let mut padded = [b'0'; 6];
-                padded[padding..].copy_from_slice(formatted.as_bytes());
-
-                let min_len = if is_utc { 1 } else { 2 };
-                let mut padded_len = 6;
-                while padded_len > min_len && padded[padded_len - 1] == b'0' {
-                    padded_len -= 1;
-                }
-
                 datetime_str.push('.');
-                datetime_str.push_str(from_utf8(&padded[..padded_len])?);
+                format_ms(&mut datetime_str, microsecond, if is_utc { 1 } else { 2 })?;
             }
 
             if let Some(tz) = tzinfo {
                 if is_utc {
                     datetime_str.push('Z');
-                } else {
-                    let result = tz
-                        .call_method1(intern!(py, "utcoffset"), (datetime,))
-                        .ok()
-                        .filter(|d| !d.is_none())
-                        .and_then(|offset_delta| {
-                            let delta = offset_delta.cast::<PyDelta>().ok()?;
-                            let days = delta.get_days();
-                            let seconds = delta.get_seconds();
-                            let total_seconds = days * 86400 + seconds;
-                            let total_minutes = total_seconds / 60;
-                            let offset_hours = total_minutes / 60;
-                            let offset_minutes = (total_minutes % 60).abs();
-                            Some((offset_hours, offset_minutes))
-                        });
-
-                    if let Some((offset_hours, offset_minutes)) = result {
-                        write!(&mut datetime_str, "{offset_hours:+03}:{offset_minutes:02}")
-                            .unwrap();
-                    }
+                } else if let Some((offset_hours, offset_minutes)) =
+                    get_utc_offset(datetime.py(), &tz, datetime)
+                {
+                    write!(&mut datetime_str, "{offset_hours:+03}:{offset_minutes:02}").unwrap();
                 }
             }
 
@@ -109,20 +84,8 @@ pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
             write!(&mut time_str, "{hour:02}:{minute:02}:{second:02}").unwrap();
 
             if microsecond > 0 {
-                let mut buffer = itoa::Buffer::new();
-                let formatted = buffer.format(microsecond);
-
-                let padding = 6 - formatted.len();
-                let mut padded = [b'0'; 6];
-                padded[padding..].copy_from_slice(formatted.as_bytes());
-
-                let mut padded_len = 6;
-                while padded_len > 1 && padded[padded_len - 1] == b'0' {
-                    padded_len -= 1;
-                }
-
                 time_str.push('.');
-                time_str.push_str(from_utf8(&padded[..padded_len])?);
+                format_ms(&mut time_str, microsecond, 1)?;
             }
 
             Ok(Value(ScalarOwned::String(time_str)))
@@ -135,41 +98,11 @@ pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
             write!(&mut date_str, "{year:04}-{month:02}-{day:02}").unwrap();
             Ok(Value(ScalarOwned::String(date_str)))
         }
-        obj if let Ok(tuple) = obj.cast::<PyTuple>() => {
-            let len = tuple.len();
-            if len == 0 {
-                return Ok(YamlOwned::Sequence(Vec::new()));
-            }
-            let mut sequence = Vec::with_capacity(len);
-            for item in tuple.iter() {
-                sequence.push(python_to_yaml(&item)?);
-            }
-            Ok(YamlOwned::Sequence(sequence))
-        }
-        obj if let Ok(list) = obj.cast::<PyList>() => {
-            let len = list.len();
-            if len == 0 {
-                return Ok(YamlOwned::Sequence(Vec::new()));
-            }
-            let mut sequence = Vec::with_capacity(len);
-            for item in list.iter() {
-                sequence.push(python_to_yaml(&item)?);
-            }
-            Ok(YamlOwned::Sequence(sequence))
-        }
-        obj if let Ok(set) = obj.cast::<PySet>() => {
-            let mut mapping = MappingOwned::with_capacity(set.len());
-            for item in set.iter() {
-                mapping.insert(python_to_yaml(&item)?, Value(ScalarOwned::Null));
-            }
-            Ok(YamlOwned::Mapping(mapping))
-        }
+        obj if let Ok(tuple) = obj.cast::<PyTuple>() => sequence_to_yaml(tuple.iter(), tuple.len()),
+        obj if let Ok(list) = obj.cast::<PyList>() => sequence_to_yaml(list.iter(), list.len()),
+        obj if let Ok(set) = obj.cast::<PySet>() => set_to_yaml(set.iter(), set.len()),
         obj if let Ok(frozenset) = obj.cast::<PyFrozenSet>() => {
-            let mut mapping = MappingOwned::with_capacity(frozenset.len());
-            for item in frozenset.iter() {
-                mapping.insert(python_to_yaml(&item)?, Value(ScalarOwned::Null));
-            }
-            Ok(YamlOwned::Mapping(mapping))
+            set_to_yaml(frozenset.iter(), frozenset.len())
         }
         obj if let Ok(dict) = obj.cast::<PyDict>() => {
             let len = dict.len();
@@ -220,6 +153,69 @@ fn to_yaml_float(float: &Bound<'_, PyFloat>) -> PyResult<String> {
     let py_str = float.str()?;
     let repr = py_str.to_str()?;
     Ok(normalize_float(repr))
+}
+
+fn format_ms(buf: &mut String, microsecond: u32, min_len: usize) -> PyResult<()> {
+    let mut buffer = itoa::Buffer::new();
+    let formatted = buffer.format(microsecond);
+
+    let padding = 6 - formatted.len();
+    let mut padded = [b'0'; 6];
+    padded[padding..].copy_from_slice(formatted.as_bytes());
+
+    let mut padded_len = 6;
+    while padded_len > min_len && padded[padded_len - 1] == b'0' {
+        padded_len -= 1;
+    }
+
+    let value = from_utf8(&padded[..padded_len])
+        .map_err(|err| YAMLEncodeError::new_err(err.to_string()))?;
+    buf.push_str(value);
+    Ok(())
+}
+
+fn get_utc_offset<'py>(
+    py: Python<'py>,
+    tz: &Bound<'py, PyTzInfo>,
+    datetime: &Bound<'py, PyDateTime>,
+) -> Option<(i32, i32)> {
+    tz.call_method1(intern!(py, "utcoffset"), (datetime,))
+        .ok()
+        .filter(|d| !d.is_none())
+        .and_then(|offset_delta| {
+            let delta = offset_delta.cast::<PyDelta>().ok()?;
+            let days = delta.get_days();
+            let seconds = delta.get_seconds();
+            let total_seconds = days * 86400 + seconds;
+            let total_minutes = total_seconds / 60;
+            Some((total_minutes / 60, (total_minutes % 60).abs()))
+        })
+}
+
+fn sequence_to_yaml<'py, I>(items: I, len: usize) -> PyResult<YamlOwned>
+where
+    I: IntoIterator<Item = Bound<'py, PyAny>>,
+{
+    if len == 0 {
+        return Ok(YamlOwned::Sequence(Vec::new()));
+    }
+
+    let mut sequence = Vec::with_capacity(len);
+    for item in items {
+        sequence.push(python_to_yaml(&item)?);
+    }
+    Ok(YamlOwned::Sequence(sequence))
+}
+
+fn set_to_yaml<'py, I>(items: I, len: usize) -> PyResult<YamlOwned>
+where
+    I: IntoIterator<Item = Bound<'py, PyAny>>,
+{
+    let mut mapping = MappingOwned::with_capacity(len);
+    for item in items {
+        mapping.insert(python_to_yaml(&item)?, Value(ScalarOwned::Null));
+    }
+    Ok(YamlOwned::Mapping(mapping))
 }
 
 fn get_decimal_type(py: Python<'_>) -> PyResult<&Bound<'_, PyType>> {
@@ -310,55 +306,12 @@ fn normalize_decimal(repr: &str) -> PyResult<Cow<'_, str>> {
         }
     }
 
-    if len > 3
-        && (
-            // SAFETY: `len > 3`, so indices `0..3` are valid.
-            unsafe { *rest.get_unchecked(0) } | 0x20,
-            unsafe { *rest.get_unchecked(1) } | 0x20,
-            unsafe { *rest.get_unchecked(2) } | 0x20,
-        ) == (b'n', b'a', b'n')
+    if has_nan_payload(rest, 3, [b'n', b'a', b'n'])
+        || has_nan_payload(rest, 4, [b's', b'n', b'a', b'n'])
     {
-        let mut all_digits = true;
-        let mut i = 3usize;
-        while i < len {
-            // SAFETY: the loop condition guarantees `i < len`.
-            if !unsafe { rest.get_unchecked(i) }.is_ascii_digit() {
-                all_digits = false;
-                break;
-            }
-            i += 1;
-        }
-        if all_digits {
-            return Err(YAMLEncodeError::new_err(format!(
-                "Cannot serialize invalid decimal.Decimal('{trimmed}') to YAML"
-            )));
-        }
-    }
-
-    if len > 4
-        && (
-            // SAFETY: `len > 4`, so indices `0..4` are valid.
-            unsafe { *rest.get_unchecked(0) } | 0x20,
-            unsafe { *rest.get_unchecked(1) } | 0x20,
-            unsafe { *rest.get_unchecked(2) } | 0x20,
-            unsafe { *rest.get_unchecked(3) } | 0x20,
-        ) == (b's', b'n', b'a', b'n')
-    {
-        let mut all_digits = true;
-        let mut i = 4usize;
-        while i < len {
-            // SAFETY: the loop condition guarantees `i < len`.
-            if !unsafe { rest.get_unchecked(i) }.is_ascii_digit() {
-                all_digits = false;
-                break;
-            }
-            i += 1;
-        }
-        if all_digits {
-            return Err(YAMLEncodeError::new_err(format!(
-                "Cannot serialize invalid decimal.Decimal('{trimmed}') to YAML"
-            )));
-        }
+        return Err(YAMLEncodeError::new_err(format!(
+            "Cannot serialize invalid decimal.Decimal('{trimmed}') to YAML"
+        )));
     }
 
     if len == 8 {

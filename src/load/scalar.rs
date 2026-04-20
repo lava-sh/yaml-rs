@@ -350,7 +350,7 @@ pub(crate) fn parse_int<'a>(str: &str) -> Option<Value<'a>> {
     }
 
     if let Some(i_64) = parse_i64(digits, radix, neg) {
-        return Some(Value::IntegerI64(i_64));
+        return Some(Value::Integer64(i_64));
     }
 
     let norm = normalize_num(&str[sign_offset..]);
@@ -369,9 +369,9 @@ pub(crate) fn parse_int<'a>(str: &str) -> Option<Value<'a>> {
 
     BigInt::parse_bytes(digits.as_bytes(), radix).map(|big_int| {
         if neg {
-            Value::IntegerBig(-big_int)
+            Value::BigInteger(-big_int)
         } else {
-            Value::IntegerBig(big_int)
+            Value::BigInteger(big_int)
         }
     })
 }

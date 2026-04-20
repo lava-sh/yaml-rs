@@ -99,3 +99,30 @@ pub(crate) fn normalize_float(repr: &str) -> String {
     // SAFETY: All bytes are ASCII from valid UTF-8 input + '.', '0', and 'e'.
     unsafe { String::from_utf8_unchecked(out) }
 }
+
+#[inline]
+pub(crate) fn has_nan_payload<const N: usize>(bytes: &[u8], start: usize, prefix: [u8; N]) -> bool {
+    if bytes.len() <= start || start != N {
+        return false;
+    }
+
+    let mut i = 0usize;
+    while i < N {
+        // SAFETY: `start == N` and `bytes.len() > start`, so indices `0..N` are in bounds.
+        if (unsafe { *bytes.get_unchecked(i) } | 0x20) != unsafe { *prefix.get_unchecked(i) } {
+            return false;
+        }
+        i += 1;
+    }
+
+    let mut i = start;
+    while i < bytes.len() {
+        // SAFETY: loop condition guarantees `i < bytes.len()`.
+        if !unsafe { bytes.get_unchecked(i) }.is_ascii_digit() {
+            return false;
+        }
+        i += 1;
+    }
+
+    true
+}
