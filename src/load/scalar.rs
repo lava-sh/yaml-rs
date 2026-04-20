@@ -34,7 +34,7 @@ pub(crate) fn is_datetime(bytes: &[u8]) -> bool {
         return false;
     }
 
-    if !(bytes[4] == b'-' && bytes[7] == b'-') {
+    if bytes[4] != b'-' || bytes[7] != b'-' {
         return false;
     }
 
@@ -240,42 +240,51 @@ pub(crate) fn is_int(bytes: &[u8]) -> bool {
     has_digit
 }
 
-#[inline]
-fn digit_to_value(byte: u8, radix: u32) -> Option<u64> {
-    let value = match byte {
-        b'0'..=b'9' => u64::from(byte - b'0'),
-        b'a'..=b'f' => u64::from(byte - b'a' + 10),
-        b'A'..=b'F' => u64::from(byte - b'A' + 10),
-        _ => return None,
-    };
-
-    if value < u64::from(radix) {
-        Some(value)
-    } else {
-        None
+static CHAR_TO_DIGIT: [u8; 256] = {
+    let mut t = [0xFF; 256];
+    let mut i = 0;
+    while i < 256 {
+        t[i] = if i >= b'0' as usize && i <= b'9' as usize {
+            i as u8 - b'0'
+        } else if i >= b'a' as usize && i <= b'f' as usize {
+            i as u8 - b'a' + 10
+        } else if i >= b'A' as usize && i <= b'F' as usize {
+            i as u8 - b'A' + 10
+        } else {
+            0xFF
+        };
+        i += 1;
     }
-}
+    t
+};
 
 #[inline]
 fn parse_i64(bytes: &[u8], radix: u32, neg: bool) -> Option<i64> {
     let mut acc = 0u64;
     let mut has_digit = false;
-    let limit = if neg {
+
+    let lim = if neg {
         i64::MIN.unsigned_abs()
     } else {
         i64::MAX as u64
     };
 
-    for &byte in bytes {
-        if byte == b'_' {
+    for &b in bytes {
+        if b == b'_' {
             continue;
         }
 
-        let digit = digit_to_value(byte, radix)?;
+        let digit = CHAR_TO_DIGIT[b as usize];
+        if digit == 0xFF || digit >= radix as u8 {
+            return None;
+        }
+
         has_digit = true;
-        acc = acc.checked_mul(u64::from(radix))?;
-        acc = acc.checked_add(digit)?;
-        if acc > limit {
+        acc = acc
+            .checked_mul(u64::from(radix))?
+            .checked_add(u64::from(digit))?;
+
+        if acc > lim {
             return None;
         }
     }
