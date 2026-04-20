@@ -225,7 +225,7 @@ pub(crate) fn parse_py_datetime<'py>(
                 (0, 0)
             };
 
-        let tz_info = if let Some(tz_pos) = tz_start {
+        if let Some(tz_pos) = tz_start {
             let tz_actual_start = trim_leading_spaces(bytes, tz_pos);
 
             if tz_actual_start >= bytes.len() {
@@ -237,8 +237,24 @@ pub(crate) fn parse_py_datetime<'py>(
             // so tz_bytes is non-empty and index 0 is valid.
             let first_byte = *tz_bytes.get_unchecked(0);
 
-            match first_byte {
-                Z => Some(PyTzInfo::utc(py)?.to_owned()),
+            return match first_byte {
+                Z => {
+                    let py_tz_info = PyTzInfo::utc(py)?;
+                    Ok(Some(
+                        PyDateTime::new(
+                            py,
+                            year,
+                            month,
+                            day,
+                            hour,
+                            minute,
+                            second,
+                            microsecond,
+                            Some(&py_tz_info),
+                        )?
+                            .into_any(),
+                    ))
+                }
                 PLUS | MINUS => {
                     let sign = if first_byte == PLUS { 1 } else { -1 };
                     let offset_bytes = &tz_bytes[1..];
@@ -252,13 +268,25 @@ pub(crate) fn parse_py_datetime<'py>(
                     let days = total_seconds.div_euclid(SECS_IN_DAY);
                     let seconds = total_seconds.rem_euclid(SECS_IN_DAY);
                     let py_delta = PyDelta::new(py, days, seconds, 0, false)?;
-                    Some(PyTzInfo::fixed_offset(py, py_delta)?)
+                    let py_tz_info = PyTzInfo::fixed_offset(py, py_delta)?;
+                    Ok(Some(
+                        PyDateTime::new(
+                            py,
+                            year,
+                            month,
+                            day,
+                            hour,
+                            minute,
+                            second,
+                            microsecond,
+                            Some(&py_tz_info),
+                        )?
+                            .into_any(),
+                    ))
                 }
-                _ => return Ok(None),
+                _ => Ok(None),
             }
-        } else {
-            None
-        };
+        }
 
         Ok(Some(
             PyDateTime::new(
@@ -270,7 +298,7 @@ pub(crate) fn parse_py_datetime<'py>(
                 minute,
                 second,
                 microsecond,
-                tz_info.as_ref(),
+                None,
             )?
             .into_any(),
         ))

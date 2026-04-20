@@ -1,4 +1,4 @@
-use std::fmt::Write;
+use std::{fmt::Write, str::from_utf8};
 
 use pyo3::{
     Bound, PyAny, PyResult, intern,
@@ -11,7 +11,7 @@ use pyo3::{
 };
 use saphyr::{MappingOwned, ScalarOwned, ScalarStyle, YamlOwned, YamlOwned::Value};
 
-use crate::YAMLEncodeError;
+use crate::{YAMLEncodeError, dump::helpers::normalize_float_repr};
 
 pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
     if let Ok(str) = obj.cast::<PyString>() {
@@ -76,19 +76,17 @@ pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
             let formatted = buffer.format(microsecond);
 
             let padding = 6 - formatted.len();
-            let mut padded = String::with_capacity(6);
-            for _ in 0..padding {
-                padded.push('0');
-            }
-            padded.push_str(formatted);
+            let mut padded = [b'0'; 6];
+            padded[padding..].copy_from_slice(formatted.as_bytes());
 
             let min_len = if is_utc { 1 } else { 2 };
-            while padded.ends_with('0') && padded.len() > min_len {
-                padded.pop();
+            let mut padded_len = 6;
+            while padded_len > min_len && padded[padded_len - 1] == b'0' {
+                padded_len -= 1;
             }
 
             datetime_str.push('.');
-            datetime_str.push_str(&padded);
+            datetime_str.push_str(from_utf8(&padded[..padded_len])?);
         }
 
         if let Some(tz) = tzinfo {
@@ -185,23 +183,5 @@ pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
 fn to_yaml_float(float: &Bound<'_, PyFloat>) -> PyResult<String> {
     let py_str = float.str()?;
     let repr = py_str.to_str()?;
-    let value = match repr {
-        "inf" => ".inf".to_owned(),
-        "-inf" => "-.inf".to_owned(),
-        "nan" => ".nan".to_owned(),
-        _ => {
-            if let Some(index) = repr.find(['e', 'E']) {
-                let mantissa = &repr[..index];
-                let exponent = &repr[index + 1..];
-                if mantissa.contains('.') {
-                    format!("{mantissa}e{exponent}")
-                } else {
-                    format!("{mantissa}.0e{exponent}")
-                }
-            } else {
-                repr.to_owned()
-            }
-        }
-    };
-    Ok(value)
+    Ok(normalize_float_repr(repr))
 }

@@ -4,7 +4,7 @@ pub(crate) fn format_error(source: &str, error: &ScanError) -> String {
     let marker = error.marker();
     let line = marker.line();
     let col = marker.col() + 1;
-    let gutter = line.to_string().len();
+    let gutter = itoa::Buffer::new().format(line).len();
 
     let error_len = error.info().len();
     let base_len = 50;
