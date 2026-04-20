@@ -1,70 +1,4 @@
-const LO_USIZE: usize = repeat_u8(0x01);
-const HI_USIZE: usize = repeat_u8(0x80);
-
-// https://github.com/rust-lang/rust/blob/1.95.0/library/core/src/num/mod.rs#L1431-L1434
-#[inline]
-const fn repeat_u8(x: u8) -> usize {
-    usize::from_ne_bytes([x; size_of::<usize>()])
-}
-
-// https://github.com/rust-lang/rust/blob/1.95.0/library/core/src/slice/memchr.rs#L17-L20
-#[inline]
-const fn contains_zero_byte(x: usize) -> bool {
-    x.wrapping_sub(LO_USIZE) & !x & HI_USIZE != 0
-}
-
-pub fn normalize_float_repr(repr: &str) -> String {
-    let bytes = repr.as_bytes();
-
-    match bytes {
-        b"inf" => return String::from(".inf"),
-        b"-inf" => return String::from("-.inf"),
-        b"nan" => return String::from(".nan"),
-        _ => {}
-    }
-
-    let Some(exp_index) = find_exp_index(bytes) else {
-        return repr.to_owned();
-    };
-
-    let mantissa = &bytes[..exp_index];
-    let exp = &bytes[exp_index + 1..];
-    let has_dot = unsafe {
-        // SAFETY: `mantissa` is a valid slice derived from `repr`, helper
-        // only reads within slice bounds and handles the unaligned prefix
-        // before performing aligned word loads
-        contains_dot(mantissa)
-    };
-
-    let mut out = vec![0; bytes.len() + if has_dot { 0 } else { 2 }];
-
-    // SAFETY: `out` has length `total_len`, so all writes below stay within
-    // the allocated buffer. Source slices come from `repr`, and copied byte
-    // counts exactly match the destination regions we calculated
-    unsafe {
-        let ptr = out.as_mut_ptr();
-
-        std::ptr::copy_nonoverlapping(mantissa.as_ptr(), ptr, mantissa.len());
-
-        let mut cursor = mantissa.len();
-
-        if has_dot {
-            *ptr.add(cursor) = b'e';
-            cursor += 1;
-        } else {
-            *ptr.add(cursor) = b'.';
-            *ptr.add(cursor + 1) = b'0';
-            *ptr.add(cursor + 2) = b'e';
-            cursor += 3;
-        }
-
-        std::ptr::copy_nonoverlapping(exp.as_ptr(), ptr.add(cursor), exp.len());
-
-        // SAFETY: all bytes written above are ASCII bytes copied from `repr`
-        // plus `.`, `0`, and `e`, so the final buffer is valid UTF-8
-        String::from_utf8_unchecked(out)
-    }
-}
+use crate::from_rust::memchr::{contains_zero_byte, repeat_u8};
 
 #[inline]
 fn find_exp_index(bytes: &[u8]) -> Option<usize> {
@@ -111,4 +45,57 @@ unsafe fn contains_dot(bytes: &[u8]) -> bool {
     }
 
     bytes[offset..].contains(&b'.')
+}
+
+pub(crate) fn normalize_float_repr(repr: &str) -> String {
+    let bytes = repr.as_bytes();
+
+    match bytes {
+        b"inf" => return String::from(".inf"),
+        b"-inf" => return String::from("-.inf"),
+        b"nan" => return String::from(".nan"),
+        _ => {}
+    }
+
+    let Some(exp_index) = find_exp_index(bytes) else {
+        return repr.to_owned();
+    };
+
+    let mantissa = &bytes[..exp_index];
+    let exp = &bytes[exp_index + 1..];
+    let has_dot = unsafe {
+        // SAFETY: `mantissa` is a subslice of `repr.as_bytes()` and contains only valid reads.
+        contains_dot(mantissa)
+    };
+
+    let mut out = vec![0; bytes.len() + if has_dot { 0 } else { 2 }];
+    let ptr = out.as_mut_ptr();
+
+    // SAFETY: source and destination pointers are valid and don't overlap.
+    unsafe {
+        std::ptr::copy_nonoverlapping(mantissa.as_ptr(), ptr, mantissa.len());
+    }
+
+    let mut cursor = mantissa.len();
+
+    // SAFETY: `ptr.add(cursor)` is within bounds of out allocation.
+    unsafe {
+        if has_dot {
+            *ptr.add(cursor) = b'e';
+            cursor += 1;
+        } else {
+            *ptr.add(cursor) = b'.';
+            *ptr.add(cursor + 1) = b'0';
+            *ptr.add(cursor + 2) = b'e';
+            cursor += 3;
+        }
+    }
+
+    // SAFETY: source and destination pointers are valid and don't overlap.
+    unsafe {
+        std::ptr::copy_nonoverlapping(exp.as_ptr(), ptr.add(cursor), exp.len());
+    }
+
+    // SAFETY: All bytes are ASCII from valid UTF-8 input + '.', '0', and 'e'.
+    unsafe { String::from_utf8_unchecked(out) }
 }
