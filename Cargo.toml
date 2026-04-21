@@ -15,8 +15,10 @@ pyo3 = {
     features = [
         "num-bigint",
         "generate-import-lib",
+        "jiff-02",
     ]
 }
+jiff = "=0.2.23"
 itoa = "=1.0.18"
 num-bigint = "=0.4.6"
 rustc-hash = "=2.1.2"
