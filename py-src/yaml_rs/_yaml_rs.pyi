@@ -36,7 +36,7 @@ def _loads(
     *,
     parse_datetime: bool = True,
     alias_limits: _AliasLimits | None = None,
-    duplicate_key_policy: DuplicateKeyPolicy | None = ...,
+    duplicate_key_policy: DuplicateKeyPolicy | None = None,
 ) -> dict[str, Any] | list[dict[str, Any]]: ...
 
 def _load(
@@ -47,7 +47,7 @@ def _load(
     encoding: str | None = None,
     encoder_errors: Literal["ignore", "replace", "strict"] | None = None,
     alias_limits: _AliasLimits | None = None,
-    duplicate_key_policy: DuplicateKeyPolicy | None = ...,
+    duplicate_key_policy: DuplicateKeyPolicy | None = None,
 ) -> dict[str, Any] | list[dict[str, Any]]: ...
 
 class YAMLDecodeError(ValueError): ...
