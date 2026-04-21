@@ -138,8 +138,8 @@ pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
         }
         obj if {
             let py = obj.py();
-            let (isinstance, decimal) = get_decimal(py)?;
-            isinstance.call1((obj, decimal))?.is_truthy()?
+            let decimal = get_decimal(py)?;
+            obj.is_instance(decimal.as_any())?
         } =>
         {
             let py_str = obj.str()?;

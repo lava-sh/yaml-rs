@@ -12,25 +12,18 @@ use crate::{
     dump::{dumps::python_to_yaml, normalize::normalize_float},
 };
 
-pub(crate) fn get_decimal(py: Python<'_>) -> PyResult<(&Bound<'_, PyAny>, &Bound<'_, PyType>)> {
-    static DECIMAL: PyOnceLock<(Py<PyAny>, Py<PyType>)> = PyOnceLock::new();
+pub(crate) fn get_decimal(py: Python<'_>) -> PyResult<&Bound<'_, PyType>> {
+    static DECIMAL: PyOnceLock<Py<PyType>> = PyOnceLock::new();
 
     DECIMAL
         .get_or_try_init(py, || {
-            let isinstance = py
-                .import("builtins")?
-                .getattr("isinstance")
-                .map(Bound::unbind)?;
-
             let decimal = py
                 .import("decimal")?
                 .getattr("Decimal")?
-                .cast_into::<PyType>()?
-                .unbind();
-
-            Ok((isinstance, decimal))
+                .cast_into::<PyType>()?;
+            Ok(decimal.unbind())
         })
-        .map(|(isinstance, decimal)| (isinstance.bind(py), decimal.bind(py)))
+        .map(|decimal| decimal.bind(py))
 }
 
 pub(crate) fn get_utc_offset<'py>(
