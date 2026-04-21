@@ -265,3 +265,57 @@ pub(crate) fn normalize_decimal(py_decimal: &str) -> PyResult<Cow<'_, str>> {
 
     Ok(Cow::Borrowed(trimmed))
 }
+
+pub(crate) fn normalize_non_utc_fraction(mut datetime_str: String) -> String {
+    let bytes = datetime_str.as_bytes();
+    let len = bytes.len();
+    let ptr = bytes.as_ptr();
+
+    let mut time_pos = 0usize;
+    while time_pos < len {
+        let byte = unsafe {
+            // SAFETY: `time_pos < len` is guaranteed by the loop condition.
+            *ptr.add(time_pos)
+        };
+        if byte == b'T' {
+            break;
+        }
+        time_pos += 1;
+    }
+    if time_pos == len {
+        return datetime_str;
+    }
+
+    let mut offset_pos = time_pos + 1;
+    while offset_pos < len {
+        let byte = unsafe {
+            // SAFETY: `offset_pos < len` is guaranteed by the loop condition.
+            *ptr.add(offset_pos)
+        };
+        if byte == b'+' || byte == b'-' {
+            break;
+        }
+        offset_pos += 1;
+    }
+    if offset_pos == len {
+        return datetime_str;
+    }
+
+    let mut dot_pos = offset_pos;
+    while dot_pos > 0 {
+        dot_pos -= 1;
+        let byte = unsafe {
+            // SAFETY: `dot_pos < len` because it starts at `offset_pos <= len`
+            // and is decremented before use.
+            *ptr.add(dot_pos)
+        };
+        if byte == b'.' {
+            if offset_pos - dot_pos == 2 {
+                datetime_str.insert(dot_pos + 2, '0');
+            }
+            return datetime_str;
+        }
+    }
+
+    datetime_str
+}

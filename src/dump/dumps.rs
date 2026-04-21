@@ -1,6 +1,8 @@
 use jiff::{
     Zoned,
     civil::{Date, DateTime, Time},
+    fmt::temporal::DateTimePrinter,
+    tz::Offset,
 };
 use pyo3::{
     Bound, PyAny, PyResult,
@@ -16,9 +18,12 @@ use crate::{
     YAMLEncodeError,
     dump::{
         helpers::{get_decimal, sequence_to_yaml, set_to_yaml, to_yaml_float},
-        normalize::normalize_decimal,
+        normalize::{normalize_decimal, normalize_non_utc_fraction},
     },
 };
+
+#[allow(non_upper_case_globals)]
+const printer: DateTimePrinter = DateTimePrinter::new();
 
 pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
     match obj {
@@ -45,25 +50,23 @@ pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
         obj if let Ok(datetime) = obj.cast::<PyDateTime>() => {
             let datetime_str = if datetime.get_tzinfo().is_some() {
                 let zoned: Zoned = obj.extract()?;
-                let mut datetime_str = zoned
-                    .timestamp()
-                    .display_with_offset(zoned.offset())
-                    .to_string();
-                if datetime_str.ends_with("+00:00") {
-                    datetime_str.truncate(datetime_str.len() - 6);
-                    datetime_str.push('Z');
+                if zoned.offset() == Offset::UTC {
+                    printer.timestamp_to_string(&zoned.timestamp())
+                } else {
+                    normalize_non_utc_fraction(
+                        printer.timestamp_with_offset_to_string(&zoned.timestamp(), zoned.offset()),
+                    )
                 }
-                datetime_str
             } else {
-                obj.extract::<DateTime>()?.to_string()
+                printer.datetime_to_string(&obj.extract::<DateTime>()?)
             };
             Ok(Value(ScalarOwned::String(datetime_str)))
         }
         obj if let Ok(time) = obj.cast::<PyTime>() => Ok(Value(ScalarOwned::String(
-            time.extract::<Time>()?.to_string(),
+            printer.time_to_string(&time.extract::<Time>()?),
         ))),
         obj if let Ok(date) = obj.cast::<PyDate>() => Ok(Value(ScalarOwned::String(
-            date.extract::<Date>()?.to_string(),
+            printer.date_to_string(&date.extract::<Date>()?),
         ))),
         obj if let Ok(tuple) = obj.cast::<PyTuple>() => sequence_to_yaml(tuple.iter(), tuple.len()),
         obj if let Ok(list) = obj.cast::<PyList>() => sequence_to_yaml(list.iter(), list.len()),
