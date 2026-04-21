@@ -1,4 +1,5 @@
 __all__ = (
+    "AliasLimits",
     "YAMLDecodeError",
     "YAMLEncodeError",
     "__version__",
@@ -9,6 +10,7 @@ __all__ = (
 )
 
 from ._lib import (
+    AliasLimits,
     dump,
     dumps,
     load,

@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Any, BinaryIO, Literal, TextIO
 
 from ._yaml_rs import (
+    _AliasLimits as AliasLimits,
     _dumps,
     _load,
     _loads,
@@ -15,12 +16,14 @@ def load(
     parse_datetime: bool = True,
     encoding: str | None = None,
     encoder_errors: Literal["ignore", "replace", "strict"] | None = None,
+    alias_limits: AliasLimits | None = None,
 ) -> dict[str, Any] | list[dict[str, Any]]:
     return _load(
         fp,
         parse_datetime=parse_datetime,
         encoding=encoding,
         encoder_errors=encoder_errors,
+        alias_limits=alias_limits,
     )
 
 
@@ -29,11 +32,12 @@ def loads(
     /,
     *,
     parse_datetime: bool = True,
+    alias_limits: AliasLimits | None = None,
 ) -> dict[str, Any] | list[dict[str, Any]]:
     if not isinstance(s, str):
         msg = f"Expected str object, not '{type(s).__qualname__}'"
         raise TypeError(msg)
-    return _loads(s, parse_datetime=parse_datetime)
+    return _loads(s, parse_datetime=parse_datetime, alias_limits=alias_limits)
 
 
 def dump(

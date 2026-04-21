@@ -11,6 +11,7 @@ pub(crate) enum Value<'a> {
     Float(f64),
     String(Cow<'a, str>),
     TaggedString(Cow<'a, str>),
+    Alias { target: NodeId, anchor_id: usize },
     Seq(Vec<NodeId>),
     Map(Vec<(NodeId, NodeId)>),
 }

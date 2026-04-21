@@ -7,6 +7,7 @@ from typing import Any, Literal
 
 import pytest
 import yaml_rs
+from yaml_rs import AliasLimits, YAMLDecodeError
 
 from .helpers import INVALID_YAMLS, SKIPPED_YAMLS, VALID_YAMLS, YamlTestSuite, _is_nan
 
@@ -786,3 +787,66 @@ def test_parse_big_nums() -> None:
         big_float,
         abs_tol=1e-9,
     )
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "exc_type", "exc_msg"),
+    [
+        (
+            {"max_total_replayed_events": -1},
+            ValueError,
+            "`max_total_replayed_events` must be greater than or equal to 0",
+        ),
+        (
+            {"max_replay_stack_depth": -1},
+            ValueError,
+            "`max_replay_stack_depth` must be greater than or equal to 0",
+        ),
+        (
+            {"max_alias_expansions_per_anchor": -1},
+            ValueError,
+            "`max_alias_expansions_per_anchor` must be greater than or equal to 0",
+        ),
+    ],
+)
+# https://github.com/lava-sh/yaml-rs/issues/124
+def test_alias_limits_invalid_constructor_args(
+    kwargs: dict[str, Any],
+    exc_type: type[Exception],
+    exc_msg: str,
+) -> None:
+    with pytest.raises(exc_type, match=exc_msg):
+        AliasLimits(**kwargs)
+
+
+@pytest.mark.parametrize(
+    ("yaml", "limits", "exc_msg"),
+    [
+        pytest.param(
+            "defs: &A { k: v }\nx: *A\ny: *A\nz: *A\n",
+            AliasLimits(max_alias_expansions_per_anchor=2),
+            "alias expansion limit exceeded",
+            id="expansion_limit",
+        ),
+        pytest.param(
+            "defs: &A [1, 2, 3, 4]\nlist: [*A, *A]\n",
+            AliasLimits(max_total_replayed_events=10),
+            "alias replay limit exceeded",
+            id="total_replay_limit",
+        ),
+        pytest.param(
+            "defs: &A [1]\nout: *A\n",
+            AliasLimits(max_replay_stack_depth=0),
+            "alias replay stack depth exceeded",
+            id="stack_depth_limit",
+        ),
+    ],
+)
+# https://github.com/lava-sh/yaml-rs/issues/124
+def test_alias_limits(
+        yaml: str,
+        limits: AliasLimits,
+        exc_msg: str,
+) -> None:
+    with pytest.raises(YAMLDecodeError, match=exc_msg):
+        yaml_rs.loads(yaml, alias_limits=limits)
