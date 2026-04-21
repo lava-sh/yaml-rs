@@ -752,7 +752,11 @@ def test_valid_yamls_from_test_suite(ts: YamlTestSuite) -> None:
 def test_skipped_yamls_from_test_suite(ts: YamlTestSuite) -> None:
     # For these cases, there are no `.json` files in `yaml-test-suite`,
     # so we have nothing to compare them to, just check that they load without error.
-    yaml_rs.loads(ts.in_yaml.read_text("utf-8"), parse_datetime=False)
+    yaml_rs.loads(
+        ts.in_yaml.read_text("utf-8"),
+        parse_datetime=False,
+        duplicate_key_policy=DuplicateKeyPolicy.LastWins,
+    )
 
 
 @pytest.mark.parametrize("ts", INVALID_YAMLS, ids=lambda ts: ts.id)
