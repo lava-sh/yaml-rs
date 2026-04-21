@@ -909,9 +909,9 @@ def test_invalid_float_like_scalars(yaml: str, expected: str) -> None:
             yaml_rs.loads,
             {},
             "x: 1\nx: 2\nx: 3\n",
-            {"x": 3},
             None,
-            id="loads_default_last_wins",
+            r"duplicate mapping key: 'x'",
+            id="loads_default_error",
         ),
         pytest.param(
             yaml_rs.loads,

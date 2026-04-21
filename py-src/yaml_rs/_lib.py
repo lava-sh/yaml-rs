@@ -37,7 +37,7 @@ def load(
     encoding: str | None = None,
     encoder_errors: Literal["ignore", "replace", "strict"] | None = None,
     alias_limits: AliasLimits | None = None,
-    duplicate_key_policy: DuplicateKeyPolicy | None = DuplicateKeyPolicy.LastWins,
+    duplicate_key_policy: DuplicateKeyPolicy | None = DuplicateKeyPolicy.Error,
 ) -> dict[str, Any] | list[dict[str, Any]]:
     return _load(
         fp,
@@ -55,7 +55,7 @@ def loads(
     *,
     parse_datetime: bool = True,
     alias_limits: AliasLimits | None = None,
-    duplicate_key_policy: DuplicateKeyPolicy | None = DuplicateKeyPolicy.LastWins,
+    duplicate_key_policy: DuplicateKeyPolicy | None = DuplicateKeyPolicy.Error,
 ) -> dict[str, Any] | list[dict[str, Any]]:
     if not isinstance(s, str):
         msg = f"Expected str object, not '{type(s).__qualname__}'"
