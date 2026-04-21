@@ -71,6 +71,9 @@ ignore = [
     "PLC3002",
 ]
 
+[lint.pylint]
+max-args = 10
+
 [lint.flake8-tidy-imports.banned-api]
 "contextlib.suppress" = { msg = "Use `try-except-pass` instead" }
 "__future__.annotations" = { msg = "Directly quote annotations instead" }

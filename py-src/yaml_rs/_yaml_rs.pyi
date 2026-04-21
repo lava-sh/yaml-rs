@@ -1,6 +1,14 @@
-from typing import Any, BinaryIO, Literal
+import enum
+from typing import Any, BinaryIO, Literal, final
 
 _VERSION: str
+
+@final
+@enum.unique
+class DuplicateKeyPolicy(str, enum.Enum):
+    Error = "error"
+    FirstWins = "first_wins"
+    LastWins = "last_wins"
 
 class _AliasLimits:
     max_total_replayed_events: int
@@ -28,7 +36,7 @@ def _loads(
     *,
     parse_datetime: bool = True,
     alias_limits: _AliasLimits | None = None,
-    duplicate_key_policy: Literal["error", "first_wins", "last_wins"] | None = None,
+    duplicate_key_policy: DuplicateKeyPolicy | None = ...,
 ) -> dict[str, Any] | list[dict[str, Any]]: ...
 
 def _load(
@@ -39,7 +47,7 @@ def _load(
     encoding: str | None = None,
     encoder_errors: Literal["ignore", "replace", "strict"] | None = None,
     alias_limits: _AliasLimits | None = None,
-    duplicate_key_policy: Literal["error", "first_wins", "last_wins"] | None = None,
+    duplicate_key_policy: DuplicateKeyPolicy | None = ...,
 ) -> dict[str, Any] | list[dict[str, Any]]: ...
 
 class YAMLDecodeError(ValueError): ...

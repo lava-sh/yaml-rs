@@ -45,7 +45,7 @@ def load(
         encoding=encoding,
         encoder_errors=encoder_errors,
         alias_limits=alias_limits,
-        duplicate_key_policy=duplicate_key_policy
+        duplicate_key_policy=duplicate_key_policy,
     )
 
 
@@ -64,7 +64,7 @@ def loads(
         s,
         parse_datetime=parse_datetime,
         alias_limits=alias_limits,
-        duplicate_key_policy=duplicate_key_policy
+        duplicate_key_policy=duplicate_key_policy,
     )
 
 
