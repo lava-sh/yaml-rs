@@ -888,3 +888,15 @@ def test_alias_limits(
 def test_alias_null_values_still_resolve_to_set() -> None:
     yaml = "a: &n null\nb: *n\nc: *n\n"
     assert yaml_rs.loads(yaml) == {"a", "b", "c"}
+
+
+@pytest.mark.parametrize(
+    ("yaml", "expected"),
+    [
+        ("x: 1.2x\n", "1.2x"),
+        ("x: 1.2.3\n", "1.2.3"),
+        ("x: .e1\n", ".e1"),
+    ],
+)
+def test_invalid_float_like_scalars(yaml: str, expected: str) -> None:
+    assert yaml_rs.loads(yaml) == {"x": expected}

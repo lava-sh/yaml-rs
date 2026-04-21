@@ -158,7 +158,7 @@ pub(crate) fn is_float(bytes: &[u8]) -> bool {
                     i += 1;
                     break;
                 }
-                return has_digit;
+                return i >= len && has_digit;
             }
             b'e' | b'E' if has_digit && !has_exp => {
                 has_exp = true;
