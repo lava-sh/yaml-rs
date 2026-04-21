@@ -1,5 +1,7 @@
+import enum
+import sys
 from pathlib import Path
-from typing import Any, BinaryIO, Literal, TextIO
+from typing import Any, BinaryIO, Literal, TextIO, final
 
 from ._yaml_rs import (
     _AliasLimits as AliasLimits,
@@ -7,6 +9,24 @@ from ._yaml_rs import (
     _load,
     _loads,
 )
+
+if sys.version_info >= (3, 11):
+
+    @final
+    @enum.unique
+    class DuplicateKeyPolicy(enum.StrEnum):
+        Error = "error"
+        FirstWins = "first_wins"
+        LastWins = "last_wins"
+
+else:
+
+    @final
+    @enum.unique
+    class DuplicateKeyPolicy(str, enum.Enum):
+        Error = "error"
+        FirstWins = "first_wins"
+        LastWins = "last_wins"
 
 
 def load(
@@ -17,6 +37,7 @@ def load(
     encoding: str | None = None,
     encoder_errors: Literal["ignore", "replace", "strict"] | None = None,
     alias_limits: AliasLimits | None = None,
+    duplicate_key_policy: DuplicateKeyPolicy | None = DuplicateKeyPolicy.LastWins,
 ) -> dict[str, Any] | list[dict[str, Any]]:
     return _load(
         fp,
@@ -24,6 +45,7 @@ def load(
         encoding=encoding,
         encoder_errors=encoder_errors,
         alias_limits=alias_limits,
+        duplicate_key_policy=duplicate_key_policy
     )
 
 
@@ -33,11 +55,17 @@ def loads(
     *,
     parse_datetime: bool = True,
     alias_limits: AliasLimits | None = None,
+    duplicate_key_policy: DuplicateKeyPolicy | None = DuplicateKeyPolicy.LastWins,
 ) -> dict[str, Any] | list[dict[str, Any]]:
     if not isinstance(s, str):
         msg = f"Expected str object, not '{type(s).__qualname__}'"
         raise TypeError(msg)
-    return _loads(s, parse_datetime=parse_datetime, alias_limits=alias_limits)
+    return _loads(
+        s,
+        parse_datetime=parse_datetime,
+        alias_limits=alias_limits,
+        duplicate_key_policy=duplicate_key_policy
+    )
 
 
 def dump(

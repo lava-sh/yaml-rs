@@ -1,5 +1,6 @@
 __all__ = (
     "AliasLimits",
+    "DuplicateKeyPolicy",
     "YAMLDecodeError",
     "YAMLEncodeError",
     "__version__",
@@ -11,6 +12,7 @@ __all__ = (
 
 from ._lib import (
     AliasLimits,
+    DuplicateKeyPolicy,
     dump,
     dumps,
     load,

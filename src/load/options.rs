@@ -59,3 +59,24 @@ impl AliasLimits {
         })
     }
 }
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum DuplicateKeyPolicy {
+    Error,
+    FirstWins,
+    #[default]
+    LastWins,
+}
+
+impl DuplicateKeyPolicy {
+    pub fn from_str(policy: Option<&str>) -> PyResult<Self> {
+        match policy.unwrap_or("last_wins") {
+            "error" => Ok(Self::Error),
+            "first_wins" => Ok(Self::FirstWins),
+            "last_wins" => Ok(Self::LastWins),
+            value => Err(PyValueError::new_err(format!(
+                "invalid duplicate_key_policy: {value:?}",
+            ))),
+        }
+    }
+}

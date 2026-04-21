@@ -7,7 +7,7 @@ from typing import Any, Literal
 
 import pytest
 import yaml_rs
-from yaml_rs import AliasLimits, YAMLDecodeError
+from yaml_rs import AliasLimits, DuplicateKeyPolicy, YAMLDecodeError
 
 from .helpers import INVALID_YAMLS, SKIPPED_YAMLS, VALID_YAMLS, YamlTestSuite, _is_nan
 
@@ -900,3 +900,72 @@ def test_alias_null_values_still_resolve_to_set() -> None:
 )
 def test_invalid_float_like_scalars(yaml: str, expected: str) -> None:
     assert yaml_rs.loads(yaml) == {"x": expected}
+
+
+@pytest.mark.parametrize(
+    ("loader", "kwargs", "yaml", "expected", "error"),
+    [
+        pytest.param(
+            yaml_rs.loads,
+            {},
+            "x: 1\nx: 2\nx: 3\n",
+            {"x": 3},
+            None,
+            id="loads_default_last_wins",
+        ),
+        pytest.param(
+            yaml_rs.loads,
+            {"duplicate_key_policy": DuplicateKeyPolicy.LastWins},
+            "x: 1\nx: 2\nx: 3\n",
+            {"x": 3},
+            None,
+            id="loads_last_wins",
+        ),
+        pytest.param(
+            yaml_rs.load,
+            {"duplicate_key_policy": DuplicateKeyPolicy.LastWins, "encoding": "utf-8"},
+            "x: 1\nx: 2\nx: 3\n",
+            {"x": 3},
+            None,
+            id="load_last_wins",
+        ),
+        pytest.param(
+            yaml_rs.loads,
+            {"duplicate_key_policy": DuplicateKeyPolicy.FirstWins},
+            "x: 1\nx: 2\nx: 3\n",
+            {"x": 1},
+            None,
+            id="first_wins",
+        ),
+        pytest.param(
+            yaml_rs.loads,
+            {"duplicate_key_policy": DuplicateKeyPolicy.Error},
+            "x: 1\nx: 2\nx: 3\n",
+            None,
+            r"duplicate mapping key: 'x'",
+            id="error_string_key",
+        ),
+        pytest.param(
+            yaml_rs.loads,
+            {"duplicate_key_policy": DuplicateKeyPolicy.Error},
+            "1: a\n1: b\n",
+            None,
+            r"duplicate mapping key: 1",
+            id="error_non_string_key",
+        ),
+    ],
+)
+def test_duplicate_key_policy(
+    loader: Any,
+    kwargs: dict[str, Any],
+    yaml: str,
+    expected: dict[str, Any] | None,
+    error: str | None,
+) -> None:
+    source: str | bytes = yaml.encode() if loader is yaml_rs.load else yaml
+
+    if error is not None:
+        with pytest.raises(YAMLDecodeError, match=error):
+            loader(source, **kwargs)
+    else:
+        assert loader(source, **kwargs) == expected
