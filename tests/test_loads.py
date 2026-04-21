@@ -840,6 +840,39 @@ def test_alias_limits_invalid_constructor_args(
             "alias replay stack depth exceeded",
             id="stack_depth_limit",
         ),
+        pytest.param(
+            """\
+            a: &a ~
+            b: &b [*a,*a,*a,*a,*a,*a,*a,*a,*a]
+            c: &c [*b,*b,*b,*b,*b,*b,*b,*b,*b]
+            d: &d [*c,*c,*c,*c,*c,*c,*c,*c,*c]
+            e: &e [*d,*d,*d,*d,*d,*d,*d,*d,*d]
+            f: &f [*e,*e,*e,*e,*e,*e,*e,*e,*e]
+            g: &g [*f,*f,*f,*f,*f,*f,*f,*f,*f]
+            h: &h [*g,*g,*g,*g,*g,*g,*g,*g,*g]
+            i: &i [*h,*h,*h,*h,*h,*h,*h,*h,*h]
+            j: &j [*i,*i,*i,*i,*i,*i,*i,*i,*i]
+            k: &k [*j,*j,*j,*j,*j,*j,*j,*j,*j]
+            l: &l [*k,*k,*k,*k,*k,*k,*k,*k,*k]
+            m: &m [*l,*l,*l,*l,*l,*l,*l,*l,*l]
+            n: &n [*m,*m,*m,*m,*m,*m,*m,*m,*m]
+            o: &o [*n,*n,*n,*n,*n,*n,*n,*n,*n]
+            p: &p [*o,*o,*o,*o,*o,*o,*o,*o,*o]
+            q: &q [*p,*p,*p,*p,*p,*p,*p,*p,*p]
+            r: &r [*q,*q,*q,*q,*q,*q,*q,*q,*q]
+            s: &s [*r,*r,*r,*r,*r,*r,*r,*r,*r]
+            t: &t [*s,*s,*s,*s,*s,*s,*s,*s,*s]
+            u: &u [*t,*t,*t,*t,*t,*t,*t,*t,*t]
+            v: &v [*u,*u,*u,*u,*u,*u,*u,*u,*u]
+            w: &w [*v,*v,*v,*v,*v,*v,*v,*v,*v]
+            x: &x [*w,*w,*w,*w,*w,*w,*w,*w,*w]
+            y: &y [*x,*x,*x,*x,*x,*x,*x,*x,*x]
+            z: &z [*y,*y,*y,*y,*y,*y,*y,*y,*y]
+            """,
+            None,
+            "alias replay limit exceeded: replayed 1000006, max 1000000",
+            id="alias_replay_limit_exceeded",
+        ),
     ],
 )
 # https://github.com/lava-sh/yaml-rs/issues/124
