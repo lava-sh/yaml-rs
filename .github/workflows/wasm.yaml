@@ -20,7 +20,7 @@ jobs:
             rust-toolchain: "nightly-2025-02-17"
             rustflags: >-
               -Z allow-features=let_chains,integer_sign_cast,if_let_guard,pointer_is_aligned_to
-              -Z crate-attr=feature(let_chains,integer_sign_cast,if_let_guard,pointer_is_aligned_to)
+              -Z crate-attr=feature(let_chains,integer_sign_cast,if_let_guard)
               -C link-arg=-sSIDE_MODULE=2
               -C link-arg=-sWASM_BIGINT
               -C relocation-model=pic
@@ -34,7 +34,7 @@ jobs:
             rust-toolchain: "nightly-2025-02-17"
             rustflags: >-
               -Z allow-features=let_chains,integer_sign_cast,if_let_guard,pointer_is_aligned_to
-              -Z crate-attr=feature(let_chains,integer_sign_cast,if_let_guard,pointer_is_aligned_to)
+              -Z crate-attr=feature(let_chains,integer_sign_cast,if_let_guard)
               -C link-arg=-sSIDE_MODULE=2
               -C link-arg=-sWASM_BIGINT
               -C relocation-model=pic
