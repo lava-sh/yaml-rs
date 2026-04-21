@@ -3,9 +3,9 @@ use std::borrow::Cow;
 use crate::{from_rust::dec2flt::is_8digits, load::value::Value};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub(crate) enum SpecialFloat {
-    Inf,
-    Nan,
+pub(crate) enum FloatingPointCategory {
+    Infinite,
+    NotANumber,
 }
 
 #[inline]
@@ -70,7 +70,7 @@ pub(crate) fn normalize_num(str: &str) -> Cow<'_, str> {
 }
 
 #[inline]
-pub(crate) fn is_inf_nan(bytes: &[u8]) -> Option<(SpecialFloat, bool)> {
+pub(crate) fn is_inf_nan(bytes: &[u8]) -> Option<(FloatingPointCategory, bool)> {
     if bytes.len() < 3 || bytes.len() > 5 {
         return None;
     }
@@ -106,8 +106,8 @@ pub(crate) fn is_inf_nan(bytes: &[u8]) -> Option<(SpecialFloat, bool)> {
     };
 
     match (a, b, c) {
-        (b'i', b'n', b'f') => Some((SpecialFloat::Inf, neg)),
-        (b'n', b'a', b'n') => Some((SpecialFloat::Nan, neg)),
+        (b'i', b'n', b'f') => Some((FloatingPointCategory::Infinite, neg)),
+        (b'n', b'a', b'n') => Some((FloatingPointCategory::NotANumber, neg)),
         _ => None,
     }
 }
@@ -169,8 +169,8 @@ pub(crate) fn parse_float(str: &str) -> Option<f64> {
 
     if let Some((kind, neg)) = is_inf_nan(str.as_bytes()) {
         return Some(match kind {
-            SpecialFloat::Nan => f64::NAN,
-            SpecialFloat::Inf => {
+            FloatingPointCategory::NotANumber => f64::NAN,
+            FloatingPointCategory::Infinite => {
                 if neg {
                     f64::NEG_INFINITY
                 } else {
