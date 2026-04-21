@@ -69,6 +69,7 @@ mimalloc = ["dep:mimalloc"]
 
 [profile.release]
 lto = "fat"
+panic = "abort"
 strip = "symbols"
 codegen-units = 1
 
