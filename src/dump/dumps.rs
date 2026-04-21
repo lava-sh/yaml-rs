@@ -59,12 +59,12 @@ pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
             };
             Ok(Value(ScalarOwned::String(datetime_str)))
         }
-        obj if let Ok(time) = obj.cast::<PyTime>() => {
-            Ok(Value(ScalarOwned::String(time.extract::<Time>()?.to_string())))
-        }
-        obj if let Ok(date) = obj.cast::<PyDate>() => {
-            Ok(Value(ScalarOwned::String(date.extract::<Date>()?.to_string())))
-        }
+        obj if let Ok(time) = obj.cast::<PyTime>() => Ok(Value(ScalarOwned::String(
+            time.extract::<Time>()?.to_string(),
+        ))),
+        obj if let Ok(date) = obj.cast::<PyDate>() => Ok(Value(ScalarOwned::String(
+            date.extract::<Date>()?.to_string(),
+        ))),
         obj if let Ok(tuple) = obj.cast::<PyTuple>() => sequence_to_yaml(tuple.iter(), tuple.len()),
         obj if let Ok(list) = obj.cast::<PyList>() => sequence_to_yaml(list.iter(), list.len()),
         obj if let Ok(set) = obj.cast::<PySet>() => set_to_yaml(set.iter(), set.len()),
