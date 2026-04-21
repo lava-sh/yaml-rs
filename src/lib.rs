@@ -1,3 +1,5 @@
+#![feature(pointer_is_aligned_to)]
+
 mod load;
 
 mod dump;
