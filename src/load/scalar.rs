@@ -122,8 +122,8 @@ pub(crate) fn is_float(bytes: &[u8]) -> bool {
         return true;
     }
 
+    let mut i = 0;
     let len = bytes.len();
-    let mut i = 0usize;
 
     if matches!(bytes[0], b'+' | b'-') {
         i = 1;
@@ -142,21 +142,50 @@ pub(crate) fn is_float(bytes: &[u8]) -> bool {
         match byte {
             b'0'..=b'9' => has_digit = true,
             b'_' => {}
-            b'.' if !has_dot && !has_exp => has_dot = true,
+            b'.' if !has_dot && !has_exp => {
+                has_dot = true;
+                i += 1;
+
+                while i < len && matches!(bytes[i], b'0'..=b'9' | b'_') {
+                    if bytes[i] != b'_' {
+                        has_digit = true;
+                    }
+                    i += 1;
+                }
+
+                if i < len && matches!(bytes[i], b'e' | b'E') {
+                    has_exp = true;
+                    i += 1;
+                    break;
+                }
+                return has_digit;
+            }
             b'e' | b'E' if has_digit && !has_exp => {
                 has_exp = true;
-                has_digit = false;
-                if i + 1 < len {
-                    // SAFETY: Guarded by `i + 1 < len`.
-                    let next = unsafe { *bytes.get_unchecked(i + 1) };
-                    if matches!(next, b'+' | b'-') {
-                        i += 1;
-                    }
-                }
+                i += 1;
+                break;
             }
             _ => return false,
         }
         i += 1;
+    }
+
+    if has_exp {
+        if i < len && matches!(bytes[i], b'+' | b'-') {
+            i += 1;
+        }
+
+        let mut exp_has_digit = false;
+        while i < len {
+            match bytes[i] {
+                b'0'..=b'9' => exp_has_digit = true,
+                b'_' => {}
+                _ => return false,
+            }
+            i += 1;
+        }
+
+        return exp_has_digit;
     }
 
     has_digit && (has_dot || has_exp)
