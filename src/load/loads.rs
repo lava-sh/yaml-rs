@@ -327,6 +327,14 @@ impl AliasReplayState {
     }
 }
 
+#[inline]
+fn resolve_value<'a>(arena: &'a Arena<'a>, id: NodeId) -> &'a Value<'a> {
+    match arena.get(id) {
+        Value::Alias { target, .. } => resolve_value(arena, *target),
+        value => value,
+    }
+}
+
 fn value_to_py<'py>(
     py: Python<'py>,
     arena: &Arena<'_>,
@@ -364,10 +372,10 @@ fn value_to_py<'py>(
             let mut has_null_key = false;
 
             for (k, v) in pairs {
-                if matches!(arena.get(*k), Value::Null) {
+                if matches!(resolve_value(arena, *k), Value::Null) {
                     has_null_key = true;
                 }
-                if !matches!(arena.get(*v), Value::Null) {
+                if !matches!(resolve_value(arena, *v), Value::Null) {
                     all_nulls = false;
                 }
             }

@@ -80,7 +80,7 @@ comment intercepting the multiline text""",
         # _________________________________________
         ("x: !!invalid", "Invalid tag: '!!invalid'"),
     ],
-)
+)  # fmt: off
 def test_yaml_loads_decode_error(bad_yaml: str, exc_msg: str) -> None:
     with pytest.raises(yaml_rs.YAMLDecodeError) as exc_info:
         yaml_rs.loads(bad_yaml)
@@ -132,10 +132,10 @@ def test_yaml_loads_type_error(bad: str, exc_msg: str) -> None:
     ],
 )
 def test_yaml_load_encoding_errors(
-        data: Any,
-        encoding: str,
-        encoder_errors: Literal["ignore", "replace", "strict"] | None,
-        expected_error: str,
+    data: Any,
+    encoding: str,
+    encoder_errors: Literal["ignore", "replace", "strict"] | None,
+    expected_error: str,
 ) -> None:
     with pytest.raises(yaml_rs.YAMLDecodeError) as exc_info:
         yaml_rs.load(data, encoding=encoding, encoder_errors=encoder_errors)
@@ -185,7 +185,7 @@ def test_yaml_load_encoding_errors(
         (b"\xc1", "iso-8859-7", "Α"),
         (b"\xf1", "iso-8859-8", "ס"),
     ],
-)
+)  # fmt: off
 def test_yaml_load_encoding_success(
     data: bytes,
     encoding: str,
@@ -664,12 +664,12 @@ def test_parse_datetime(yaml: str, parsed: Any) -> None:
             {"hello": {"world": "this is a string --- still a string"}},
         ),
     ],
-)
+)  # fmt: off
 def test_parse_yaml_spec_examples(yaml: str, parsed: Any) -> None:
     assert yaml_rs.loads(yaml) == _is_nan(parsed), (
         f"\nRaw: {yaml}\n"
         f"\nParsed: {parsed}\n"
-    )
+    )  # fmt: off
 
 
 @pytest.mark.parametrize(
@@ -734,9 +734,9 @@ def test_valid_yamls_from_test_suite(ts: YamlTestSuite) -> None:
     # print(type(py_yaml.safe_load(y)))  # <class 'set'>
     # ```
     if (
-            isinstance(actual, set)
-            and isinstance(expected, dict)
-            and all(v is None for v in expected.values())
+        isinstance(actual, set)
+        and isinstance(expected, dict)
+        and all(v is None for v in expected.values())
     ):
         actual = dict.fromkeys(actual)
 
@@ -765,7 +765,7 @@ def test_invalid_yamls_from_test_suite(ts: YamlTestSuite) -> None:
     platform.python_implementation() == "PyPy",
     reason="PyPy's `Decimal` parsing hits the int string "
            "conversion digit limit for very large numbers.",
-)
+)  # fmt: off
 def test_parse_big_nums() -> None:
     big_int = 999**999
     big_float = float(f"{big_int}.{big_int}")
@@ -877,9 +877,14 @@ def test_alias_limits_invalid_constructor_args(
 )
 # https://github.com/lava-sh/yaml-rs/issues/124
 def test_alias_limits(
-        yaml: str,
-        limits: AliasLimits,
-        exc_msg: str,
+    yaml: str,
+    limits: AliasLimits,
+    exc_msg: str,
 ) -> None:
     with pytest.raises(YAMLDecodeError, match=exc_msg):
         yaml_rs.loads(yaml, alias_limits=limits)
+
+
+def test_alias_null_values_still_resolve_to_set() -> None:
+    yaml = "a: &n null\nb: *n\nc: *n\n"
+    assert yaml_rs.loads(yaml) == {"a", "b", "c"}
