@@ -36,7 +36,19 @@ mod yaml_rs {
     #[pymodule_export]
     const _VERSION: &str = env!("CARGO_PKG_VERSION");
 
-    #[pyfunction(name = "_load")]
+    #[pyfunction(
+        name = "_load",
+        signature = (
+            obj,
+            /,
+            *,
+            parse_datetime = true,
+            encoding = None,
+            encoder_errors = None,
+            alias_limits = None,
+            duplicate_key_policy = None
+        )
+    )]
     fn load<'py>(
         py: Python<'py>,
         obj: &Bound<'_, PyAny>,
@@ -70,7 +82,17 @@ mod yaml_rs {
         )
     }
 
-    #[pyfunction(name = "_loads")]
+    #[pyfunction(
+        name = "_loads",
+        signature = (
+            yaml_string,
+            /,
+            *,
+            parse_datetime = true,
+            alias_limits = None,
+            duplicate_key_policy = None
+        )
+    )]
     #[allow(clippy::needless_pass_by_value)]
     fn load_yaml_from_string<'py>(
         py: Python<'py>,
@@ -99,7 +121,10 @@ mod yaml_rs {
         )
     }
 
-    #[pyfunction(name = "_dumps")]
+    #[pyfunction(
+        name = "_dumps",
+        signature = (obj, /, *, compact = true, multiline_strings = true)
+    )]
     fn dumps_yaml(
         obj: &Bound<'_, PyAny>,
         compact: bool,
