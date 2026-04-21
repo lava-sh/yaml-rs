@@ -1,6 +1,5 @@
 use std::borrow::Cow;
 
-use memchr::{memchr, memchr2};
 use pyo3::{
     IntoPyObjectExt,
     prelude::*,
@@ -98,9 +97,7 @@ fn resolve_scalar<'a>(
 
         let bytes = str.as_bytes();
 
-        if (is_inf_nan(bytes).is_some()
-            || memchr(b'.', bytes).is_some()
-            || memchr2(b'e', b'E', bytes).is_some())
+        if (is_inf_nan(bytes).is_some() || memchr::memchr3(b'.', b'e', b'E', bytes).is_some())
             && is_float(bytes)
             && let Some(float) = parse_float(str)
         {
