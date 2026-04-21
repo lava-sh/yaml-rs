@@ -7,6 +7,7 @@ from typing import Any, Literal
 
 import pytest
 import yaml_rs
+from yaml_rs import AliasLimits, DuplicateKeyPolicy, YAMLDecodeError
 
 from .helpers import INVALID_YAMLS, SKIPPED_YAMLS, VALID_YAMLS, YamlTestSuite, _is_nan
 
@@ -79,7 +80,7 @@ comment intercepting the multiline text""",
         # _________________________________________
         ("x: !!invalid", "Invalid tag: '!!invalid'"),
     ],
-)
+)  # fmt: off
 def test_yaml_loads_decode_error(bad_yaml: str, exc_msg: str) -> None:
     with pytest.raises(yaml_rs.YAMLDecodeError) as exc_info:
         yaml_rs.loads(bad_yaml)
@@ -131,10 +132,10 @@ def test_yaml_loads_type_error(bad: str, exc_msg: str) -> None:
     ],
 )
 def test_yaml_load_encoding_errors(
-        data: Any,
-        encoding: str,
-        encoder_errors: Literal["ignore", "replace", "strict"] | None,
-        expected_error: str,
+    data: Any,
+    encoding: str,
+    encoder_errors: Literal["ignore", "replace", "strict"] | None,
+    expected_error: str,
 ) -> None:
     with pytest.raises(yaml_rs.YAMLDecodeError) as exc_info:
         yaml_rs.load(data, encoding=encoding, encoder_errors=encoder_errors)
@@ -184,7 +185,7 @@ def test_yaml_load_encoding_errors(
         (b"\xc1", "iso-8859-7", "Α"),
         (b"\xf1", "iso-8859-8", "ס"),
     ],
-)
+)  # fmt: off
 def test_yaml_load_encoding_success(
     data: bytes,
     encoding: str,
@@ -663,12 +664,12 @@ def test_parse_datetime(yaml: str, parsed: Any) -> None:
             {"hello": {"world": "this is a string --- still a string"}},
         ),
     ],
-)
+)  # fmt: off
 def test_parse_yaml_spec_examples(yaml: str, parsed: Any) -> None:
     assert yaml_rs.loads(yaml) == _is_nan(parsed), (
         f"\nRaw: {yaml}\n"
         f"\nParsed: {parsed}\n"
-    )
+    )  # fmt: off
 
 
 @pytest.mark.parametrize(
@@ -733,9 +734,9 @@ def test_valid_yamls_from_test_suite(ts: YamlTestSuite) -> None:
     # print(type(py_yaml.safe_load(y)))  # <class 'set'>
     # ```
     if (
-            isinstance(actual, set)
-            and isinstance(expected, dict)
-            and all(v is None for v in expected.values())
+        isinstance(actual, set)
+        and isinstance(expected, dict)
+        and all(v is None for v in expected.values())
     ):
         actual = dict.fromkeys(actual)
 
@@ -764,7 +765,7 @@ def test_invalid_yamls_from_test_suite(ts: YamlTestSuite) -> None:
     platform.python_implementation() == "PyPy",
     reason="PyPy's `Decimal` parsing hits the int string "
            "conversion digit limit for very large numbers.",
-)
+)  # fmt: off
 def test_parse_big_nums() -> None:
     big_int = 999**999
     big_float = float(f"{big_int}.{big_int}")
@@ -786,3 +787,185 @@ def test_parse_big_nums() -> None:
         big_float,
         abs_tol=1e-9,
     )
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "exc_type", "exc_msg"),
+    [
+        (
+            {"max_total_replayed_events": -1},
+            ValueError,
+            "`max_total_replayed_events` must be greater than or equal to 0",
+        ),
+        (
+            {"max_replay_stack_depth": -1},
+            ValueError,
+            "`max_replay_stack_depth` must be greater than or equal to 0",
+        ),
+        (
+            {"max_alias_expansions_per_anchor": -1},
+            ValueError,
+            "`max_alias_expansions_per_anchor` must be greater than or equal to 0",
+        ),
+    ],
+)
+# https://github.com/lava-sh/yaml-rs/issues/124
+def test_alias_limits_invalid_constructor_args(
+    kwargs: dict[str, Any],
+    exc_type: type[Exception],
+    exc_msg: str,
+) -> None:
+    with pytest.raises(exc_type, match=exc_msg):
+        AliasLimits(**kwargs)
+
+
+@pytest.mark.parametrize(
+    ("yaml", "limits", "exc_msg"),
+    [
+        pytest.param(
+            "defs: &A { k: v }\nx: *A\ny: *A\nz: *A\n",
+            AliasLimits(max_alias_expansions_per_anchor=2),
+            "alias expansion limit exceeded",
+            id="expansion_limit",
+        ),
+        pytest.param(
+            "defs: &A [1, 2, 3, 4]\nlist: [*A, *A]\n",
+            AliasLimits(max_total_replayed_events=10),
+            "alias replay limit exceeded",
+            id="total_replay_limit",
+        ),
+        pytest.param(
+            "defs: &A [1]\nout: *A\n",
+            AliasLimits(max_replay_stack_depth=0),
+            "alias replay stack depth exceeded",
+            id="stack_depth_limit",
+        ),
+        pytest.param(
+            """\
+            a: &a ~
+            b: &b [*a,*a,*a,*a,*a,*a,*a,*a,*a]
+            c: &c [*b,*b,*b,*b,*b,*b,*b,*b,*b]
+            d: &d [*c,*c,*c,*c,*c,*c,*c,*c,*c]
+            e: &e [*d,*d,*d,*d,*d,*d,*d,*d,*d]
+            f: &f [*e,*e,*e,*e,*e,*e,*e,*e,*e]
+            g: &g [*f,*f,*f,*f,*f,*f,*f,*f,*f]
+            h: &h [*g,*g,*g,*g,*g,*g,*g,*g,*g]
+            i: &i [*h,*h,*h,*h,*h,*h,*h,*h,*h]
+            j: &j [*i,*i,*i,*i,*i,*i,*i,*i,*i]
+            k: &k [*j,*j,*j,*j,*j,*j,*j,*j,*j]
+            l: &l [*k,*k,*k,*k,*k,*k,*k,*k,*k]
+            m: &m [*l,*l,*l,*l,*l,*l,*l,*l,*l]
+            n: &n [*m,*m,*m,*m,*m,*m,*m,*m,*m]
+            o: &o [*n,*n,*n,*n,*n,*n,*n,*n,*n]
+            p: &p [*o,*o,*o,*o,*o,*o,*o,*o,*o]
+            q: &q [*p,*p,*p,*p,*p,*p,*p,*p,*p]
+            r: &r [*q,*q,*q,*q,*q,*q,*q,*q,*q]
+            s: &s [*r,*r,*r,*r,*r,*r,*r,*r,*r]
+            t: &t [*s,*s,*s,*s,*s,*s,*s,*s,*s]
+            u: &u [*t,*t,*t,*t,*t,*t,*t,*t,*t]
+            v: &v [*u,*u,*u,*u,*u,*u,*u,*u,*u]
+            w: &w [*v,*v,*v,*v,*v,*v,*v,*v,*v]
+            x: &x [*w,*w,*w,*w,*w,*w,*w,*w,*w]
+            y: &y [*x,*x,*x,*x,*x,*x,*x,*x,*x]
+            z: &z [*y,*y,*y,*y,*y,*y,*y,*y,*y]
+            """,
+            None,
+            "alias replay limit exceeded: replayed 1000006, max 1000000",
+            id="alias_replay_limit_exceeded",
+        ),
+    ],
+)
+# https://github.com/lava-sh/yaml-rs/issues/124
+def test_alias_limits(
+    yaml: str,
+    limits: AliasLimits,
+    exc_msg: str,
+) -> None:
+    with pytest.raises(YAMLDecodeError, match=exc_msg):
+        yaml_rs.loads(yaml, alias_limits=limits)
+
+
+def test_alias_null_values_still_resolve_to_set() -> None:
+    yaml = "a: &n null\nb: *n\nc: *n\n"
+    assert yaml_rs.loads(yaml) == {"a", "b", "c"}
+
+
+@pytest.mark.parametrize(
+    ("yaml", "expected"),
+    [
+        ("x: 1.2x\n", "1.2x"),
+        ("x: 1.2.3\n", "1.2.3"),
+        ("x: .e1\n", ".e1"),
+    ],
+)
+def test_invalid_float_like_scalars(yaml: str, expected: str) -> None:
+    assert yaml_rs.loads(yaml) == {"x": expected}
+
+
+@pytest.mark.parametrize(
+    ("loader", "kwargs", "yaml", "expected", "error"),
+    [
+        pytest.param(
+            yaml_rs.loads,
+            {},
+            "x: 1\nx: 2\nx: 3\n",
+            {"x": 3},
+            None,
+            id="loads_default_last_wins",
+        ),
+        pytest.param(
+            yaml_rs.loads,
+            {"duplicate_key_policy": DuplicateKeyPolicy.LastWins},
+            "x: 1\nx: 2\nx: 3\n",
+            {"x": 3},
+            None,
+            id="loads_last_wins",
+        ),
+        pytest.param(
+            yaml_rs.load,
+            {"duplicate_key_policy": DuplicateKeyPolicy.LastWins, "encoding": "utf-8"},
+            "x: 1\nx: 2\nx: 3\n",
+            {"x": 3},
+            None,
+            id="load_last_wins",
+        ),
+        pytest.param(
+            yaml_rs.loads,
+            {"duplicate_key_policy": DuplicateKeyPolicy.FirstWins},
+            "x: 1\nx: 2\nx: 3\n",
+            {"x": 1},
+            None,
+            id="first_wins",
+        ),
+        pytest.param(
+            yaml_rs.loads,
+            {"duplicate_key_policy": DuplicateKeyPolicy.Error},
+            "x: 1\nx: 2\nx: 3\n",
+            None,
+            r"duplicate mapping key: 'x'",
+            id="error_string_key",
+        ),
+        pytest.param(
+            yaml_rs.loads,
+            {"duplicate_key_policy": DuplicateKeyPolicy.Error},
+            "1: a\n1: b\n",
+            None,
+            r"duplicate mapping key: 1",
+            id="error_non_string_key",
+        ),
+    ],
+)
+def test_duplicate_key_policy(
+    loader: Any,
+    kwargs: dict[str, Any],
+    yaml: str,
+    expected: dict[str, Any] | None,
+    error: str | None,
+) -> None:
+    source: str | bytes = yaml.encode() if loader is yaml_rs.load else yaml
+
+    if error is not None:
+        with pytest.raises(YAMLDecodeError, match=error):
+            loader(source, **kwargs)
+    else:
+        assert loader(source, **kwargs) == expected

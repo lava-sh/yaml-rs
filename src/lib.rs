@@ -1,7 +1,8 @@
-mod load;
+#![feature(pointer_is_aligned_to)]
 
 mod dump;
 mod from_rust;
+mod load;
 
 #[cfg(feature = "mimalloc")]
 #[global_allocator]
@@ -20,12 +21,15 @@ mod yaml_rs {
 
     #[pymodule_export]
     use super::{YAMLDecodeError, YAMLEncodeError};
+    #[pymodule_export]
+    use crate::load::options::AliasLimits;
     use crate::{
         dump::dumps,
         load::{
             decoder,
             format_error::format_error,
             loads::{BuildError, build_from_events, to_python},
+            options::DuplicateKeyPolicy,
         },
     };
 
@@ -33,12 +37,22 @@ mod yaml_rs {
     const _VERSION: &str = env!("CARGO_PKG_VERSION");
 
     #[pyfunction(name = "_load")]
+    #[pyo3(signature = (
+        obj,
+        parse_datetime = true,
+        encoding = None,
+        encoder_errors = None,
+        alias_limits = None,
+        duplicate_key_policy = None
+    ))]
     fn load<'py>(
         py: Python<'py>,
         obj: &Bound<'_, PyAny>,
         parse_datetime: bool,
         encoding: Option<&str>,
         encoder_errors: Option<&str>,
+        alias_limits: Option<PyRef<'_, AliasLimits>>,
+        duplicate_key_policy: Option<&str>,
     ) -> PyResult<Bound<'py, PyAny>> {
         let data: Cow<[u8]> = if let Ok(string) = obj.cast::<PyString>() {
             let path = string.to_str()?;
@@ -55,14 +69,29 @@ mod yaml_rs {
             .detach(|| decoder::encode(&data, encoding, encoder_errors))
             .map_err(YAMLDecodeError::new_err)?;
 
-        load_yaml_from_string(py, encoded_string.as_ref(), parse_datetime)
+        load_yaml_from_string(
+            py,
+            encoded_string.as_ref(),
+            parse_datetime,
+            alias_limits,
+            duplicate_key_policy,
+        )
     }
 
     #[pyfunction(name = "_loads")]
+    #[pyo3(signature = (
+        yaml_string,
+        parse_datetime = true,
+        alias_limits = None,
+        duplicate_key_policy = None
+    ))]
+    #[allow(clippy::needless_pass_by_value)]
     fn load_yaml_from_string<'py>(
         py: Python<'py>,
         yaml_string: &str,
         parse_datetime: bool,
+        alias_limits: Option<PyRef<'_, AliasLimits>>,
+        duplicate_key_policy: Option<&str>,
     ) -> PyResult<Bound<'py, PyAny>> {
         let (arena, docs) = py
             .detach(|| build_from_events(yaml_string))
@@ -71,7 +100,17 @@ mod yaml_rs {
                 BuildError::Decode(msg) => YAMLDecodeError::new_err(msg),
             })?;
 
-        to_python(py, &arena, &docs, parse_datetime)
+        to_python(
+            py,
+            &arena,
+            &docs,
+            parse_datetime,
+            alias_limits
+                .as_ref()
+                .map(|limits| **limits)
+                .unwrap_or_default(),
+            DuplicateKeyPolicy::from_str(duplicate_key_policy)?,
+        )
     }
 
     #[pyfunction(name = "_dumps")]

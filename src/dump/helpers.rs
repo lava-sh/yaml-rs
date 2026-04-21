@@ -22,14 +22,15 @@ pub(crate) fn get_decimal(py: Python<'_>) -> PyResult<(&Bound<'_, PyAny>, &Bound
                 .getattr("isinstance")
                 .map(Bound::unbind)?;
 
-            let decimal_type = py
+            let decimal = py
                 .import("decimal")?
                 .getattr("Decimal")?
                 .cast_into::<PyType>()?
                 .unbind();
-            Ok((isinstance, decimal_type))
+
+            Ok((isinstance, decimal))
         })
-        .map(|(isinstance, decimal_type)| (isinstance.bind(py), decimal_type.bind(py)))
+        .map(|(isinstance, decimal)| (isinstance.bind(py), decimal.bind(py)))
 }
 
 pub(crate) fn get_utc_offset<'py>(

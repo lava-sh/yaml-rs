@@ -1,8 +1,4 @@
-// https://github.com/rust-lang/rust/blob/1.95.0/library/core/src/num/mod.rs#L1431-L1434
-#[inline]
-pub(crate) const fn repeat_u8(x: u8) -> usize {
-    usize::from_ne_bytes([x; size_of::<usize>()])
-}
+use crate::from_rust::num::repeat_u8;
 
 const LO_USIZE: usize = repeat_u8(0x01);
 const HI_USIZE: usize = repeat_u8(0x80);

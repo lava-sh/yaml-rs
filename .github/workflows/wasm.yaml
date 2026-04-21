@@ -10,6 +10,7 @@ jobs:
     timeout-minutes: 30
     # See: https://github.com/pyodide/pyodide/blob/main/pyodide-cross-build-environments.json
     strategy:
+      fail-fast: false
       matrix:
         platform:
           - python-version: "3.11"
@@ -18,7 +19,7 @@ jobs:
             emsdk-version: "3.1.46"
             rust-toolchain: "nightly-2025-02-17"
             rustflags: >-
-              -Z allow-features=let_chains,integer_sign_cast,if_let_guard
+              -Z allow-features=let_chains,integer_sign_cast,if_let_guard,pointer_is_aligned_to
               -Z crate-attr=feature(let_chains,integer_sign_cast,if_let_guard)
               -C link-arg=-sSIDE_MODULE=2
               -C link-arg=-sWASM_BIGINT
@@ -32,7 +33,7 @@ jobs:
             emsdk-version: "3.1.58"
             rust-toolchain: "nightly-2025-02-17"
             rustflags: >-
-              -Z allow-features=let_chains,integer_sign_cast,if_let_guard
+              -Z allow-features=let_chains,integer_sign_cast,if_let_guard,pointer_is_aligned_to
               -Z crate-attr=feature(let_chains,integer_sign_cast,if_let_guard)
               -C link-arg=-sSIDE_MODULE=2
               -C link-arg=-sWASM_BIGINT
