@@ -3,20 +3,20 @@ use std::borrow::Cow;
 use crate::{from_rust::dec2flt::is_8digits, load::value::Value};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub(crate) enum FloatingPointCategory {
+pub enum FloatingPointCategory {
     Infinite,
     NotANumber,
 }
 
 #[inline]
-pub(crate) fn is_null(str: &str) -> bool {
+pub fn is_null(str: &str) -> bool {
     // https://yaml.org/spec/1.2.2/#1031-tags
     // Regular expression: null | Null | NULL | ~
     matches!(str, "null" | "Null" | "NULL" | "~")
 }
 
 #[inline]
-pub(crate) fn is_bool(str: &str) -> Option<bool> {
+pub fn is_bool(str: &str) -> Option<bool> {
     // https://yaml.org/spec/1.2.2/#1031-tags
     // Regular expression: true | True | TRUE | false | False | FALSE
     match str {
@@ -27,7 +27,7 @@ pub(crate) fn is_bool(str: &str) -> Option<bool> {
 }
 
 #[inline]
-pub(crate) fn is_datetime(bytes: &[u8]) -> bool {
+pub fn is_datetime(bytes: &[u8]) -> bool {
     if bytes.len() < 10 {
         return false;
     }
@@ -52,7 +52,7 @@ pub(crate) fn is_datetime(bytes: &[u8]) -> bool {
 }
 
 #[inline]
-pub(crate) fn normalize_num(str: &str) -> Cow<'_, str> {
+pub fn normalize_num(str: &str) -> Cow<'_, str> {
     let bytes = str.as_bytes();
 
     if memchr::memchr(b'_', bytes).is_none() {
@@ -70,7 +70,7 @@ pub(crate) fn normalize_num(str: &str) -> Cow<'_, str> {
 }
 
 #[inline]
-pub(crate) fn is_inf_nan(bytes: &[u8]) -> Option<(FloatingPointCategory, bool)> {
+pub fn is_inf_nan(bytes: &[u8]) -> Option<(FloatingPointCategory, bool)> {
     if bytes.len() < 3 || bytes.len() > 5 {
         return None;
     }
@@ -113,7 +113,7 @@ pub(crate) fn is_inf_nan(bytes: &[u8]) -> Option<(FloatingPointCategory, bool)> 
 }
 
 #[inline]
-pub(crate) fn is_float(bytes: &[u8]) -> bool {
+pub fn is_float(bytes: &[u8]) -> bool {
     if bytes.is_empty() {
         return false;
     }
@@ -191,7 +191,7 @@ pub(crate) fn is_float(bytes: &[u8]) -> bool {
     has_digit && (has_dot || has_exp)
 }
 
-pub(crate) fn parse_float(str: &str) -> Option<f64> {
+pub fn parse_float(str: &str) -> Option<f64> {
     if str.is_empty() {
         return None;
     }
@@ -213,7 +213,7 @@ pub(crate) fn parse_float(str: &str) -> Option<f64> {
 }
 
 #[inline]
-pub(crate) fn is_int(bytes: &[u8]) -> bool {
+pub fn is_int(bytes: &[u8]) -> bool {
     let bytes = if let [b'+' | b'-', rest @ ..] = bytes {
         rest
     } else {
@@ -331,7 +331,7 @@ fn parse_i64(bytes: &[u8], radix: u32, neg: bool) -> Option<i64> {
     }
 }
 
-pub(crate) fn parse_int<'a>(str: &str) -> Option<Value<'a>> {
+pub fn parse_int<'a>(str: &str) -> Option<Value<'a>> {
     if str.is_empty() {
         return None;
     }

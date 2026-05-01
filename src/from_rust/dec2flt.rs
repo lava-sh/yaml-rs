@@ -1,6 +1,6 @@
 // https://github.com/rust-lang/rust/blob/1.95.0/library/core/src/num/dec2flt/common.rs#L56-L64
 #[inline]
-pub(crate) fn is_8digits(v: u64) -> bool {
+pub const fn is_8digits(v: u64) -> bool {
     let a = v.wrapping_add(0x4646_4646_4646_4646);
     let b = v.wrapping_sub(0x3030_3030_3030_3030);
     (a | b) & 0x8080_8080_8080_8080 == 0
@@ -8,7 +8,7 @@ pub(crate) fn is_8digits(v: u64) -> bool {
 
 // https://github.com/rust-lang/rust/blob/1.95.0/library/core/src/num/dec2flt/parse.rs#L17-L26
 #[allow(clippy::cast_lossless)]
-fn parse_8digits(mut v: u64) -> u64 {
+const fn parse_8digits(mut v: u64) -> u64 {
     const MASK: u64 = 0x0000_00FF_0000_00FF;
     const MUL1: u64 = 0x000F_4240_0000_0064;
     const MUL2: u64 = 0x0000_2710_0000_0001;
@@ -58,7 +58,7 @@ unsafe fn try_parse_digits(bytes: &[u8], start: usize, count: usize) -> u32 {
 }
 
 #[inline]
-pub(crate) fn parse_digits(bytes: &[u8], start: usize, count: usize) -> u32 {
+pub fn parse_digits(bytes: &[u8], start: usize, count: usize) -> u32 {
     debug_assert!(
         start
             .checked_add(count)

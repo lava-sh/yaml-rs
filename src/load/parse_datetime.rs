@@ -92,10 +92,7 @@ fn parse_tz_hm(offset_bytes: &[u8]) -> Option<(i32, i32)> {
     }
 }
 
-pub(crate) fn parse_py_datetime<'py>(
-    py: Python<'py>,
-    str: &str,
-) -> PyResult<Option<Bound<'py, PyAny>>> {
+pub fn parse_py_datetime<'py>(py: Python<'py>, str: &str) -> PyResult<Option<Bound<'py, PyAny>>> {
     const SECS_IN_DAY: i32 = 86_400;
 
     let bytes = str.as_bytes();

@@ -89,3 +89,4 @@ suspicious = { level = "deny", priority = -1 }
 too_many_lines = "allow"
 manual_let_else = "allow"
 cast_possible_truncation = "allow"
+option_if_let_else = "allow"

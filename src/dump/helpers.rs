@@ -8,7 +8,7 @@ use saphyr::{MappingOwned, ScalarOwned, YamlOwned, YamlOwned::Value};
 
 use crate::dump::{dumps::python_to_yaml, normalize::normalize_float};
 
-pub(crate) fn get_decimal(py: Python<'_>) -> PyResult<&Bound<'_, PyType>> {
+pub fn get_decimal(py: Python<'_>) -> PyResult<&Bound<'_, PyType>> {
     static DECIMAL: PyOnceLock<Py<PyType>> = PyOnceLock::new();
 
     DECIMAL
@@ -22,13 +22,13 @@ pub(crate) fn get_decimal(py: Python<'_>) -> PyResult<&Bound<'_, PyType>> {
         .map(|decimal| decimal.bind(py))
 }
 
-pub(crate) fn to_yaml_float(float: &Bound<'_, PyFloat>) -> PyResult<String> {
+pub fn to_yaml_float(float: &Bound<'_, PyFloat>) -> PyResult<String> {
     let py_str = float.str()?;
     let repr = py_str.to_str()?;
     Ok(normalize_float(repr))
 }
 
-pub(crate) fn sequence_to_yaml<'py, I>(items: I, len: usize) -> PyResult<YamlOwned>
+pub fn sequence_to_yaml<'py, I>(items: I, len: usize) -> PyResult<YamlOwned>
 where
     I: IntoIterator<Item = Bound<'py, PyAny>>,
 {
@@ -43,7 +43,7 @@ where
     Ok(YamlOwned::Sequence(sequence))
 }
 
-pub(crate) fn set_to_yaml<'py, I>(items: I, len: usize) -> PyResult<YamlOwned>
+pub fn set_to_yaml<'py, I>(items: I, len: usize) -> PyResult<YamlOwned>
 where
     I: IntoIterator<Item = Bound<'py, PyAny>>,
 {

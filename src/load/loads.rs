@@ -43,7 +43,7 @@ pub enum BuildError {
 
 impl From<ScanError> for BuildError {
     fn from(err: ScanError) -> Self {
-        BuildError::Scan(err)
+        Self::Scan(err)
     }
 }
 
@@ -114,7 +114,7 @@ fn resolve_scalar<'a>(
     Ok(arena.push(Value::String(value)))
 }
 
-pub(crate) fn build_from_events(input: &'_ str) -> Result<(Arena<'_>, Vec<NodeId>), BuildError> {
+pub fn build_from_events(input: &'_ str) -> Result<(Arena<'_>, Vec<NodeId>), BuildError> {
     let parser = Parser::new_from_str(input);
 
     let mut arena = Arena::with_capacity((input.len() / 8).max(64));
@@ -565,7 +565,7 @@ where
     Ok(py_list.into_any())
 }
 
-pub(crate) fn to_python<'py>(
+pub fn to_python<'py>(
     py: Python<'py>,
     arena: &Arena<'_>,
     docs: &[NodeId],
