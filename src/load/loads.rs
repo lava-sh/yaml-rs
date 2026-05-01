@@ -1,12 +1,12 @@
 use std::borrow::Cow;
 
+use granit_parser::{Event, Parser, ScalarStyle, ScanError, Tag};
 use pyo3::{
     IntoPyObjectExt,
     prelude::*,
     types::{PyDict, PyFrozenSet, PyList, PySet, PyTuple},
 };
 use rustc_hash::FxHashMap;
-use saphyr_parser::{Event, Parser, ScalarStyle, ScanError, Tag};
 
 use crate::{
     YAMLDecodeError,

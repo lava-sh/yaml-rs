@@ -38,10 +38,9 @@ saphyr = {
     git = "https://github.com/bourumir-wyngs/saphyr",
     rev = "0aef87d2010e599116bdc9f75a4a0d9e2bb47d85",
 }
-saphyr-parser = {
-    package = "saphyr-parser-bw",
-    git = "https://github.com/bourumir-wyngs/saphyr",
-    rev = "0aef87d2010e599116bdc9f75a4a0d9e2bb47d85",
+granit-parser = {
+    git = "https://github.com/bourumir-wyngs/granit-parser",
+    rev = "d260e5b35b46abcf116846e60aea7042c02da807",
 }
 
 lexical-core = {
@@ -70,17 +69,23 @@ default = []
 mimalloc = ["dep:mimalloc"]
 
 [profile.release]
+opt-level = 3
 lto = "fat"
 panic = "abort"
 strip = "symbols"
 codegen-units = 1
 
-[lints]
-rust.warnings = { level = "deny" }
-clippy.perf = { level = "deny", priority = -1 }
-clippy.style = { level = "warn", priority = -1 }
-clippy.pedantic = { level = "warn", priority = -1 }
+[lints.rust]
+warnings = "deny"
 
-clippy.too_many_lines = "allow"
-clippy.manual_let_else = "allow"
-clippy.cast_possible_truncation = "allow"
+[lints.clippy]
+perf = { level = "deny", priority = 1 }
+style = { level = "deny", priority = -1 }
+pedantic = { level = "deny", priority = -1 }
+nursery = { level = "deny", priority = -1 }
+complexity = { level = "deny", priority = -1 }
+suspicious = { level = "deny", priority = -1 }
+
+too_many_lines = "allow"
+manual_let_else = "allow"
+cast_possible_truncation = "allow"

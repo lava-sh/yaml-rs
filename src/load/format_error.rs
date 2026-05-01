@@ -1,4 +1,4 @@
-use saphyr_parser::ScanError;
+use granit_parser::ScanError;
 
 #[inline]
 unsafe fn push(buf: &mut String, byte: u8, count: usize) {
