@@ -40,7 +40,7 @@ saphyr = {
 }
 granit-parser = {
     git = "https://github.com/bourumir-wyngs/granit-parser",
-    rev = "d260e5b35b46abcf116846e60aea7042c02da807",
+    rev = "d0f33cdb165d53a0c080b43b167da1114b2b87c7",
 }
 
 lexical-core = {
