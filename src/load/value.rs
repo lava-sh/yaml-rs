@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use crate::load::types::NodeId;
 
 #[derive(Clone, Debug)]
-pub(crate) enum Value<'a> {
+pub enum Value<'a> {
     Null,
     Boolean(bool),
     Integer64(i64),

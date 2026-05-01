@@ -5,7 +5,7 @@ use std::{
 
 use simdutf8::basic::from_utf8;
 
-pub(crate) fn encode<'a>(
+pub fn encode<'a>(
     data: &'a [u8],
     encoding: Option<&str>,
     encoder_errors: Option<&str>,

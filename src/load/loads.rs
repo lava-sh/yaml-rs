@@ -1,13 +1,12 @@
 use std::borrow::Cow;
 
-use memchr::{memchr, memchr2};
+use granit_parser::{Event, Parser, ScalarStyle, ScanError, Tag};
 use pyo3::{
     IntoPyObjectExt,
     prelude::*,
     types::{PyDict, PyFrozenSet, PyList, PySet, PyTuple},
 };
 use rustc_hash::FxHashMap;
-use saphyr_parser::{Event, Parser, ScalarStyle, ScanError, Tag};
 
 use crate::{
     YAMLDecodeError,
@@ -44,7 +43,7 @@ pub enum BuildError {
 
 impl From<ScanError> for BuildError {
     fn from(err: ScanError) -> Self {
-        BuildError::Scan(err)
+        Self::Scan(err)
     }
 }
 
@@ -98,9 +97,7 @@ fn resolve_scalar<'a>(
 
         let bytes = str.as_bytes();
 
-        if (is_inf_nan(bytes).is_some()
-            || memchr(b'.', bytes).is_some()
-            || memchr2(b'e', b'E', bytes).is_some())
+        if (is_inf_nan(bytes).is_some() || memchr::memchr3(b'.', b'e', b'E', bytes).is_some())
             && is_float(bytes)
             && let Some(float) = parse_float(str)
         {
@@ -117,7 +114,7 @@ fn resolve_scalar<'a>(
     Ok(arena.push(Value::String(value)))
 }
 
-pub(crate) fn build_from_events(input: &'_ str) -> Result<(Arena<'_>, Vec<NodeId>), BuildError> {
+pub fn build_from_events(input: &'_ str) -> Result<(Arena<'_>, Vec<NodeId>), BuildError> {
     let parser = Parser::new_from_str(input);
 
     let mut arena = Arena::with_capacity((input.len() / 8).max(64));
@@ -568,7 +565,7 @@ where
     Ok(py_list.into_any())
 }
 
-pub(crate) fn to_python<'py>(
+pub fn to_python<'py>(
     py: Python<'py>,
     arena: &Arena<'_>,
     docs: &[NodeId],

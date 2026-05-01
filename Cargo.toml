@@ -1,6 +1,6 @@
 [package]
 name = "yaml-rs"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 license = "Unlicense"
 repository = "https://github.com/lava-sh/yaml-rs"
@@ -18,7 +18,7 @@ pyo3 = {
         "jiff-02",
     ]
 }
-jiff = "=0.2.23"
+jiff = "=0.2.24"
 itoa = "=1.0.18"
 num-bigint = "=0.4.6"
 rustc-hash = "=2.1.2"
@@ -36,12 +36,11 @@ simdutf8 = {
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 saphyr = {
     git = "https://github.com/bourumir-wyngs/saphyr",
-    rev = "50127cf7fbefe1de5e515c5a08dee3599aa6e6d1",
+    rev = "0aef87d2010e599116bdc9f75a4a0d9e2bb47d85",
 }
-saphyr-parser = {
-    package = "saphyr-parser-bw",
-    git = "https://github.com/bourumir-wyngs/saphyr",
-    rev = "50127cf7fbefe1de5e515c5a08dee3599aa6e6d1",
+granit-parser = {
+    git = "https://github.com/bourumir-wyngs/granit-parser",
+    rev = "d0f33cdb165d53a0c080b43b167da1114b2b87c7",
 }
 
 lexical-core = {
@@ -56,7 +55,7 @@ lexical-core = {
 }
 mimalloc = {
     optional = true,
-    version = "=0.1.49",
+    version = "=0.1.50",
     features = [
         # mimalloc v3
         # See: https://github.com/microsoft/mimalloc/tree/dev3?tab=readme-ov-file#branches
@@ -70,17 +69,24 @@ default = []
 mimalloc = ["dep:mimalloc"]
 
 [profile.release]
+opt-level = 3
 lto = "fat"
 panic = "abort"
 strip = "symbols"
 codegen-units = 1
 
-[lints]
-rust.warnings = { level = "deny" }
-clippy.perf = { level = "deny", priority = -1 }
-clippy.style = { level = "warn", priority = -1 }
-clippy.pedantic = { level = "warn", priority = -1 }
+[lints.rust]
+warnings = "deny"
 
-clippy.too_many_lines = "allow"
-clippy.manual_let_else = "allow"
-clippy.cast_possible_truncation = "allow"
+[lints.clippy]
+perf = { level = "deny", priority = 1 }
+style = { level = "deny", priority = -1 }
+pedantic = { level = "deny", priority = -1 }
+nursery = { level = "deny", priority = -1 }
+complexity = { level = "deny", priority = -1 }
+suspicious = { level = "deny", priority = -1 }
+
+too_many_lines = "allow"
+manual_let_else = "allow"
+cast_possible_truncation = "allow"
+option_if_let_else = "allow"

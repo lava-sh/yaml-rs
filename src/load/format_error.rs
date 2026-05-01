@@ -1,4 +1,4 @@
-use saphyr_parser::ScanError;
+use granit_parser::ScanError;
 
 #[inline]
 unsafe fn push(buf: &mut String, byte: u8, count: usize) {
@@ -10,7 +10,7 @@ unsafe fn push(buf: &mut String, byte: u8, count: usize) {
     }
 }
 
-pub(crate) fn format_error(source: &str, error: &ScanError) -> String {
+pub fn format_error(source: &str, error: &ScanError) -> String {
     let marker = error.marker();
 
     let line = marker.line();

@@ -25,7 +25,7 @@ use crate::{
 #[allow(non_upper_case_globals)]
 const printer: DateTimePrinter = DateTimePrinter::new();
 
-pub(crate) fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
+pub fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
     match obj {
         obj if let Ok(str) = obj.cast::<PyString>() => Ok(Value(ScalarOwned::String(
             str.to_string_lossy().into_owned(),
