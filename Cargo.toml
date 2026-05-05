@@ -31,18 +31,14 @@ simdutf8 = {
     version = "=0.1.5",
     features = ["aarch64_neon_prefetch"],
 }
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# https://github.com/bourumir-wyngs/saphyr/tree/dev/saphyr-parser #
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 saphyr = {
     git = "https://github.com/bourumir-wyngs/saphyr",
     rev = "97c21fee9f7620e72f3fe3c0658708a719420cd6",
 }
 granit-parser = {
     git = "https://github.com/bourumir-wyngs/granit-parser",
-    rev = "fc193e7c14b4116dbe80f8f1507cc2e178d75c45",
+    rev = "d5d48541248d43550284e9e23c0edca37a298dc3",
 }
-
 lexical-core = {
     git = "https://github.com/Alexhuszagh/rust-lexical",
     rev = "afb2efa651f42f63415a3bf3d51ced6143132b2b",
