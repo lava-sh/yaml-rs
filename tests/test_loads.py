@@ -894,6 +894,24 @@ def test_alias_null_values_still_resolve_to_set() -> None:
     assert yaml_rs.loads(yaml) == {"a", "b", "c"}
 
 
+# https://github.com/lava-sh/yaml-rs/issues/128
+def test_mapping_with_null_values_is_dict() -> None:
+    yaml = """\
+    test:
+        key_a: null
+        key_b: null
+
+    test2:
+        key_a: null
+        key_b: "b"
+    """
+
+    assert yaml_rs.loads(yaml) == {
+        "test": {"key_a": None, "key_b": None},
+        "test2": {"key_a": None, "key_b": "b"},
+    }
+
+
 @pytest.mark.parametrize(
     ("yaml", "expected"),
     [

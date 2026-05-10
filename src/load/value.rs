@@ -13,5 +13,5 @@ pub enum Value<'a> {
     TaggedString(Cow<'a, str>),
     Alias { target: NodeId, anchor_id: usize },
     Seq(Vec<NodeId>),
-    Map(Vec<(NodeId, NodeId)>),
+    Map(Vec<(NodeId, NodeId)>, bool),
 }
