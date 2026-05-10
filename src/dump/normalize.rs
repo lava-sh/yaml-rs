@@ -4,11 +4,7 @@ use pyo3::PyResult;
 
 use crate::{YAMLEncodeError, from_rust::ascii::is_dot};
 
-pub(crate) fn is_nan_numeric_payload<const N: usize>(
-    bytes: &[u8],
-    start: usize,
-    prefix: [u8; N],
-) -> bool {
+pub fn is_nan_numeric_payload<const N: usize>(bytes: &[u8], start: usize, prefix: [u8; N]) -> bool {
     if bytes.len() <= start || start != N {
         return false;
     }
@@ -57,7 +53,7 @@ macro_rules! check_byte {
 }
 
 #[inline]
-pub(crate) fn find_exp_index(bytes: &[u8]) -> Option<usize> {
+pub const fn find_exp_index(bytes: &[u8]) -> Option<usize> {
     let ptr = bytes.as_ptr();
     let len = bytes.len();
     let mut i = 0usize;
@@ -95,7 +91,7 @@ pub(crate) fn find_exp_index(bytes: &[u8]) -> Option<usize> {
     None
 }
 
-pub(crate) fn normalize_float(py_float: &str) -> String {
+pub fn normalize_float(py_float: &str) -> String {
     let bytes = py_float.as_bytes();
 
     match bytes {
@@ -145,7 +141,7 @@ pub(crate) fn normalize_float(py_float: &str) -> String {
     unsafe { String::from_utf8_unchecked(out) }
 }
 
-pub(crate) fn normalize_decimal(py_decimal: &str) -> PyResult<Cow<'_, str>> {
+pub fn normalize_decimal(py_decimal: &str) -> PyResult<Cow<'_, str>> {
     let bytes = py_decimal.as_bytes();
     let mut start = 0;
     let mut end = bytes.len();
@@ -266,7 +262,7 @@ pub(crate) fn normalize_decimal(py_decimal: &str) -> PyResult<Cow<'_, str>> {
     Ok(Cow::Borrowed(trimmed))
 }
 
-pub(crate) fn normalize_non_utc_fraction(mut datetime_str: String) -> String {
+pub fn normalize_non_utc_fraction(mut datetime_str: String) -> String {
     let bytes = datetime_str.as_bytes();
     let len = bytes.len();
     let ptr = bytes.as_ptr();

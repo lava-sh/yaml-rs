@@ -4,7 +4,7 @@ use crate::from_rust::{memchr::contains_zero_byte, num::repeat_u8};
 // https://github.com/rust-lang/rust/blob/1.95.0/library/core/src/slice/ascii.rs#L428-L539
 #[inline]
 #[allow(clippy::ptr_as_ptr, clippy::cast_ptr_alignment)]
-pub(crate) fn is_dot(s: &[u8]) -> bool {
+pub fn is_dot(s: &[u8]) -> bool {
     /// Returns `true` if any byte in the word `v` is a dot ('.').
     const fn contains_dot(v: usize) -> bool {
         const DOT_MASK: usize = repeat_u8(b'.');

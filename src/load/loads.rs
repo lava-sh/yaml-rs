@@ -1,13 +1,12 @@
 use std::borrow::Cow;
 
-use memchr::{memchr, memchr2};
+use granit_parser::{Event, Parser, ScalarStyle, ScanError, Tag};
 use pyo3::{
     IntoPyObjectExt,
     prelude::*,
     types::{PyDict, PyFrozenSet, PyList, PySet, PyTuple},
 };
 use rustc_hash::FxHashMap;
-use saphyr_parser::{Event, Parser, ScalarStyle, ScanError, Tag};
 
 use crate::{
     YAMLDecodeError,
@@ -33,6 +32,7 @@ enum Frame {
         anchor: usize,
         items: Vec<(NodeId, NodeId)>,
         pending_key: Option<NodeId>,
+        is_tagged_set: bool,
     },
 }
 
@@ -44,7 +44,7 @@ pub enum BuildError {
 
 impl From<ScanError> for BuildError {
     fn from(err: ScanError) -> Self {
-        BuildError::Scan(err)
+        Self::Scan(err)
     }
 }
 
@@ -98,9 +98,7 @@ fn resolve_scalar<'a>(
 
         let bytes = str.as_bytes();
 
-        if (is_inf_nan(bytes).is_some()
-            || memchr(b'.', bytes).is_some()
-            || memchr2(b'e', b'E', bytes).is_some())
+        if (is_inf_nan(bytes).is_some() || memchr::memchr3(b'.', b'e', b'E', bytes).is_some())
             && is_float(bytes)
             && let Some(float) = parse_float(str)
         {
@@ -117,7 +115,7 @@ fn resolve_scalar<'a>(
     Ok(arena.push(Value::String(value)))
 }
 
-pub(crate) fn build_from_events(input: &'_ str) -> Result<(Arena<'_>, Vec<NodeId>), BuildError> {
+pub fn build_from_events(input: &'_ str) -> Result<(Arena<'_>, Vec<NodeId>), BuildError> {
     let parser = Parser::new_from_str(input);
 
     let mut arena = Arena::with_capacity((input.len() / 8).max(64));
@@ -181,16 +179,27 @@ pub(crate) fn build_from_events(input: &'_ str) -> Result<(Arena<'_>, Vec<NodeId
                     push_value(node, &mut stack, &mut current_root);
                 }
             }
-            Event::MappingStart(anchor_id, _) => {
+            Event::MappingStart(anchor_id, tag) => {
+                let is_tagged_set = tag
+                    .as_deref()
+                    .is_some_and(|t| t.is_yaml_core_schema() && t.suffix == "set");
+
                 stack.push(Frame::Map {
                     anchor: anchor_id,
                     items: Vec::new(),
                     pending_key: None,
+                    is_tagged_set,
                 });
             }
             Event::MappingEnd => {
-                if let Some(Frame::Map { anchor, items, .. }) = stack.pop() {
-                    let node = arena.push(Value::Map(items));
+                if let Some(Frame::Map {
+                    anchor,
+                    items,
+                    is_tagged_set,
+                    ..
+                }) = stack.pop()
+                {
+                    let node = arena.push(Value::Map(items, is_tagged_set));
 
                     if anchor != 0 {
                         anchors.insert(anchor, node);
@@ -308,7 +317,7 @@ impl AliasReplayState {
                 }
                 count
             }
-            Value::Map(pairs) => {
+            Value::Map(pairs, _) => {
                 let mut count = 2usize;
                 for (key, value) in pairs {
                     count = count
@@ -324,14 +333,6 @@ impl AliasReplayState {
 
         self.replayed_event_counts.insert(id, count);
         Ok(count)
-    }
-}
-
-#[inline]
-fn resolve_value<'a>(arena: &'a Arena<'a>, id: NodeId) -> &'a Value<'a> {
-    match arena.get(id) {
-        Value::Alias { target, .. } => resolve_value(arena, *target),
-        value => value,
     }
 }
 
@@ -392,20 +393,8 @@ fn value_to_py<'py>(
                 duplicate_key_policy,
             )
         }),
-        Value::Map(pairs) => {
-            let mut all_nulls = true;
-            let mut has_null_key = false;
-
-            for (k, v) in pairs {
-                if matches!(resolve_value(arena, *k), Value::Null) {
-                    has_null_key = true;
-                }
-                if !matches!(resolve_value(arena, *v), Value::Null) {
-                    all_nulls = false;
-                }
-            }
-
-            if all_nulls && !has_null_key && pairs.len() > 1 {
+        Value::Map(pairs, is_tagged_set) => {
+            if *is_tagged_set {
                 let py_set = PySet::empty(py)?;
                 for (k, _) in pairs {
                     let py_key = value_to_hashable(
@@ -506,7 +495,7 @@ fn value_to_hashable<'py>(
             }
             PyTuple::new(py, &vec)?.into_bound_py_any(py)
         }
-        Value::Map(pairs) => {
+        Value::Map(pairs, _) => {
             let py_dict = PyDict::new(py);
             for (k, v) in pairs {
                 let py_key = value_to_hashable(
@@ -568,7 +557,7 @@ where
     Ok(py_list.into_any())
 }
 
-pub(crate) fn to_python<'py>(
+pub fn to_python<'py>(
     py: Python<'py>,
     arena: &Arena<'_>,
     docs: &[NodeId],

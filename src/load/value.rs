@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use crate::load::types::NodeId;
 
 #[derive(Clone, Debug)]
-pub(crate) enum Value<'a> {
+pub enum Value<'a> {
     Null,
     Boolean(bool),
     Integer64(i64),
@@ -13,5 +13,5 @@ pub(crate) enum Value<'a> {
     TaggedString(Cow<'a, str>),
     Alias { target: NodeId, anchor_id: usize },
     Seq(Vec<NodeId>),
-    Map(Vec<(NodeId, NodeId)>),
+    Map(Vec<(NodeId, NodeId)>, bool),
 }

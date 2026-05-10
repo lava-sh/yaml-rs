@@ -20,13 +20,15 @@
 
 ## Installation
 
+Using pip:
+
 ```bash
-# Using pip
 pip install yaml-rs
 ```
 
+Using uv:
+
 ```bash
-# Using uv
 uv pip install yaml-rs
 ```
 

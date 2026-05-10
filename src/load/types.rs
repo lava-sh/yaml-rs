@@ -1,1 +1,1 @@
-pub(crate) type NodeId = u32;
+pub type NodeId = u32;

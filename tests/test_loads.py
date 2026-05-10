@@ -889,9 +889,22 @@ def test_alias_limits(
         yaml_rs.loads(yaml, alias_limits=limits)
 
 
-def test_alias_null_values_still_resolve_to_set() -> None:
-    yaml = "a: &n null\nb: *n\nc: *n\n"
-    assert yaml_rs.loads(yaml) == {"a", "b", "c"}
+# https://github.com/lava-sh/yaml-rs/issues/128
+def test_mapping_with_null_values_is_dict() -> None:
+    yaml = """\
+    test:
+        key_a: null
+        key_b: null
+
+    test2:
+        key_a: null
+        key_b: "b"
+    """
+
+    assert yaml_rs.loads(yaml) == {
+        "test": {"key_a": None, "key_b": None},
+        "test2": {"key_a": None, "key_b": "b"},
+    }
 
 
 @pytest.mark.parametrize(
@@ -907,7 +920,7 @@ def test_invalid_float_like_scalars(yaml: str, expected: str) -> None:
 
 
 @pytest.mark.parametrize(
-    ("loader", "kwargs", "yaml", "expected", "error"),
+    ("loader", "kwargs", "yaml", "expected", "exc_msg"),
     [
         pytest.param(
             yaml_rs.loads,
@@ -964,12 +977,12 @@ def test_duplicate_key_policy(
     kwargs: dict[str, Any],
     yaml: str,
     expected: dict[str, Any] | None,
-    error: str | None,
+    exc_msg: str | None,
 ) -> None:
     source: str | bytes = yaml.encode() if loader is yaml_rs.load else yaml
 
-    if error is not None:
-        with pytest.raises(YAMLDecodeError, match=error):
+    if exc_msg is not None:
+        with pytest.raises(YAMLDecodeError, match=exc_msg):
             loader(source, **kwargs)
     else:
         assert loader(source, **kwargs) == expected
