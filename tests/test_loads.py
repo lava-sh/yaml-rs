@@ -907,7 +907,7 @@ def test_invalid_float_like_scalars(yaml: str, expected: str) -> None:
 
 
 @pytest.mark.parametrize(
-    ("loader", "kwargs", "yaml", "expected", "error"),
+    ("loader", "kwargs", "yaml", "expected", "exc_msg"),
     [
         pytest.param(
             yaml_rs.loads,
@@ -964,12 +964,12 @@ def test_duplicate_key_policy(
     kwargs: dict[str, Any],
     yaml: str,
     expected: dict[str, Any] | None,
-    error: str | None,
+    exc_msg: str | None,
 ) -> None:
     source: str | bytes = yaml.encode() if loader is yaml_rs.load else yaml
 
-    if error is not None:
-        with pytest.raises(YAMLDecodeError, match=error):
+    if exc_msg is not None:
+        with pytest.raises(YAMLDecodeError, match=exc_msg):
             loader(source, **kwargs)
     else:
         assert loader(source, **kwargs) == expected
