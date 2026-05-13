@@ -76,12 +76,19 @@ jobs:
         with:
           node-version: "26.1.0"
 
+      - name: "Download pyodide"
+        uses: pyodide/pyodide-actions/download-pyodide@012fa537869d343726d01863a34b773fc4d96a14 # v2
+        with:
+          version: ${{ matrix.platform.pyodide-version }}
+          to: pyodide-dist
+
       - name: "Test wasm wheel"
         run: |
           uv venv .venv --python ${{ matrix.platform.python-version }}
           uv pip install --group wasm-test
           source .venv/bin/activate
-          pytest tests/test_wasm.py --runtime node --dist-dir dist -v
+          cp dist/*.whl pyodide-dist/pyodide/
+          pytest tests/test_wasm.py --runtime node --dist-dir pyodide-dist/ -v
 
       - name: "Upload wasm wheel"
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

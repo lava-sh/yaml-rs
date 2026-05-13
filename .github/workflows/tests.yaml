@@ -58,7 +58,7 @@ jobs:
         run: uv pip install --group ci
 
       - name: "Run maturin"
-        run: maturin build --out wheel --release --features mimalloc
+        run: maturin build --out wheel --features mimalloc
 
       - name: "Install built wheel"
         shell: bash
