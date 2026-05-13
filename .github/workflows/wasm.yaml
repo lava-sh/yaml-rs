@@ -12,41 +12,15 @@ jobs:
       fail-fast: false
       matrix:
         platform:
-          - python-version: "3.11"
-            # pyodide: 0.25.0 - 0.25.1
-            pyodide-version: "0.25.0, 0.25.1"
-            emsdk-version: "3.1.46"
-            rust-toolchain: "nightly-2025-02-17"
-            rustflags: >-
-              -Z allow-features=let_chains,integer_sign_cast,if_let_guard,pointer_is_aligned_to
-              -Z crate-attr=feature(let_chains,integer_sign_cast,if_let_guard)
-              -C link-arg=-sSIDE_MODULE=2
-              -C link-arg=-sWASM_BIGINT
-              -C relocation-model=pic
-
-          - python-version: "3.12"
-            # pyodide:
-            # 0.26.0a1 - 0.26.0a4 (emscripten 3.1.52)
-            # 0.26.0a5 - 0.27.7 (emscripten 3.1.58)
-            pyodide-version: "0.26.0a5, 0.27.7"
-            emsdk-version: "3.1.58"
-            rust-toolchain: "nightly-2025-02-17"
-            rustflags: >-
-              -Z allow-features=let_chains,integer_sign_cast,if_let_guard,pointer_is_aligned_to
-              -Z crate-attr=feature(let_chains,integer_sign_cast,if_let_guard)
-              -C link-arg=-sSIDE_MODULE=2
-              -C link-arg=-sWASM_BIGINT
-              -C relocation-model=pic
-
           - python-version: "3.13"
             # pyodide:
             # 0.28.0a1 (emscripten 4.0.6)
             # 0.28.0a2 (emscripten 4.0.8)
             # 0.28.0a3 - 0.29.4 (emscripten 4.0.9)
-            pyodide-version: "0.28.0a3, 0.29.4"
-            pyodide-abi-version: "2025_0"
+            pyodide-version: "0.29.4"
+            pyemscripten-version: "2025_0"
             emsdk-version: "4.0.9"
-            rust-toolchain: "nightly-2026-05-09"
+            rust-toolchain: "nightly-2026-05-12"
             rustflags: >-
               -Z emscripten-wasm-eh
               -C link-arg=-sSIDE_MODULE=2
@@ -56,11 +30,11 @@ jobs:
 
           - python-version: "3.14"
             # pyodide:
-            # 314.0.0a1 (emscripten 5.0.3)
-            pyodide-version: "314.0.0a1"
-            pyemscripten-platform-version: "2026_0"
+            # 314.0.0a1 - 314.0.0a2 (emscripten 5.0.3)
+            pyodide-version: "314.0.0a2"
+            pyemscripten-version: "2026_0"
             emsdk-version: "5.0.3"
-            rust-toolchain: "nightly-2026-05-09"
+            rust-toolchain: "nightly-2026-05-12"
             rustflags: >-
               -Z emscripten-wasm-eh
               -C link-arg=-sSIDE_MODULE=2
@@ -73,10 +47,6 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        with:
-          node-version: "26.1.0"
-
       - name: "Install Emscripten SDK"
         uses: mymindstorm/setup-emsdk@4528d102f7230f0e7b276855c01ea1159be0e984 # v16
         with:
@@ -87,57 +57,41 @@ jobs:
         with:
           enable-cache: ${{ github.ref_type != 'tag' }} # zizmor: ignore[cache-poisoning]
 
-      - name: "Convert Cargo.toml from TOML 1.1 to TOML 1.0"
-        run: uv run .github/scripts/normalize_cargo_toml.py
-
       - name: "Build WASM wheel"
         uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
         env:
           CARGO_TARGET_WASM32_UNKNOWN_EMSCRIPTEN_RUSTFLAGS: ${{ matrix.platform.rustflags }}
-          MATURIN_PYODIDE_ABI_VERSION: ${{ matrix.platform.pyodide-abi-version }}
-          MATURIN_PYEMSCRIPTEN_PLATFORM_VERSION: ${{ matrix.platform.pyemscripten-platform-version }}
+          MATURIN_PYEMSCRIPTEN_PLATFORM_VERSION: ${{ matrix.platform.pyemscripten-version }}
         with:
           container: off
           rust-toolchain: ${{ matrix.platform.rust-toolchain }}
+          sccache: ${{ github.ref_type != 'tag' }} # zizmor: ignore[cache-poisoning]
           args: >
             --out dist
             --release
             --target wasm32-unknown-emscripten
             --interpreter python${{ matrix.platform.python-version }}
 
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "26.1.0"
+
+      - name: "Download pyodide"
+        uses: pyodide/pyodide-actions/download-pyodide@012fa537869d343726d01863a34b773fc4d96a14 # v2
+        with:
+          version: ${{ matrix.platform.pyodide-version }}
+          to: pyodide-dist
+
       - name: "Test wasm wheel"
-        env:
-          PYODIDE_VERSIONS: ${{ matrix.platform.pyodide-version }}
         run: |
-          set -euo pipefail
-          set -x
-          wheel_path="$(realpath "$(ls dist/*.whl | head -n1)")"
-          test -f "${wheel_path}"
-
-          mkdir -p .__tmp-pyodide-check__
-          cd .__tmp-pyodide-check__
-          printf '%s\n' '{"name":"wasm-pyodide-check","private":true,"type":"module"}' > package.json
-          cp ../.github/scripts/test_wasm_wheel.mjs ./test_wasm_wheel.mjs
-
-          IFS=',' read -ra raw_versions <<< "${PYODIDE_VERSIONS}"
-          for raw_version in "${raw_versions[@]}"; do
-            pyodide_version="$(echo "${raw_version}" | xargs)"
-            pyodide_npm_version="${pyodide_version}"
-            if [[ "${pyodide_npm_version}" =~ ^([0-9]+\.[0-9]+\.[0-9]+)a([0-9]+)$ ]]; then
-              pyodide_npm_version="${BASH_REMATCH[1]}-alpha.${BASH_REMATCH[2]}"
-            fi
-            echo "Testing pyodide ${pyodide_version} (npm: ${pyodide_npm_version})"
-            rm -rf node_modules package-lock.json
-            npm view "pyodide@${pyodide_npm_version}" version
-            npm install --no-fund --no-audit "pyodide@${pyodide_npm_version}"
-          
-            PYODIDE_VERSION="${pyodide_version}" \
-            WHEEL_PATH="${wheel_path}" \
-            node ./test_wasm_wheel.mjs
-          done
+          uv venv .venv --python ${{ matrix.platform.python-version }}
+          uv pip install --group wasm-test
+          source .venv/bin/activate
+          cp dist/*.whl pyodide-dist/
+          pytest tests/test_wasm.py --runtime node --dist-dir pyodide-dist -v
 
       - name: "Upload wasm wheel"
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: wasm-wheels-cp${{ matrix.platform.python-version }}
+          name: wheels-wasm-${{ matrix.platform.python-version }}
           path: dist

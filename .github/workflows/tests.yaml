@@ -36,6 +36,12 @@ jobs:
         with:
           enable-cache: false
 
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        if: github.ref_type != 'tag'
+        with:
+          lookup-only: false # zizmor: ignore[cache-poisoning]
+          shared-key: ${{ matrix.os }}-${{ matrix.python-version }}
+
       - name: "Create and activate .venv"
         shell: bash
         run: |
@@ -43,6 +49,7 @@ jobs:
           if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
             echo ".venv/Scripts" >> "$GITHUB_PATH"
             echo "PYO3_PYTHON=.venv/Scripts/python" >> "$GITHUB_ENV"
+            echo "UV_LINK_MODE=copy" >> "$GITHUB_ENV"
           else
             echo ".venv/bin" >> "$GITHUB_PATH"
             echo "PYO3_PYTHON=.venv/bin/python3" >> "$GITHUB_ENV"
@@ -52,7 +59,7 @@ jobs:
         run: uv pip install --group ci
 
       - name: "Run maturin"
-        run: maturin build --out wheel --release --features mimalloc
+        run: maturin build --out wheel --features mimalloc
 
       - name: "Install built wheel"
         shell: bash
