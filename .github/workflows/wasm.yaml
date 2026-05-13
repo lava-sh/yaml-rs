@@ -87,8 +87,8 @@ jobs:
           uv venv .venv --python ${{ matrix.platform.python-version }}
           uv pip install --group wasm-test
           source .venv/bin/activate
-          cp dist/*.whl pyodide-dist/pyodide/
-          pytest tests/test_wasm.py --runtime node --dist-dir pyodide-dist/ -v
+          cp dist/*.whl pyodide-dist/
+          pytest tests/test_wasm.py --runtime node --dist-dir pyodide-dist -v
 
       - name: "Upload wasm wheel"
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
