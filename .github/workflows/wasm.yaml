@@ -12,39 +12,13 @@ jobs:
       fail-fast: false
       matrix:
         platform:
-          - python-version: "3.11"
-            # pyodide: 0.25.0 - 0.25.1
-            pyodide-version: "0.25.0, 0.25.1"
-            emsdk-version: "3.1.46"
-            rust-toolchain: "nightly-2025-02-17"
-            rustflags: >-
-              -Z allow-features=let_chains,integer_sign_cast,if_let_guard,pointer_is_aligned_to
-              -Z crate-attr=feature(let_chains,integer_sign_cast,if_let_guard)
-              -C link-arg=-sSIDE_MODULE=2
-              -C link-arg=-sWASM_BIGINT
-              -C relocation-model=pic
-
-          - python-version: "3.12"
-            # pyodide:
-            # 0.26.0a1 - 0.26.0a4 (emscripten 3.1.52)
-            # 0.26.0a5 - 0.27.7 (emscripten 3.1.58)
-            pyodide-version: "0.26.0a5, 0.27.7"
-            emsdk-version: "3.1.58"
-            rust-toolchain: "nightly-2025-02-17"
-            rustflags: >-
-              -Z allow-features=let_chains,integer_sign_cast,if_let_guard,pointer_is_aligned_to
-              -Z crate-attr=feature(let_chains,integer_sign_cast,if_let_guard)
-              -C link-arg=-sSIDE_MODULE=2
-              -C link-arg=-sWASM_BIGINT
-              -C relocation-model=pic
-
           - python-version: "3.13"
             # pyodide:
             # 0.28.0a1 (emscripten 4.0.6)
             # 0.28.0a2 (emscripten 4.0.8)
             # 0.28.0a3 - 0.29.4 (emscripten 4.0.9)
             pyodide-version: "0.28.0a3, 0.29.4"
-            pyodide-abi-version: "2025_0"
+            pyemscripten-platform-version: "2025_0"
             emsdk-version: "4.0.9"
             rust-toolchain: "nightly-2026-05-09"
             rustflags: >-
@@ -56,8 +30,8 @@ jobs:
 
           - python-version: "3.14"
             # pyodide:
-            # 314.0.0a1 (emscripten 5.0.3)
-            pyodide-version: "314.0.0a1"
+            # 314.0.0a1 - 314.0.0a2 (emscripten 5.0.3)
+            pyodide-version: "314.0.0a2"
             pyemscripten-platform-version: "2026_0"
             emsdk-version: "5.0.3"
             rust-toolchain: "nightly-2026-05-09"
@@ -87,14 +61,10 @@ jobs:
         with:
           enable-cache: ${{ github.ref_type != 'tag' }} # zizmor: ignore[cache-poisoning]
 
-      - name: "Convert Cargo.toml from TOML 1.1 to TOML 1.0"
-        run: uv run .github/scripts/normalize_cargo_toml.py
-
       - name: "Build WASM wheel"
         uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
         env:
           CARGO_TARGET_WASM32_UNKNOWN_EMSCRIPTEN_RUSTFLAGS: ${{ matrix.platform.rustflags }}
-          MATURIN_PYODIDE_ABI_VERSION: ${{ matrix.platform.pyodide-abi-version }}
           MATURIN_PYEMSCRIPTEN_PLATFORM_VERSION: ${{ matrix.platform.pyemscripten-platform-version }}
         with:
           container: off
