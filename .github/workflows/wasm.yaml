@@ -18,7 +18,7 @@ jobs:
             # 0.28.0a2 (emscripten 4.0.8)
             # 0.28.0a3 - 0.29.4 (emscripten 4.0.9)
             pyodide-version: "0.28.0a3, 0.29.4"
-            pyemscripten-platform-version: "2025_0"
+            pyemscripten-version: "2025_0"
             emsdk-version: "4.0.9"
             rust-toolchain: "nightly-2026-05-09"
             rustflags: >-
@@ -32,7 +32,7 @@ jobs:
             # pyodide:
             # 314.0.0a1 - 314.0.0a2 (emscripten 5.0.3)
             pyodide-version: "314.0.0a2"
-            pyemscripten-platform-version: "2026_0"
+            pyemscripten-version: "2026_0"
             emsdk-version: "5.0.3"
             rust-toolchain: "nightly-2026-05-09"
             rustflags: >-
@@ -65,7 +65,7 @@ jobs:
         uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
         env:
           CARGO_TARGET_WASM32_UNKNOWN_EMSCRIPTEN_RUSTFLAGS: ${{ matrix.platform.rustflags }}
-          MATURIN_PYEMSCRIPTEN_PLATFORM_VERSION: ${{ matrix.platform.pyemscripten-platform-version }}
+          MATURIN_PYEMSCRIPTEN_PLATFORM_VERSION: ${{ matrix.platform.pyemscripten-version }}
         with:
           container: off
           rust-toolchain: ${{ matrix.platform.rust-toolchain }}
