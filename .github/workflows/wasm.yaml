@@ -18,9 +18,9 @@ jobs:
             # 0.28.0a2 (emscripten 4.0.8)
             # 0.28.0a3 - 0.29.4 (emscripten 4.0.9)
             pyodide-version: "0.28.0a3, 0.29.4"
-            pyemscripten-version: "2025_0"
+            pyemscripten-version: "2026_0"
             emsdk-version: "4.0.9"
-            rust-toolchain: "nightly-2026-05-09"
+            rust-toolchain: "nightly-2026-05-12"
             rustflags: >-
               -Z emscripten-wasm-eh
               -C link-arg=-sSIDE_MODULE=2
@@ -34,7 +34,7 @@ jobs:
             pyodide-version: "314.0.0a2"
             pyemscripten-version: "2026_0"
             emsdk-version: "5.0.3"
-            rust-toolchain: "nightly-2026-05-09"
+            rust-toolchain: "nightly-2026-05-12"
             rustflags: >-
               -Z emscripten-wasm-eh
               -C link-arg=-sSIDE_MODULE=2
@@ -109,5 +109,5 @@ jobs:
       - name: "Upload wasm wheel"
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: wasm-wheels-cp${{ matrix.platform.python-version }}
+          name: wheels-wasm-${{ matrix.platform.python-version }}
           path: dist

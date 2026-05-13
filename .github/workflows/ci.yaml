@@ -1,4 +1,4 @@
-name: CI
+name: "CI"
 
 permissions: { }
 
@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   cargo-fmt:
-    name: "cargo fmt"
+    name: "cargo fmt (nightly)"
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -35,10 +35,11 @@ jobs:
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
           lookup-only: true
+
       - run: cargo fmt-nightly --check
 
   cargo-clippy:
-    name: "cargo clippy"
+    name: "cargo clippy (nightly)"
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -52,11 +53,26 @@ jobs:
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
           lookup-only: true
+
       - run: cargo clippy --all-targets
 
-  zizmor:
-    name: "zizmor"
+  tools:
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        include:
+          - name: "zizmor"
+            command: zizmor .github/
+
+          - name: "typos"
+            command: typos --config .typos.toml
+
+          - name: "rumdl"
+            command: rumdl check .
+
+    name: ${{ matrix.name }}
+
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -71,57 +87,11 @@ jobs:
         with:
           enable-cache: ${{ github.ref_type != 'tag' }} # zizmor: ignore[cache-poisoning]
 
-      - name: "Install zizmor"
-        run: uv pip install --group zizmor --system
+      - name: "Install ${{ matrix.name }}"
+        run: uv pip install --group ${{ matrix.name }} --system
 
-      - name: "Run zizmor"
-        run: zizmor .github/
-
-  typos:
-    name: "typos"
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
-
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-        with:
-          python-version: "3.14"
-
-      - name: "Install uv"
-        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
-        with:
-          enable-cache: ${{ github.ref_type != 'tag' }} # zizmor: ignore[cache-poisoning]
-
-      - name: "Install typos"
-        run: uv pip install --group typos --system
-
-      - name: "Run typos"
-        run: typos --config .typos.toml
-
-  rumdl:
-    name: "rumdl"
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
-
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-        with:
-          python-version: "3.14"
-
-      - name: "Install uv"
-        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
-        with:
-          enable-cache: ${{ github.ref_type != 'tag' }} # zizmor: ignore[cache-poisoning]
-
-      - name: "Install rumdl"
-        run: uv pip install --group rumdl --system
-
-      - name: "Run rumdl"
-        run: rumdl check .
+      - name: "Run ${{ matrix.name }}"
+        run: ${{ matrix.command }}
 
   tests:
     uses: ./.github/workflows/tests.yaml
@@ -129,17 +99,11 @@ jobs:
   tests-alpine:
     name: "tests / alpine / python 3.14"
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
-      - name: "0.2.1"
-        run: |
-          docker run --rm ghcr.io/astral-sh/uv:python3.14-alpine sh -c "
-            uv pip install yaml-rs==0.0.9 --system && \
-            python -c 'import yaml_rs; print(yaml_rs.__version__)'
-          " 2>&1 | tee /dev/stderr | grep -q "initial-exec TLS resolves to dynamic definition"
+
       - name: "latest"
         run: |
           mkdir -p /tmp/__build__
@@ -160,23 +124,23 @@ jobs:
           "
 
   linux:
-    needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, zizmor, typos, rumdl ]
+    needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, tools ]
     uses: ./.github/workflows/linux.yaml
 
   musllinux:
-    needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, zizmor, typos, rumdl ]
+    needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, tools ]
     uses: ./.github/workflows/musllinux.yaml
 
   windows:
-    needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, zizmor, typos, rumdl ]
+    needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, tools ]
     uses: ./.github/workflows/windows.yaml
 
   macos:
-    needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, zizmor, typos, rumdl ]
+    needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, tools ]
     uses: ./.github/workflows/macos.yaml
 
   wasm:
-    needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, zizmor, typos, rumdl ]
+    needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, tools ]
     uses: ./.github/workflows/wasm.yaml
 
   build-sdist:
@@ -240,21 +204,13 @@ jobs:
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
 
-      - name: "Download wasm artifacts"
-        if: ${{ github.ref_type == 'tag' }}
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          pattern: wasm-wheels-*
-          merge-multiple: true
-          path: wasm
-
       - name: "Upload wasm wheels to GitHub Release"
         if: ${{ github.ref_type == 'tag' }}
         run: |
           tag="${GITHUB_REF#refs/tags/}"
           gh release view "$tag" >/dev/null 2>&1 || \
           gh release create "$tag" --title "$tag" --notes ""
-          gh release upload "$tag" wasm/*.whl --clobber
+          gh release upload "$tag" wheels-wasm-*/*.whl --clobber
         env:
           GH_REPO: ${{ github.repository }}
           GH_TOKEN: ${{ github.token }}
