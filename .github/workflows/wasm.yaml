@@ -77,7 +77,9 @@ jobs:
 
       - name: "Test wasm wheel"
         run: |
-          uv pip install --group pytest-pyodide --system
+          uv venv .venv --python ${{ matrix.platform.python-version }}
+          uv pip install --group pytest-pyodide
+          echo ".venv/bin" >> "$GITHUB_PATH"
           pytest tests/test_wasm.py --runtime node -v
 
       - name: "Upload wasm wheel"
