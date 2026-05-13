@@ -18,7 +18,7 @@ jobs:
             # 0.28.0a2 (emscripten 4.0.8)
             # 0.28.0a3 - 0.29.4 (emscripten 4.0.9)
             pyodide-version: "0.29.4"
-            pyemscripten-version: "2026_0"
+            pyemscripten-version: "2025_0"
             emsdk-version: "4.0.9"
             rust-toolchain: "nightly-2026-05-12"
             rustflags: >-
