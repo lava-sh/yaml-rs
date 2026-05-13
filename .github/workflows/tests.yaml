@@ -37,6 +37,7 @@ jobs:
           enable-cache: false
 
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        if: github.ref_type != 'tag'
         with:
           lookup-only: false # zizmor: ignore[cache-poisoning]
           shared-key: ${{ matrix.os }}-${{ matrix.python-version }}
