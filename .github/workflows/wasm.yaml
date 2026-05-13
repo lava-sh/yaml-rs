@@ -79,7 +79,7 @@ jobs:
         run: |
           uv venv .venv --python ${{ matrix.platform.python-version }}
           uv pip install --group wasm-test
-          echo ".venv/bin" >> "$GITHUB_PATH"
+          source .venv/bin/activate
           pytest tests/test_wasm.py --runtime node -v
 
       - name: "Upload wasm wheel"
