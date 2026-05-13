@@ -20,7 +20,8 @@ def test_version(selenium: SeleniumType) -> None:
         await micropip.install("{url}{wheel}")
 
         import yaml_rs
-        assert yaml_rs.__version__""")
+        assert yaml_rs.__version__
+        """)
 
 
 def test_loads(selenium: SeleniumType) -> None:
