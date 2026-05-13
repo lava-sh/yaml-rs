@@ -10,12 +10,12 @@ from pytest_pyodide.decorator import SeleniumType
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def test_version(selenium: SeleniumType) -> None:
+def test_version(selenium_standalone: SeleniumType) -> None:
     dist = ROOT / "dist"
     with spawn_web_server(dist) as (host, port, _):
         url = f"http://{host}:{port}/"
         wheel = next(dist.glob("yaml_rs-*.whl")).name
-        selenium.run_async(f"""
+        selenium_standalone.run_async(f"""
         import micropip
         await micropip.install("{url}{wheel}")
 
@@ -24,12 +24,12 @@ def test_version(selenium: SeleniumType) -> None:
         """)
 
 
-def test_loads(selenium: SeleniumType) -> None:
+def test_loads(selenium_standalone: SeleniumType) -> None:
     dist = ROOT / "dist"
     with spawn_web_server(dist) as (host, port, _):
         url = f"http://{host}:{port}/"
         wheel = next(dist.glob("yaml_rs-*.whl")).name
-        selenium.run_async(f"""
+        selenium_standalone.run_async(f"""
         import micropip
         await micropip.install("{url}{wheel}")
 
