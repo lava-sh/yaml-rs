@@ -5,6 +5,7 @@ use pyo3::{
     types::{PyFloat, PyType},
 };
 use saphyr::{MappingOwned, ScalarOwned, YamlOwned, YamlOwned::Value};
+use std::fmt::Write;
 
 use crate::dump::{dumps::python_to_yaml, normalize::normalize_float};
 
@@ -52,4 +53,42 @@ where
         mapping.insert(python_to_yaml(&item)?, Value(ScalarOwned::Null));
     }
     Ok(YamlOwned::Mapping(mapping))
+}
+
+pub fn has_unsafe_scalar_char(value: &str) -> bool {
+    value.chars().any(|ch| {
+        matches!(
+            ch,
+            '\0'..='\u{0008}'
+                | '\u{000b}'..='\u{001f}'
+                | '\u{007f}'..='\u{009f}'
+                | '\u{2028}'
+                | '\u{2029}'
+                | '\u{FEFF}'
+        )
+    })
+}
+
+pub fn escape_double_quoted(value: &str) -> String {
+    let mut escaped = String::with_capacity(value.len());
+    for ch in value.chars() {
+        match ch {
+            '"' => escaped.push_str("\\\""),
+            '\\' => escaped.push_str("\\\\"),
+            '\t' => escaped.push_str("\\t"),
+            '\n' => escaped.push_str("\\n"),
+            '\r' => escaped.push_str("\\r"),
+            '\u{0008}' => escaped.push_str("\\b"),
+            '\u{000c}' => escaped.push_str("\\f"),
+            '\u{0085}' => escaped.push_str("\\N"),
+            '\u{2028}' => escaped.push_str("\\L"),
+            '\u{2029}' => escaped.push_str("\\P"),
+            '\u{FEFF}' => escaped.push_str("\\uFEFF"),
+            '\0'..='\u{001f}' | '\u{007f}'..='\u{009f}' => {
+                write!(escaped, "\\u{:04X}", ch as u32).expect("write to String failed");
+            }
+            _ => escaped.push(ch),
+        }
+    }
+    escaped
 }
