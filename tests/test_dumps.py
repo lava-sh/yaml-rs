@@ -165,6 +165,23 @@ def test_dumps_with_options(
     )
 
 
+def test_dumps_escapes_unsafe_scalar_chars() -> None:
+    data = {
+        "nel": "line1\x85line2",
+        "ls": "line1\u2028line2",
+        "ps": "line1\u2029line2",
+        "bom": "line1\ufeffline2",
+        "controls": "\0\a\b\v\f\r\x1b\x7f\x80\x9f",
+    }
+
+    dumped = yaml_rs.dumps(data)
+
+    for unsafe_character in "\x85\u2028\u2029\ufeff\0\a\b\v\f\r\x1b\x7f\x80\x9f":
+        assert unsafe_character not in dumped
+    assert yaml_rs.loads(dumped) == data
+    assert pyyaml.safe_load(dumped) == data
+
+
 @pytest.mark.parametrize(
     "ts",
     [ts for ts in VALID_YAMLS if ts.out_yaml is not None],

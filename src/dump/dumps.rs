@@ -17,7 +17,10 @@ use saphyr::{MappingOwned, ScalarOwned, ScalarStyle, YamlOwned, YamlOwned::Value
 use crate::{
     YAMLEncodeError,
     dump::{
-        helpers::{get_decimal, sequence_to_yaml, set_to_yaml, to_yaml_float},
+        helpers::{
+            escape_double_quoted, get_decimal, has_unsafe_scalar_char, sequence_to_yaml,
+            set_to_yaml, to_yaml_float,
+        },
         normalize::{normalize_decimal, normalize_non_utc_fraction},
     },
 };
@@ -27,9 +30,18 @@ const printer: DateTimePrinter = DateTimePrinter::new();
 
 pub fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
     match obj {
-        obj if let Ok(str) = obj.cast::<PyString>() => Ok(Value(ScalarOwned::String(
-            str.to_string_lossy().into_owned(),
-        ))),
+        obj if let Ok(str) = obj.cast::<PyString>() => {
+            let value = str.to_string_lossy();
+            if has_unsafe_scalar_char(&value) {
+                Ok(YamlOwned::Representation(
+                    escape_double_quoted(&value),
+                    ScalarStyle::DoubleQuoted,
+                    None,
+                ))
+            } else {
+                Ok(Value(ScalarOwned::String(value.into_owned())))
+            }
+        }
         obj if let Ok(bool) = obj.cast::<PyBool>() => {
             Ok(Value(ScalarOwned::Boolean(bool.is_true())))
         }
