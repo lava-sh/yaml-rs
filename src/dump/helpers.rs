@@ -1,3 +1,5 @@
+use std::fmt::Write;
+
 use pyo3::{
     Bound, Py, PyAny, PyResult, Python,
     prelude::{PyAnyMethods, PyStringMethods},
@@ -5,7 +7,6 @@ use pyo3::{
     types::{PyFloat, PyType},
 };
 use saphyr::{MappingOwned, ScalarOwned, YamlOwned, YamlOwned::Value};
-use std::fmt::Write;
 
 use crate::dump::{dumps::python_to_yaml, normalize::normalize_float};
 
