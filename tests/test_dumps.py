@@ -165,6 +165,22 @@ def test_dumps_with_options(
     )
 
 
+def test_dumps_escapes_yaml_line_separator_scalars() -> None:
+    data = {
+        "nel": "line1\x85line2",
+        "ls": "line1\u2028line2",
+        "ps": "line1\u2029line2",
+    }
+
+    dumped = yaml_rs.dumps(data)
+
+    assert "\\N" in dumped
+    assert "\\L" in dumped
+    assert "\\P" in dumped
+    assert yaml_rs.loads(dumped) == data
+    assert pyyaml.safe_load(dumped) == data
+
+
 @pytest.mark.parametrize(
     "ts",
     [ts for ts in VALID_YAMLS if ts.out_yaml is not None],

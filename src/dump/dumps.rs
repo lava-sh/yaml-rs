@@ -25,11 +25,74 @@ use crate::{
 #[allow(non_upper_case_globals)]
 const printer: DateTimePrinter = DateTimePrinter::new();
 
+fn needs_yaml_line_separator_escape(value: &str) -> bool {
+    value.contains(['\u{85}', '\u{2028}', '\u{2029}'])
+}
+
+fn escape_yaml_double_quoted(value: &str) -> String {
+    let mut escaped = String::with_capacity(value.len());
+
+    for character in value.chars() {
+        match character {
+            '"' => escaped.push_str("\\\""),
+            '\\' => escaped.push_str("\\\\"),
+            '\0' => escaped.push_str("\\u0000"),
+            '\u{01}' => escaped.push_str("\\u0001"),
+            '\u{02}' => escaped.push_str("\\u0002"),
+            '\u{03}' => escaped.push_str("\\u0003"),
+            '\u{04}' => escaped.push_str("\\u0004"),
+            '\u{05}' => escaped.push_str("\\u0005"),
+            '\u{06}' => escaped.push_str("\\u0006"),
+            '\u{07}' => escaped.push_str("\\u0007"),
+            '\u{08}' => escaped.push_str("\\b"),
+            '\t' => escaped.push_str("\\t"),
+            '\n' => escaped.push_str("\\n"),
+            '\u{0b}' => escaped.push_str("\\u000b"),
+            '\u{0c}' => escaped.push_str("\\f"),
+            '\r' => escaped.push_str("\\r"),
+            '\u{0e}' => escaped.push_str("\\u000e"),
+            '\u{0f}' => escaped.push_str("\\u000f"),
+            '\u{10}' => escaped.push_str("\\u0010"),
+            '\u{11}' => escaped.push_str("\\u0011"),
+            '\u{12}' => escaped.push_str("\\u0012"),
+            '\u{13}' => escaped.push_str("\\u0013"),
+            '\u{14}' => escaped.push_str("\\u0014"),
+            '\u{15}' => escaped.push_str("\\u0015"),
+            '\u{16}' => escaped.push_str("\\u0016"),
+            '\u{17}' => escaped.push_str("\\u0017"),
+            '\u{18}' => escaped.push_str("\\u0018"),
+            '\u{19}' => escaped.push_str("\\u0019"),
+            '\u{1a}' => escaped.push_str("\\u001a"),
+            '\u{1b}' => escaped.push_str("\\u001b"),
+            '\u{1c}' => escaped.push_str("\\u001c"),
+            '\u{1d}' => escaped.push_str("\\u001d"),
+            '\u{1e}' => escaped.push_str("\\u001e"),
+            '\u{1f}' => escaped.push_str("\\u001f"),
+            '\u{7f}' => escaped.push_str("\\u007f"),
+            '\u{85}' => escaped.push_str("\\N"),
+            '\u{2028}' => escaped.push_str("\\L"),
+            '\u{2029}' => escaped.push_str("\\P"),
+            _ => escaped.push(character),
+        }
+    }
+
+    escaped
+}
+
 pub fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
     match obj {
-        obj if let Ok(str) = obj.cast::<PyString>() => Ok(Value(ScalarOwned::String(
-            str.to_string_lossy().into_owned(),
-        ))),
+        obj if let Ok(str) = obj.cast::<PyString>() => {
+            let value = str.to_string_lossy();
+            if needs_yaml_line_separator_escape(&value) {
+                Ok(YamlOwned::Representation(
+                    escape_yaml_double_quoted(&value),
+                    ScalarStyle::DoubleQuoted,
+                    None,
+                ))
+            } else {
+                Ok(Value(ScalarOwned::String(value.into_owned())))
+            }
+        }
         obj if let Ok(bool) = obj.cast::<PyBool>() => {
             Ok(Value(ScalarOwned::Boolean(bool.is_true())))
         }
