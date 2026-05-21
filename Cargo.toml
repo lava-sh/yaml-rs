@@ -51,7 +51,7 @@ lexical-core = {
 }
 mimalloc = {
     optional = true,
-    version = "=0.1.51",
+    version = "=0.1.50",
     features = [
         # mimalloc v3
         # See: https://github.com/microsoft/mimalloc/tree/dev3?tab=readme-ov-file#branches
