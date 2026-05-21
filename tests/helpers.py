@@ -5,9 +5,9 @@ __all__ = (
     "tzinfo",
 )
 
+import datetime
 import math
 import sys
-from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from dirty_equals import IsFloatNan
@@ -19,8 +19,8 @@ else:
 
     UTC = datetime.timezone.utc
 
-tzinfo = timezone(timedelta(days=-1, seconds=68400))
-dt = datetime(
+tzinfo = datetime.timezone(datetime.timedelta(days=-1, seconds=68400))
+dt = datetime.datetime(
     2001,
     12,
     14,
