@@ -18,8 +18,9 @@ use crate::{
     YAMLEncodeError,
     dump::{
         helpers::{
-            escape_double_quoted, get_decimal, has_unsafe_scalar_char, sequence_to_yaml,
-            set_to_yaml, to_yaml_float,
+            escape_double_quoted, get_decimal, has_unsafe_scalar_char,
+            needs_double_quotes_to_preserve_multiline, sequence_to_yaml, set_to_yaml,
+            to_yaml_float,
         },
         normalize::{normalize_decimal, normalize_non_utc_fraction},
     },
@@ -32,7 +33,7 @@ pub fn python_to_yaml(obj: &Bound<'_, PyAny>) -> PyResult<YamlOwned> {
     match obj {
         obj if let Ok(str) = obj.cast::<PyString>() => {
             let value = str.to_string_lossy();
-            if has_unsafe_scalar_char(&value) {
+            if has_unsafe_scalar_char(&value) || needs_double_quotes_to_preserve_multiline(&value) {
                 Ok(YamlOwned::Representation(
                     escape_double_quoted(&value),
                     ScalarStyle::DoubleQuoted,

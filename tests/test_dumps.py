@@ -183,6 +183,48 @@ def test_dumps_escapes_unsafe_scalar_chars() -> None:
 
 
 @pytest.mark.parametrize(
+    "value",
+    [
+        "  indented\nnext",
+        "  indented\n  still indented",
+        "\tindented\nnext",
+    ],
+)
+def test_dumps_multiline_string_with_leading_indent_round_trips(
+    value: str,
+) -> None:
+    data = {
+        "lead": value,
+        "nested": {"lead": value},
+    }
+
+    dumped = yaml_rs.dumps(data, multiline_strings=True)
+
+    assert yaml_rs.loads(dumped) == data
+    assert pyyaml.safe_load(dumped) == data
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "\n",
+        "\n\n",
+        "line\n",
+        "line\n\n",
+    ],
+)
+def test_dumps_multiline_string_with_trailing_newline_round_trips(
+    value: str,
+) -> None:
+    data = {"value": value}
+
+    dumped = yaml_rs.dumps(data, multiline_strings=True)
+
+    assert yaml_rs.loads(dumped) == data
+    assert pyyaml.safe_load(dumped) == data
+
+
+@pytest.mark.parametrize(
     "ts",
     [ts for ts in VALID_YAMLS if ts.out_yaml is not None],
     ids=lambda ts: ts.id,

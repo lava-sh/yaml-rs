@@ -70,6 +70,18 @@ pub fn has_unsafe_scalar_char(value: &str) -> bool {
     })
 }
 
+pub fn needs_double_quotes_to_preserve_multiline(value: &str) -> bool {
+    if !value.contains('\n') {
+        return false;
+    }
+
+    value.ends_with('\n')
+        || value
+            .lines()
+            .find(|line| !line.is_empty())
+            .is_some_and(|line| line.starts_with([' ', '\t']))
+}
+
 pub fn escape_double_quoted(value: &str) -> String {
     let mut escaped = String::with_capacity(value.len());
     for ch in value.chars() {
