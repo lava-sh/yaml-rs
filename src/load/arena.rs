@@ -26,20 +26,26 @@ impl<'a> Arena<'a> {
     }
 
     #[inline]
+    pub fn push_intern(
+        &mut self,
+        cow: Cow<'a, str>,
+        f: impl FnOnce(&'a str) -> Value<'a>,
+    ) -> NodeId {
+        let s: &'a str = match cow {
+            Cow::Borrowed(s) => s,
+            Cow::Owned(string) => {
+                self.owned_strings.push(string);
+                // SAFETY
+                unsafe { &*ptr::from_ref::<str>(self.owned_strings.last().unwrap().as_str()) }
+            }
+        };
+        self.push(f(s))
+    }
+
+    #[inline]
     pub fn get(&self, id: NodeId) -> &Value<'_> {
         // SAFETY: `id` is produced by `push` and nodes are never removed,
         // so it is always a valid index.
         unsafe { self.nodes.get_unchecked(id as usize) }
-    }
-
-    #[inline]
-    pub fn intern(&mut self, cow: Cow<'a, str>) -> &'a str {
-        match cow {
-            Cow::Borrowed(str) => str,
-            Cow::Owned(string) => {
-                self.owned_strings.push(string);
-                unsafe { &*ptr::from_ref::<str>(self.owned_strings.last().unwrap().as_str()) }
-            }
-        }
     }
 }

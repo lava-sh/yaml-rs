@@ -73,21 +73,14 @@ fn resolve_scalar<'a>(
                         return Err(format!("Invalid value '{value}' for '!!null' tag"));
                     }
                 }
-                "binary" => {
-                    let interned = arena.intern(value);
-                    Value::String(interned)
-                }
-                "str" => {
-                    let interned = arena.intern(value);
-                    Value::TaggedString(interned)
-                }
+                "binary" => return Ok(arena.push_intern(value, Value::String)),
+                "str" => return Ok(arena.push_intern(value, Value::TaggedString)),
                 _ => return Err(format!("Invalid tag: '!!{}'", tag.suffix)),
             };
             return Ok(arena.push(v));
         }
 
-        let interned = arena.intern(value);
-        return Ok(arena.push(Value::String(interned)));
+        return Ok(arena.push_intern(value, Value::String));
     }
 
     if style == ScalarStyle::Plain {
@@ -115,8 +108,7 @@ fn resolve_scalar<'a>(
         }
     }
 
-    let interned = arena.intern(value);
-    Ok(arena.push(Value::String(interned)))
+    Ok(arena.push_intern(value, Value::String))
 }
 
 pub fn build_from_events(input: &'_ str) -> Result<(Arena<'_>, Vec<NodeId>), BuildError> {
