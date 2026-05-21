@@ -775,7 +775,7 @@ def test_parse_big_nums() -> None:
     big_float = float(f"{big_int}.{big_int}")
 
     y = f"x: {big_int}"
-    y2 = f"x: {big_float}"
+    y2 = f"x: .{big_float}"  # x: .inf
     y3 = f"x: {big_int + big_int}.{big_int}"
     y4 = f"x: -{big_int}"
 
@@ -986,3 +986,30 @@ def test_duplicate_key_policy(
             loader(source, **kwargs)
     else:
         assert loader(source, **kwargs) == expected
+
+
+@pytest.mark.parametrize(
+    ("yamls", "expected"),
+    [
+        ([".nan", ".NaN", ".NAN"], float("nan")),
+        (["nan", "NaN", "NAN"], None),
+        (["+.nan", "-.nan", "+.NaN", "-.NaN"], None),
+
+        ([".inf", ".Inf", ".INF", "+.inf", "+.Inf", "+.INF"], float("inf")),
+        (["-.inf", "-.Inf", "-.INF"], float("-inf")),
+
+        (["inf", "Inf", "INF", "+inf", "-inf"], None),
+    ],
+)
+# https://github.com/lava-sh/yaml-rs/issues/134
+def test_nan_inf(yamls: list[str], expected: Any) -> None:
+    for yaml in yamls:
+        result = yaml_rs.loads(yaml)
+
+        if expected is None:
+            assert result == yaml
+        elif math.isnan(expected):
+            assert isinstance(result, float)
+            assert math.isnan(result)
+        else:
+            assert result == expected

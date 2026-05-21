@@ -34,9 +34,9 @@ classifiers = [
 ]
 
 [dependency-groups]
-typos = ["typos == 1.46.1"]
-zizmor = ["zizmor == 1.24.1"]
-rumdl = ["rumdl == 0.1.91"]
+typos = ["typos == 1.46.2"]
+zizmor = ["zizmor == 1.25.2"]
+rumdl = ["rumdl == 0.1.96"]
 maturin = ["maturin == 1.13.3"]
 wasm-test = [
     "pytest-pyodide == 0.59.2",
@@ -45,7 +45,7 @@ wasm-test = [
 ci = [
     "pytest == 9.0.3",
     "dirty-equals == 0.11",
-    "ruff == 0.15.12",
+    "ruff == 0.15.14",
     "pyyaml == 6.0.3",
     { include-group = "maturin" },
 ]
