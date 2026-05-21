@@ -32,8 +32,8 @@ simdutf8 = {
     features = ["aarch64_neon_prefetch"],
 }
 saphyr = {
-    git = "https://github.com/bourumir-wyngs/saphyr",
-    rev = "97c21fee9f7620e72f3fe3c0658708a719420cd6",
+    git = "https://github.com/lava-sh/saphyr",
+    rev = "e12f38b41152417c619044151c7b71ccee945ffa",
 }
 granit-parser = {
     git = "https://github.com/bourumir-wyngs/granit-parser",
