@@ -38,6 +38,8 @@ impl<'a> Arena<'a> {
             Cow::Borrowed(str) => str,
             Cow::Owned(string) => {
                 self.owned_strings.push(string);
+                // SAFETY: We just pushed the string to owned_strings, so it has a stable address
+                // for the lifetime of the arena.
                 unsafe { &*ptr::from_ref::<str>(self.owned_strings.last().unwrap().as_str()) }
             }
         }

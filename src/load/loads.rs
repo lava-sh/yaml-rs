@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use granit_parser::{Event, Parser, ScalarStyle, ScanError, Tag};
 use pyo3::{
     IntoPyObjectExt,
@@ -49,44 +51,51 @@ impl From<ScanError> for BuildError {
 
 fn resolve_scalar<'a>(
     arena: &mut Arena<'a>,
-    value: &'a str,
+    value: Cow<'a, str>,
     style: ScalarStyle,
     tag: Option<&Tag>,
 ) -> Result<NodeId, String> {
     if let Some(tag) = tag {
         if tag.is_yaml_core_schema() {
             let v = match tag.suffix.as_str() {
-                "int" => parse_int(value)
+                "int" => parse_int(value.as_ref())
                     .ok_or_else(|| format!("Invalid value '{value}' for '!!int' tag"))?,
-                "float" => parse_float(value)
+                "float" => parse_float(value.as_ref())
                     .map(Value::Float)
                     .ok_or_else(|| format!("Invalid value '{value}' for '!!float' tag"))?,
-                "bool" => is_bool(value)
+                "bool" => is_bool(value.as_ref())
                     .map(Value::Boolean)
                     .ok_or_else(|| format!("Invalid value '{value}' for '!!bool' tag"))?,
                 "null" => {
-                    if value.is_empty() || is_null(value) {
+                    if value.is_empty() || is_null(value.as_ref()) {
                         Value::Null
                     } else {
                         return Err(format!("Invalid value '{value}' for '!!null' tag"));
                     }
                 }
-                "binary" => Value::String(value),
-                "str" => Value::TaggedString(value),
+                "binary" => {
+                    let interned = arena.intern(value);
+                    Value::String(interned)
+                }
+                "str" => {
+                    let interned = arena.intern(value);
+                    Value::TaggedString(interned)
+                }
                 _ => return Err(format!("Invalid tag: '!!{}'", tag.suffix)),
             };
             return Ok(arena.push(v));
         }
 
-        return Ok(arena.push(Value::String(value)));
+        let interned = arena.intern(value);
+        return Ok(arena.push(Value::String(interned)));
     }
 
     if style == ScalarStyle::Plain {
-        if value.is_empty() || is_null(value) {
+        if value.is_empty() || is_null(value.as_ref()) {
             return Ok(arena.push(Value::Null));
         }
 
-        if let Some(bool) = is_bool(value) {
+        if let Some(bool) = is_bool(value.as_ref()) {
             return Ok(arena.push(Value::Boolean(bool)));
         }
 
@@ -94,19 +103,20 @@ fn resolve_scalar<'a>(
 
         if (is_inf_nan(bytes).is_some() || memchr::memchr3(b'.', b'e', b'E', bytes).is_some())
             && is_float(bytes)
-            && let Some(float) = parse_float(value)
+            && let Some(float) = parse_float(value.as_ref())
         {
             return Ok(arena.push(Value::Float(float)));
         }
 
         if is_int(bytes)
-            && let Some(int) = parse_int(value)
+            && let Some(int) = parse_int(value.as_ref())
         {
             return Ok(arena.push(int));
         }
     }
 
-    Ok(arena.push(Value::String(value)))
+    let interned = arena.intern(value);
+    Ok(arena.push(Value::String(interned)))
 }
 
 pub fn build_from_events(input: &'_ str) -> Result<(Arena<'_>, Vec<NodeId>), BuildError> {
@@ -147,8 +157,7 @@ pub fn build_from_events(input: &'_ str) -> Result<(Arena<'_>, Vec<NodeId>), Bui
                 push_value(node, &mut stack, &mut current_root);
             }
             Event::Scalar(val, style, anchor_id, tag) => {
-                let interned = arena.intern(val);
-                let node = resolve_scalar(&mut arena, interned, style, tag.as_deref())
+                let node = resolve_scalar(&mut arena, val, style, tag.as_deref())
                     .map_err(BuildError::Decode)?;
 
                 if anchor_id != 0 {
