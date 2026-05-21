@@ -17,6 +17,9 @@ license-files = ["UNLICENSE"]
 authors = [
     { name = "chirizxc", email = "chirizxc@proton.me" }
 ]
+urls.Source = "https://github.com/lava-sh/yaml-rs"
+urls.Homepage = "https://github.com/lava-sh/yaml-rs"
+urls."Bug Tracker" = "https://github.com/lava-sh/yaml-rs/issues"
 classifiers = [
     "Typing :: Typed",
     "Programming Language :: Rust",
@@ -68,7 +71,5 @@ bench = [
     "vl-convert-python == 1.9.0.post1",
 ]
 
-[project.urls]
-Source = "https://github.com/lava-sh/yaml-rs"
-Homepage = "https://github.com/lava-sh/yaml-rs"
-"Bug Tracker" = "https://github.com/lava-sh/yaml-rs/issues"
+[tool.uv.dependency-groups]
+wasm-test = { requires-python = ">=3.11" }
