@@ -43,6 +43,7 @@ pub enum BuildError {
 }
 
 impl From<ScanError> for BuildError {
+    #[cold]
     fn from(err: ScanError) -> Self {
         Self::Scan(err)
     }
@@ -182,7 +183,7 @@ pub fn build_from_events(input: &'_ str) -> Result<(Arena<'_>, Vec<NodeId>), Bui
             Event::MappingStart(anchor_id, tag) => {
                 let is_tagged_set = tag
                     .as_deref()
-                    .is_some_and(|t| t.is_yaml_core_schema() && t.suffix == "set");
+                    .is_some_and(|t| t.is_yaml_core_schema_tag("set"));
 
                 stack.push(Frame::Map {
                     anchor: anchor_id,

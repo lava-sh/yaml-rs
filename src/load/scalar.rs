@@ -71,7 +71,7 @@ pub fn normalize_num(str: &str) -> Cow<'_, str> {
 
 #[inline]
 pub fn is_inf_nan(bytes: &[u8]) -> Option<(FloatingPointCategory, bool)> {
-    if bytes.len() < 3 || bytes.len() > 5 {
+    if bytes.len() < 4 || bytes.len() > 5 {
         return None;
     }
 
@@ -88,9 +88,13 @@ pub fn is_inf_nan(bytes: &[u8]) -> Option<(FloatingPointCategory, bool)> {
         _ => false,
     };
 
-    if i < bytes.len() && bytes[i] == b'.' {
-        i += 1;
+    let has_sign = i > 0;
+
+    if i >= bytes.len() || bytes[i] != b'.' {
+        return None;
     }
+
+    i += 1;
 
     if bytes.len() - i != 3 {
         return None;
@@ -107,7 +111,7 @@ pub fn is_inf_nan(bytes: &[u8]) -> Option<(FloatingPointCategory, bool)> {
 
     match (a, b, c) {
         (b'i', b'n', b'f') => Some((FloatingPointCategory::Infinite, neg)),
-        (b'n', b'a', b'n') => Some((FloatingPointCategory::NotANumber, neg)),
+        (b'n', b'a', b'n') if !has_sign => Some((FloatingPointCategory::NotANumber, false)),
         _ => None,
     }
 }

@@ -1,6 +1,6 @@
 [package]
 name = "yaml-rs"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2024"
 license = "Unlicense"
 repository = "https://github.com/lava-sh/yaml-rs"
@@ -32,12 +32,12 @@ simdutf8 = {
     features = ["aarch64_neon_prefetch"],
 }
 saphyr = {
-    git = "https://github.com/bourumir-wyngs/saphyr",
-    rev = "97c21fee9f7620e72f3fe3c0658708a719420cd6",
+    git = "https://github.com/lava-sh/saphyr",
+    rev = "e12f38b41152417c619044151c7b71ccee945ffa",
 }
 granit-parser = {
     git = "https://github.com/bourumir-wyngs/granit-parser",
-    rev = "d5d48541248d43550284e9e23c0edca37a298dc3",
+    rev = "e10ee63e049c2fff7390d5640c690e95c8d216a1",
 }
 lexical-core = {
     git = "https://github.com/Alexhuszagh/rust-lexical",
@@ -51,7 +51,7 @@ lexical-core = {
 }
 mimalloc = {
     optional = true,
-    version = "=0.1.50",
+    version = "=0.1.51",
     features = [
         # mimalloc v3
         # See: https://github.com/microsoft/mimalloc/tree/dev3?tab=readme-ov-file#branches

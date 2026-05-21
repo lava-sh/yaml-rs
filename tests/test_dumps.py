@@ -1,4 +1,3 @@
-import sys
 from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal
 from textwrap import dedent
@@ -8,27 +7,11 @@ import pytest
 import yaml as pyyaml
 import yaml_rs
 
-from .helpers import VALID_YAMLS, YamlTestSuite
-
-if sys.version_info >= (3, 11):
-    from datetime import UTC
-else:
-    UTC = timezone.utc
-
-dt = datetime(
-    2001,
-    12,
-    14,
-    21,
-    59,
-    43,
-    100000,
-    tzinfo=timezone(timedelta(days=-1, seconds=68400)),
-)
+from .helpers import UTC, dt
 
 
 @pytest.mark.parametrize(
-    ("v", "pattern"),
+    ("obj", "exc_msg"),
     [
         (
             type("_Class", (), {}),
@@ -48,9 +31,9 @@ dt = datetime(
         ),
     ],
 )
-def test_incorrect_dumps(v: Any, pattern: str) -> None:
-    with pytest.raises(yaml_rs.YAMLEncodeError, match=pattern):
-        yaml_rs.dumps(v)
+def test_incorrect_dumps(obj: Any, exc_msg: str) -> None:
+    with pytest.raises(yaml_rs.YAMLEncodeError, match=exc_msg):
+        yaml_rs.dumps(obj)
 
 
 @pytest.mark.parametrize(
@@ -72,7 +55,7 @@ def test_incorrect_dumps(v: Any, pattern: str) -> None:
         (time(10, 30, 0, 120000), '"10:30:00.12"'),
         (time(10, 30, 0, 123400), '"10:30:00.1234"'),
     ],
-)
+)  # fmt: off
 def test_datetime_dumps(data: Any, dumped: str) -> None:
     assert yaml_rs.dumps(data).removeprefix("---\n") == str(dumped)
 
@@ -165,6 +148,7 @@ def test_dumps_with_options(
     )
 
 
+# https://github.com/lava-sh/yaml-rs/issues/131
 def test_dumps_escapes_unsafe_scalar_chars() -> None:
     data = {
         "nel": "line1\x85line2",
@@ -176,32 +160,11 @@ def test_dumps_escapes_unsafe_scalar_chars() -> None:
 
     dumped = yaml_rs.dumps(data)
 
-    for unsafe_character in "\x85\u2028\u2029\ufeff\0\a\b\v\f\r\x1b\x7f\x80\x9f":
-        assert unsafe_character not in dumped
+    for unsafe_chars in "\x85\u2028\u2029\ufeff\0\a\b\v\f\r\x1b\x7f\x80\x9f":
+        assert unsafe_chars not in dumped
+
     assert yaml_rs.loads(dumped) == data
     assert pyyaml.safe_load(dumped) == data
-
-
-@pytest.mark.parametrize(
-    "ts",
-    [ts for ts in VALID_YAMLS if ts.out_yaml is not None],
-    ids=lambda ts: ts.id,
-)
-def test_valid_yamls_dumps_from_test_suite(ts: YamlTestSuite) -> None:
-    loaded = yaml_rs.loads(ts.in_yaml.read_text("utf-8"), parse_datetime=False)
-
-    if isinstance(loaded, list):
-        dumped = "".join(yaml_rs.dumps(doc) for doc in loaded)
-    else:
-        dumped = yaml_rs.dumps(loaded)
-
-    expected = ts.out_yaml.read_text("utf-8")
-
-    try:
-        # FIXME(chiri)
-        assert dumped == expected
-    except AssertionError:
-        pytest.skip(f"dump mismatch: {ts.id}")
 
 
 # https://github.com/lava-sh/yaml-rs/issues/69
@@ -249,7 +212,7 @@ def test_dumps_nums(data: dict[str, float | int]) -> None:
 
 
 @pytest.mark.parametrize(
-    ("v", "expected"),
+    ("obj", "expected"),
     [
         (Decimal(0), "x: 0.0"),
         (Decimal(1), "x: 1.0"),
@@ -281,5 +244,45 @@ def test_dumps_nums(data: dict[str, float | int]) -> None:
         (Decimal("  -2.5  "), "x: -2.5"),
     ],
 )
-def test_dumps_decimal(v: Decimal, expected: str) -> None:
-    assert yaml_rs.dumps({"x": v}).removeprefix("---\n") == expected
+def test_dumps_decimal(obj: Decimal, expected: str) -> None:
+    assert yaml_rs.dumps({"x": obj}).removeprefix("---\n") == expected
+
+
+@pytest.mark.parametrize(
+    "obj",
+    [
+        "  indented\nnext",
+        "  indented\n  still indented",
+        "\tindented\nnext",
+    ],
+)
+# https://github.com/lava-sh/yaml-rs/issues/130
+def test_leading_indent_round_trip(obj: str) -> None:
+    data = {
+        "lead": obj,
+        "nested": {"lead": obj},
+    }
+
+    dumped = yaml_rs.dumps(data, multiline_strings=True)
+
+    assert yaml_rs.loads(dumped) == data
+    assert pyyaml.safe_load(dumped) == data
+
+
+@pytest.mark.parametrize(
+    "obj",
+    [
+        "\n",
+        "\n\n",
+        "line\n",
+        "line\n\n",
+    ],
+)
+# # https://github.com/lava-sh/yaml-rs/issues/130
+def test_trailing_newline_round_trip(obj: str) -> None:
+    data = {"value": obj}
+
+    dumped = yaml_rs.dumps(data, multiline_strings=True)
+
+    assert yaml_rs.loads(dumped) == data
+    assert pyyaml.safe_load(dumped) == data

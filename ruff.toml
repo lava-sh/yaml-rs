@@ -57,7 +57,7 @@ ignore = [
     "E501",
     "ERA001",
 ]
-"tests/test_dumps.py" = [
+"tests/test_dumps*.py" = [
     "DTZ001", # Check for datetime instantiations that do not specify a timezone
     "FIX001", # Check for "FIXME" comments
     ########

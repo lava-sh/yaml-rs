@@ -1,7 +1,5 @@
-import json
 import math
 import platform
-import sys
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Literal
 
@@ -9,19 +7,11 @@ import pytest
 import yaml_rs
 from yaml_rs import AliasLimits, DuplicateKeyPolicy, YAMLDecodeError
 
-from .helpers import INVALID_YAMLS, SKIPPED_YAMLS, VALID_YAMLS, YamlTestSuite, _is_nan
-
-if sys.version_info >= (3, 11):
-    from datetime import UTC
-else:
-    UTC = timezone.utc
-
-_tzinfo = timezone(timedelta(days=-1, seconds=68400))
-dt = datetime(2001, 12, 14, 21, 59, 43, 100000, tzinfo=_tzinfo)
+from .helpers import UTC, dt, is_nan, tzinfo
 
 
 @pytest.mark.parametrize(
-    ("bad_yaml", "exc_msg"),
+    ("yaml", "exc_msg"),
     [
         (
             "[ [ [ [",
@@ -81,9 +71,10 @@ comment intercepting the multiline text""",
         ("x: !!invalid", "Invalid tag: '!!invalid'"),
     ],
 )  # fmt: off
-def test_yaml_loads_decode_error(bad_yaml: str, exc_msg: str) -> None:
+def test_yaml_loads_decode_error(yaml: str, exc_msg: str) -> None:
     with pytest.raises(yaml_rs.YAMLDecodeError) as exc_info:
-        yaml_rs.loads(bad_yaml)
+        yaml_rs.loads(yaml)
+
     assert str(exc_info.value) == exc_msg
 
 
@@ -409,8 +400,8 @@ def test_parse_datetime(yaml: str, parsed: Any) -> None:
          "date: 2002-12-14\n",
          {"canonical": datetime(2001, 12, 15, 2, 59, 43, 100000, tzinfo=UTC),
           "date": date(2002, 12, 14),
-          "iso8601": datetime(2001, 12, 14, 21, 59, 43, 100000, tzinfo=_tzinfo),
-          "spaced": datetime(2001, 12, 14, 21, 59, 43, 100000, tzinfo=_tzinfo)}),
+          "iso8601": datetime(2001, 12, 14, 21, 59, 43, 100000, tzinfo=tzinfo),
+          "spaced": datetime(2001, 12, 14, 21, 59, 43, 100000, tzinfo=tzinfo)}),
         # Example 2.23 Various Explicit Tags
         ("---\n"
          "not-date: !!str 2002-04-28\n"
@@ -548,13 +539,13 @@ def test_parse_datetime(yaml: str, parsed: Any) -> None:
          "  line: 58\n"
          "  code: |-\n"
          "    foo = bar\n",
-         [{"Time": datetime(2001, 11, 23, 15, 1, 42, tzinfo=_tzinfo),
+         [{"Time": datetime(2001, 11, 23, 15, 1, 42, tzinfo=tzinfo),
            "User": "ed",
            "Warning": "This is an error message for the log file"},
-          {"Time": datetime(2001, 11, 23, 15, 2, 31, tzinfo=_tzinfo),
+          {"Time": datetime(2001, 11, 23, 15, 2, 31, tzinfo=tzinfo),
            "User": "ed",
            "Warning": "A slightly different error message."},
-          {"Date": datetime(2001, 11, 23, 15, 3, 17, tzinfo=_tzinfo),
+          {"Date": datetime(2001, 11, 23, 15, 3, 17, tzinfo=tzinfo),
            "Fatal": 'Unknown variable "bar"',
            "Stack": [{"code": 'x = MoreObject("345\\n")\n',
                       "file": "TopClass.py",
@@ -666,7 +657,7 @@ def test_parse_datetime(yaml: str, parsed: Any) -> None:
     ],
 )  # fmt: off
 def test_parse_yaml_spec_examples(yaml: str, parsed: Any) -> None:
-    assert yaml_rs.loads(yaml) == _is_nan(parsed), (
+    assert yaml_rs.loads(yaml) == is_nan(parsed), (
         f"\nRaw: {yaml}\n"
         f"\nParsed: {parsed}\n"
     )  # fmt: off
@@ -689,82 +680,6 @@ def test_parse_yaml_tags(yaml: str, parsed: Any) -> None:
     assert yaml_rs.loads(yaml) == parsed
 
 
-@pytest.mark.parametrize("ts", VALID_YAMLS, ids=lambda ts: ts.id)
-def test_valid_yamls_from_test_suite(ts: YamlTestSuite) -> None:
-    actual = yaml_rs.loads(
-        ts.in_yaml.read_text("utf-8"),
-        parse_datetime=False,
-    )
-
-    text = ts.in_json.read_text("utf-8")
-
-    if text == "":  # noqa: PLC1901
-        expected = None
-    else:
-        try:
-            expected = json.loads(text)
-        except json.JSONDecodeError:
-            decoder = json.JSONDecoder()
-            expected = []
-            pos = 0
-            n = len(text)
-
-            while pos < n:
-                obj, pos = decoder.raw_decode(text, pos)
-                expected.append(obj)
-                while pos < n and text[pos] in " \t\r\n":
-                    pos += 1
-
-    if isinstance(expected, list) and not isinstance(actual, list):
-        actual = [actual]
-
-    # JSON does not have a native "set" type, while Python does.
-    # In YAML, the tag `!!set` represents a set, and Python YAML parsers
-    # (including ours) map it to a Python `set`.
-    # ```python
-    # import yaml as py_yaml
-    #
-    # y = """\
-    # --- !!set
-    # ? Mark McGwire
-    # ? Sammy Sosa
-    # ? Ken Griffey
-    # """
-    # print(py_yaml.safe_load(y))  # {'Mark McGwire', 'Ken Griffey', 'Sammy Sosa'}
-    # print(type(py_yaml.safe_load(y)))  # <class 'set'>
-    # ```
-    if (
-        isinstance(actual, set)
-        and isinstance(expected, dict)
-        and all(v is None for v in expected.values())
-    ):
-        actual = dict.fromkeys(actual)
-
-    assert _is_nan(actual) == _is_nan(expected), (
-        f"\nTest case: {ts.id}\n"
-        f"\nYAML file: {ts.in_yaml}\n"
-        f"\nActual:\n{actual!r}\n"
-        f"\nExpected:\n{expected!r}\n"
-    )
-
-
-@pytest.mark.parametrize("ts", SKIPPED_YAMLS, ids=lambda ts: ts.id)
-def test_skipped_yamls_from_test_suite(ts: YamlTestSuite) -> None:
-    # For these cases, there are no `.json` files in `yaml-test-suite`,
-    # so we have nothing to compare them to, just check that they load without error.
-    yaml_rs.loads(
-        ts.in_yaml.read_text("utf-8"),
-        parse_datetime=False,
-        duplicate_key_policy=DuplicateKeyPolicy.LastWins,
-    )
-
-
-@pytest.mark.parametrize("ts", INVALID_YAMLS, ids=lambda ts: ts.id)
-def test_invalid_yamls_from_test_suite(ts: YamlTestSuite) -> None:
-    with pytest.raises(yaml_rs.YAMLDecodeError):
-        yaml_rs.loads(ts.in_yaml.read_text("utf-8"), parse_datetime=False)
-
-
 @pytest.mark.skipif(
     platform.python_implementation() == "PyPy",
     reason="PyPy's `Decimal` parsing hits the int string "
@@ -775,7 +690,7 @@ def test_parse_big_nums() -> None:
     big_float = float(f"{big_int}.{big_int}")
 
     y = f"x: {big_int}"
-    y2 = f"x: {big_float}"
+    y2 = f"x: .{big_float}"  # x: .inf
     y3 = f"x: {big_int + big_int}.{big_int}"
     y4 = f"x: -{big_int}"
 
@@ -986,3 +901,28 @@ def test_duplicate_key_policy(
             loader(source, **kwargs)
     else:
         assert loader(source, **kwargs) == expected
+
+
+@pytest.mark.parametrize(
+    ("yamls", "expected"),
+    [
+        ([".nan", ".NaN", ".NAN"], float("nan")),
+        (["nan", "NaN", "NAN"], None),
+        (["+.nan", "-.nan", "+.NaN", "-.NaN"], None),
+        ([".inf", ".Inf", ".INF", "+.inf", "+.Inf", "+.INF"], float("inf")),
+        (["-.inf", "-.Inf", "-.INF"], float("-inf")),
+        (["inf", "Inf", "INF", "+inf", "-inf"], None),
+    ],
+)
+# https://github.com/lava-sh/yaml-rs/issues/134
+def test_nan_inf(yamls: list[str], expected: Any) -> None:
+    for yaml in yamls:
+        result = yaml_rs.loads(yaml)
+
+        if expected is None:
+            assert result == yaml
+        elif math.isnan(expected):
+            assert isinstance(result, float)
+            assert math.isnan(result)
+        else:
+            assert result == expected
