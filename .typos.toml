@@ -6,5 +6,14 @@ extend-exclude = [
 ]
 
 [default.extend-words]
-# For line: `56enmleECcgggoBADs=`
+# error: `BA` should be `BY`, `BE`
+#    --> .\tests\test_loads.py:413:26
+#     |
+# 413 |          " 56enmleECcgggoBADs=\n"
+#     |                          ^^
+# error: `BA` should be `BY`, `BE`
+#    --> .\tests\test_loads.py:426:37
+#     |
+# 426 |                      "56enmleECcgggoBADs=\n"}),
+#     |                                     ^^
 ba = "ba"
