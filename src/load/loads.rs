@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use granit_parser::{Event, Parser, ScalarStyle, ScanError, Tag};
 use pyo3::{
     IntoPyObjectExt,
@@ -51,29 +49,26 @@ impl From<ScanError> for BuildError {
 
 fn resolve_scalar<'a>(
     arena: &mut Arena<'a>,
-    value: Cow<'a, str>,
+    value: &'a str,
     style: ScalarStyle,
     tag: Option<&Tag>,
 ) -> Result<NodeId, String> {
     if let Some(tag) = tag {
         if tag.is_yaml_core_schema() {
             let v = match tag.suffix.as_str() {
-                "int" => parse_int(value.as_ref())
-                    .ok_or_else(|| format!("Invalid value '{}' for '!!int' tag", value.as_ref()))?,
-                "float" => parse_float(value.as_ref())
+                "int" => parse_int(value)
+                    .ok_or_else(|| format!("Invalid value '{value}' for '!!int' tag"))?,
+                "float" => parse_float(value)
                     .map(Value::Float)
-                    .ok_or_else(|| {
-                        format!("Invalid value '{}' for '!!float' tag", value.as_ref())
-                    })?,
-                "bool" => is_bool(value.as_ref()).map(Value::Boolean).ok_or_else(|| {
-                    format!("Invalid value '{}' for '!!bool' tag", value.as_ref())
-                })?,
+                    .ok_or_else(|| format!("Invalid value '{value}' for '!!float' tag"))?,
+                "bool" => is_bool(value)
+                    .map(Value::Boolean)
+                    .ok_or_else(|| format!("Invalid value '{value}' for '!!bool' tag"))?,
                 "null" => {
-                    let str = value.as_ref();
-                    if str.is_empty() || is_null(str) {
+                    if value.is_empty() || is_null(value) {
                         Value::Null
                     } else {
-                        return Err(format!("Invalid value '{str}' for '!!null' tag"));
+                        return Err(format!("Invalid value '{value}' for '!!null' tag"));
                     }
                 }
                 "binary" => Value::String(value),
@@ -87,27 +82,25 @@ fn resolve_scalar<'a>(
     }
 
     if style == ScalarStyle::Plain {
-        let str = value.as_ref();
-
-        if str.is_empty() || is_null(str) {
+        if value.is_empty() || is_null(value) {
             return Ok(arena.push(Value::Null));
         }
 
-        if let Some(bool) = is_bool(str) {
+        if let Some(bool) = is_bool(value) {
             return Ok(arena.push(Value::Boolean(bool)));
         }
 
-        let bytes = str.as_bytes();
+        let bytes = value.as_bytes();
 
         if (is_inf_nan(bytes).is_some() || memchr::memchr3(b'.', b'e', b'E', bytes).is_some())
             && is_float(bytes)
-            && let Some(float) = parse_float(str)
+            && let Some(float) = parse_float(value)
         {
             return Ok(arena.push(Value::Float(float)));
         }
 
         if is_int(bytes)
-            && let Some(int) = parse_int(str)
+            && let Some(int) = parse_int(value)
         {
             return Ok(arena.push(int));
         }
@@ -154,7 +147,8 @@ pub fn build_from_events(input: &'_ str) -> Result<(Arena<'_>, Vec<NodeId>), Bui
                 push_value(node, &mut stack, &mut current_root);
             }
             Event::Scalar(val, style, anchor_id, tag) => {
-                let node = resolve_scalar(&mut arena, val, style, tag.as_deref())
+                let interned = arena.intern(val);
+                let node = resolve_scalar(&mut arena, interned, style, tag.as_deref())
                     .map_err(BuildError::Decode)?;
 
                 if anchor_id != 0 {
@@ -360,7 +354,7 @@ fn value_to_py<'py>(
         Value::Integer64(int_64) => int_64.into_bound_py_any(py),
         Value::BigInteger(big_int) => big_int.into_bound_py_any(py),
         Value::Float(float) => float.into_bound_py_any(py),
-        Value::TaggedString(string_tagged) => string_tagged.into_bound_py_any(py),
+        Value::TaggedString(string_tagged) => (*string_tagged).into_bound_py_any(py),
         Value::Alias { target, anchor_id } => {
             let next_depth = alias_state.enter_alias(arena, *target, *anchor_id, alias_depth)?;
             value_to_py(
@@ -374,14 +368,13 @@ fn value_to_py<'py>(
             )
         }
         Value::String(string) => {
-            let str = string.as_ref();
             if parse_datetime
-                && is_datetime(str.as_bytes())
-                && let Ok(Some(dt)) = parse_py_datetime(py, str)
+                && is_datetime(string.as_bytes())
+                && let Ok(Some(dt)) = parse_py_datetime(py, string)
             {
                 return Ok(dt);
             }
-            str.into_bound_py_any(py)
+            (*string).into_bound_py_any(py)
         }
         Value::Seq(items) => to_py_list(py, items, |child| {
             value_to_py(

@@ -1,8 +1,11 @@
+use std::{borrow::Cow, ptr};
+
 use crate::load::{types::NodeId, value::Value};
 
 #[derive(Debug)]
 pub struct Arena<'a> {
     nodes: Vec<Value<'a>>,
+    owned_strings: Vec<String>,
 }
 
 impl<'a> Arena<'a> {
@@ -10,6 +13,7 @@ impl<'a> Arena<'a> {
     pub fn with_capacity(c: usize) -> Self {
         Self {
             nodes: Vec::with_capacity(c),
+            owned_strings: Vec::new(),
         }
     }
 
@@ -26,5 +30,16 @@ impl<'a> Arena<'a> {
         // SAFETY: `id` is produced by `push` and nodes are never removed,
         // so it is always a valid index.
         unsafe { self.nodes.get_unchecked(id as usize) }
+    }
+
+    #[inline]
+    pub fn intern(&mut self, cow: Cow<'a, str>) -> &'a str {
+        match cow {
+            Cow::Borrowed(str) => str,
+            Cow::Owned(string) => {
+                self.owned_strings.push(string);
+                unsafe { &*ptr::from_ref::<str>(self.owned_strings.last().unwrap().as_str()) }
+            }
+        }
     }
 }
