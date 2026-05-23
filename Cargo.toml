@@ -35,7 +35,7 @@ saphyr = {
     git = "https://github.com/lava-sh/saphyr",
     rev = "e12f38b41152417c619044151c7b71ccee945ffa",
 }
-# after the commit: https://github.com/bourumir-wyngs/granit-parser/commit/e10ee63e049c2fff7390d5640c690e95c8d216a1
+# after https://github.com/bourumir-wyngs/granit-parser/commit/e10ee63e049c2fff7390d5640c690e95c8d216a1
 # comment parsing was added, which degrades performance because it requires more operations
 granit-parser = {
     git = "https://github.com/bourumir-wyngs/granit-parser",
