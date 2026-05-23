@@ -37,7 +37,7 @@ saphyr = {
 }
 granit-parser = {
     git = "https://github.com/bourumir-wyngs/granit-parser",
-    rev = "e10ee63e049c2fff7390d5640c690e95c8d216a1",
+    rev = "63cbe1591aa96d108ca5055a7e60c831b687d0a1",
 }
 lexical-core = {
     git = "https://github.com/Alexhuszagh/rust-lexical",
@@ -51,7 +51,7 @@ lexical-core = {
 }
 mimalloc = {
     optional = true,
-    version = "=0.1.51",
+    version = "=0.1.52",
     features = [
         # mimalloc v3
         # See: https://github.com/microsoft/mimalloc/tree/dev3?tab=readme-ov-file#branches
