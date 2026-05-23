@@ -125,7 +125,6 @@ pub fn build_from_events(input: &'_ str) -> Result<(Arena<'_>, Vec<NodeId>), Bui
         let (event, _) = event_res?;
 
         match event {
-            Event::StreamStart | Event::StreamEnd | Event::Nothing => {}
             Event::DocumentStart(_) => {
                 current_root = None;
                 stack.clear();
@@ -204,6 +203,7 @@ pub fn build_from_events(input: &'_ str) -> Result<(Arena<'_>, Vec<NodeId>), Bui
                     push_value(node, &mut stack, &mut current_root);
                 }
             }
+            Event::StreamStart | Event::StreamEnd | Event::Nothing => {}
         }
     }
 
@@ -303,9 +303,9 @@ impl AliasReplayState {
             | Value::Float(_)
             | Value::String(_)
             | Value::TaggedString(_)
-            | Value::Alias { .. } => 1usize,
+            | Value::Alias { .. } => 1_usize,
             Value::Seq(items) => {
-                let mut count = 2usize;
+                let mut count = 2_usize;
                 for &child in items {
                     count = count
                         .checked_add(self.replayed_event_count(arena, child)?)
@@ -314,7 +314,7 @@ impl AliasReplayState {
                 count
             }
             Value::Map(pairs, _) => {
-                let mut count = 2usize;
+                let mut count = 2_usize;
                 for (key, value) in pairs {
                     count = count
                         .checked_add(self.replayed_event_count(arena, *key)?)
