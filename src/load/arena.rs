@@ -1,8 +1,11 @@
+use std::{borrow::Cow, ptr};
+
 use crate::load::{types::NodeId, value::Value};
 
 #[derive(Debug)]
 pub struct Arena<'a> {
     nodes: Vec<Value<'a>>,
+    owned_strings: Vec<String>,
 }
 
 impl<'a> Arena<'a> {
@@ -10,6 +13,7 @@ impl<'a> Arena<'a> {
     pub fn with_capacity(c: usize) -> Self {
         Self {
             nodes: Vec::with_capacity(c),
+            owned_strings: Vec::new(),
         }
     }
 
@@ -19,6 +23,23 @@ impl<'a> Arena<'a> {
         debug_assert!(id < u32::MAX, "Arena capacity exceeded");
         self.nodes.push(value);
         id
+    }
+
+    #[inline]
+    pub fn push_intern(
+        &mut self,
+        cow: Cow<'a, str>,
+        f: impl FnOnce(&'a str) -> Value<'a>,
+    ) -> NodeId {
+        let s: &'a str = match cow {
+            Cow::Borrowed(s) => s,
+            Cow::Owned(string) => {
+                self.owned_strings.push(string);
+                // SAFETY
+                unsafe { &*ptr::from_ref::<str>(self.owned_strings.last().unwrap().as_str()) }
+            }
+        };
+        self.push(f(s))
     }
 
     #[inline]

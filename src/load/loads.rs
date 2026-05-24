@@ -59,61 +59,56 @@ fn resolve_scalar<'a>(
         if tag.is_yaml_core_schema() {
             let v = match tag.suffix.as_str() {
                 "int" => parse_int(value.as_ref())
-                    .ok_or_else(|| format!("Invalid value '{}' for '!!int' tag", value.as_ref()))?,
+                    .ok_or_else(|| format!("Invalid value '{value}' for '!!int' tag"))?,
                 "float" => parse_float(value.as_ref())
                     .map(Value::Float)
-                    .ok_or_else(|| {
-                        format!("Invalid value '{}' for '!!float' tag", value.as_ref())
-                    })?,
-                "bool" => is_bool(value.as_ref()).map(Value::Boolean).ok_or_else(|| {
-                    format!("Invalid value '{}' for '!!bool' tag", value.as_ref())
-                })?,
+                    .ok_or_else(|| format!("Invalid value '{value}' for '!!float' tag"))?,
+                "bool" => is_bool(value.as_ref())
+                    .map(Value::Boolean)
+                    .ok_or_else(|| format!("Invalid value '{value}' for '!!bool' tag"))?,
                 "null" => {
-                    let str = value.as_ref();
-                    if str.is_empty() || is_null(str) {
+                    if value.is_empty() || is_null(value.as_ref()) {
                         Value::Null
                     } else {
-                        return Err(format!("Invalid value '{str}' for '!!null' tag"));
+                        return Err(format!("Invalid value '{value}' for '!!null' tag"));
                     }
                 }
-                "binary" => Value::String(value),
-                "str" => Value::TaggedString(value),
+                "binary" => return Ok(arena.push_intern(value, Value::String)),
+                "str" => return Ok(arena.push_intern(value, Value::TaggedString)),
                 _ => return Err(format!("Invalid tag: '!!{}'", tag.suffix)),
             };
             return Ok(arena.push(v));
         }
 
-        return Ok(arena.push(Value::String(value)));
+        return Ok(arena.push_intern(value, Value::String));
     }
 
     if style == ScalarStyle::Plain {
-        let str = value.as_ref();
-
-        if str.is_empty() || is_null(str) {
+        if value.is_empty() || is_null(value.as_ref()) {
             return Ok(arena.push(Value::Null));
         }
 
-        if let Some(bool) = is_bool(str) {
+        if let Some(bool) = is_bool(value.as_ref()) {
             return Ok(arena.push(Value::Boolean(bool)));
         }
 
-        let bytes = str.as_bytes();
+        let bytes = value.as_bytes();
 
         if (is_inf_nan(bytes).is_some() || memchr::memchr3(b'.', b'e', b'E', bytes).is_some())
             && is_float(bytes)
-            && let Some(float) = parse_float(str)
+            && let Some(float) = parse_float(value.as_ref())
         {
             return Ok(arena.push(Value::Float(float)));
         }
 
         if is_int(bytes)
-            && let Some(int) = parse_int(str)
+            && let Some(int) = parse_int(value.as_ref())
         {
             return Ok(arena.push(int));
         }
     }
 
-    Ok(arena.push(Value::String(value)))
+    Ok(arena.push_intern(value, Value::String))
 }
 
 pub fn build_from_events(input: &'_ str) -> Result<(Arena<'_>, Vec<NodeId>), BuildError> {
@@ -130,7 +125,6 @@ pub fn build_from_events(input: &'_ str) -> Result<(Arena<'_>, Vec<NodeId>), Bui
         let (event, _) = event_res?;
 
         match event {
-            Event::StreamStart | Event::StreamEnd | Event::Nothing => {}
             Event::DocumentStart(_) => {
                 current_root = None;
                 stack.clear();
@@ -209,6 +203,7 @@ pub fn build_from_events(input: &'_ str) -> Result<(Arena<'_>, Vec<NodeId>), Bui
                     push_value(node, &mut stack, &mut current_root);
                 }
             }
+            Event::StreamStart | Event::StreamEnd | Event::Nothing => {}
         }
     }
 
@@ -308,9 +303,9 @@ impl AliasReplayState {
             | Value::Float(_)
             | Value::String(_)
             | Value::TaggedString(_)
-            | Value::Alias { .. } => 1usize,
+            | Value::Alias { .. } => 1_usize,
             Value::Seq(items) => {
-                let mut count = 2usize;
+                let mut count = 2_usize;
                 for &child in items {
                     count = count
                         .checked_add(self.replayed_event_count(arena, child)?)
@@ -319,7 +314,7 @@ impl AliasReplayState {
                 count
             }
             Value::Map(pairs, _) => {
-                let mut count = 2usize;
+                let mut count = 2_usize;
                 for (key, value) in pairs {
                     count = count
                         .checked_add(self.replayed_event_count(arena, *key)?)
@@ -360,7 +355,7 @@ fn value_to_py<'py>(
         Value::Integer64(int_64) => int_64.into_bound_py_any(py),
         Value::BigInteger(big_int) => big_int.into_bound_py_any(py),
         Value::Float(float) => float.into_bound_py_any(py),
-        Value::TaggedString(string_tagged) => string_tagged.into_bound_py_any(py),
+        Value::TaggedString(string_tagged) => (*string_tagged).into_bound_py_any(py),
         Value::Alias { target, anchor_id } => {
             let next_depth = alias_state.enter_alias(arena, *target, *anchor_id, alias_depth)?;
             value_to_py(
@@ -374,14 +369,13 @@ fn value_to_py<'py>(
             )
         }
         Value::String(string) => {
-            let str = string.as_ref();
             if parse_datetime
-                && is_datetime(str.as_bytes())
-                && let Ok(Some(dt)) = parse_py_datetime(py, str)
+                && is_datetime(string.as_bytes())
+                && let Ok(Some(dt)) = parse_py_datetime(py, string)
             {
                 return Ok(dt);
             }
-            str.into_bound_py_any(py)
+            (*string).into_bound_py_any(py)
         }
         Value::Seq(items) => to_py_list(py, items, |child| {
             value_to_py(
