@@ -18,12 +18,12 @@ pyo3 = {
         "jiff-02",
     ]
 }
-jiff = "=0.2.24"
+jiff = "=0.2.27"
 itoa = "=1.0.18"
 num-bigint = "=0.4.6"
 rustc-hash = "=2.1.2"
 memchr = {
-    version = "=2.8.0",
+    version = "=2.8.1",
     default-features = false,
 }
 encoding_rs = "=0.8.35"
