@@ -1,4 +1,4 @@
-// https://github.com/rust-lang/rust/blob/1.95.0/library/core/src/num/dec2flt/common.rs#L56-L64
+// https://github.com/rust-lang/rust/blob/1.96.0/library/core/src/num/imp/dec2flt/common.rs#L56-L64
 #[inline]
 pub fn is_8digits(v: u64) -> bool {
     let a = v.wrapping_add(0x4646_4646_4646_4646);
@@ -6,7 +6,7 @@ pub fn is_8digits(v: u64) -> bool {
     (a | b) & 0x8080_8080_8080_8080 == 0
 }
 
-// https://github.com/rust-lang/rust/blob/1.95.0/library/core/src/num/dec2flt/parse.rs#L17-L26
+// https://github.com/rust-lang/rust/blob/1.95.0/library/core/src/num/dec2flt/parse.rs#L9-L26
 #[allow(clippy::cast_lossless)]
 fn parse_8digits(mut v: u64) -> u64 {
     const MASK: u64 = 0x0000_00FF_0000_00FF;

@@ -75,7 +75,7 @@ pub fn is_inf_nan(bytes: &[u8]) -> Option<(FloatingPointCategory, bool)> {
         return None;
     }
 
-    let mut i = 0usize;
+    let mut i = 0_usize;
     let neg = match bytes[0] {
         b'+' => {
             i = 1;
@@ -291,7 +291,7 @@ static CHAR_TO_DIGIT: [u8; 256] = {
 
 #[inline]
 fn parse_i64(bytes: &[u8], radix: u32, neg: bool) -> Option<i64> {
-    let mut acc = 0u64;
+    let mut acc = 0_u64;
     let mut has_digit = false;
 
     let lim = if neg {
@@ -342,16 +342,16 @@ pub fn parse_int<'a>(str: &str) -> Option<Value<'a>> {
 
     let bytes = str.as_bytes();
     let (neg, sign_offset, mut index) = match bytes[0] {
-        b'+' => (false, 1usize, 1usize),
-        b'-' => (true, 1usize, 1usize),
-        _ => (false, 0usize, 0usize),
+        b'+' => (false, 1_usize, 1_usize),
+        b'-' => (true, 1_usize, 1_usize),
+        _ => (false, 0_usize, 0_usize),
     };
 
     if index >= bytes.len() {
         return None;
     }
 
-    let mut radix = 10u32;
+    let mut radix = 10_u32;
     let mut prefixed = false;
     if bytes[index] == b'0' && index + 1 < bytes.len() {
         match bytes[index + 1] {
