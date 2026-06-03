@@ -10,9 +10,9 @@ pub struct Arena<'a> {
 
 impl<'a> Arena<'a> {
     #[inline]
-    pub fn with_capacity(c: usize) -> Self {
+    pub fn with_capacity(cap: usize) -> Self {
         Self {
-            nodes: Vec::with_capacity(c),
+            nodes: Vec::with_capacity(cap),
             owned_strings: Vec::new(),
         }
     }
