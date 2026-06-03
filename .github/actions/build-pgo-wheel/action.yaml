@@ -46,9 +46,10 @@ runs:
       run: mkdir -p ${{ github.workspace }}/profdata
 
     - name: "Install uv"
-      uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+      uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
       with:
-        enable-cache: ${{ !startsWith(github.ref, 'refs/tags/') }} # zizmor: ignore[cache-poisoning]
+        # zizmor: ignore[cache-poisoning]
+        enable-cache: ${{ github.event_name == 'pull_request' }}
 
     - name: "Build initial wheel"
       uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
@@ -56,6 +57,7 @@ runs:
         working-directory: ${{ inputs.working-directory }}
         target: ${{ inputs.target }}
         manylinux: auto
+        sccache: ${{ github.event_name == 'pull_request' }}
         args: >
           --release
           --out initial-wheel
@@ -86,6 +88,7 @@ runs:
         working-directory: ${{ inputs.working-directory }}
         target: ${{ inputs.target }}
         manylinux: auto
+        sccache: ${{ github.event_name == 'pull_request' }}
         args: >
           --release
           --out dist
