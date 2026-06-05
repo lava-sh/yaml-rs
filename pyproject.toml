@@ -37,9 +37,9 @@ classifiers = [
 ]
 
 [dependency-groups]
-typos = ["typos == 1.47.1"]
+typos = ["typos == 1.47.2"]
 zizmor = ["zizmor == 1.25.2"]
-rumdl = ["rumdl == 0.2.6"]
+rumdl = ["rumdl == 0.2.8"]
 maturin = ["maturin == 1.13.3"]
 wasm-test = [
     "pytest-pyodide == 0.59.2",
@@ -48,7 +48,7 @@ wasm-test = [
 ci = [
     "pytest == 9.0.3",
     "dirty-equals == 0.11",
-    "ruff == 0.15.15",
+    "ruff == 0.15.16",
     "pyyaml == 6.0.3",
     { include-group = "maturin" },
 ]
@@ -66,7 +66,7 @@ bench = [
     "ruamel.yaml.clibz == 0.3.7",
     ##################
     "polars == 1.41.2",
-    "altair == 6.1.0 ",
+    "altair == 6.2.1 ",
     "py-cpuinfo == 9.0.0",
     "vl-convert-python == 1.9.0.post1",
 ]
