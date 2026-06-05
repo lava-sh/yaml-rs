@@ -19,8 +19,8 @@ impl<'a> Arena<'a> {
 
     #[inline]
     pub fn push(&mut self, value: Value<'a>) -> NodeId {
-        let id = self.nodes.len() as u32;
-        debug_assert!(id < u32::MAX, "Arena capacity exceeded");
+        let id = self.nodes.len() as NodeId;
+        debug_assert!(id < NodeId::MAX, "Arena capacity exceeded");
         self.nodes.push(value);
         id
     }
@@ -35,8 +35,10 @@ impl<'a> Arena<'a> {
             Cow::Borrowed(s) => s,
             Cow::Owned(string) => {
                 self.owned_strings.push(string);
-                // SAFETY
-                unsafe { &*ptr::from_ref::<str>(self.owned_strings.last().unwrap().as_str()) }
+                // SAFETY: `push` made the vector non-empty, and stored string buffers outlive nodes
+                unsafe {
+                    &*ptr::from_ref::<str>(self.owned_strings.last().unwrap_unchecked().as_str())
+                }
             }
         };
         self.push(f(s))
@@ -44,6 +46,7 @@ impl<'a> Arena<'a> {
 
     #[inline]
     pub fn get(&self, id: NodeId) -> &Value<'_> {
+        debug_assert!((id as usize) < self.nodes.len());
         // SAFETY: `id` is produced by `push` and nodes are never removed,
         // so it is always a valid index.
         unsafe { self.nodes.get_unchecked(id as usize) }
