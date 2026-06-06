@@ -84,7 +84,7 @@ pprint(yaml_rs.loads(yaml))
 
 #### [PyYAML](https://pypi.org/project/PyYAML)
 
-![GitHub last commit](https://img.shields.io/github/last-commit/yaml/pyyaml?style=flat-square)
+<a href="https://github.com/yaml/pyyaml/commits/main"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/last-commit/yaml/pyyaml.svg?variant=outline&font=geist-mono&size=xs&mode=dark"><img alt="Last Commit" src="https://shieldcn.dev/github/last-commit/yaml/pyyaml.svg?variant=outline&font=geist-mono&size=xs&mode=light"></picture></a>
 
 `PyYAML` is a parser for [YAML 1.1](https://github.com/yaml/pyyaml/blob/6.0.3/setup.py#L10)
 
@@ -92,7 +92,7 @@ It does [not pass](https://matrix.yaml.info) the [yaml-test-suite](https://githu
 
 #### [oyaml](https://pypi.org/project/oyaml)
 
-![GitHub last commit](https://img.shields.io/github/last-commit/wimglenn/oyaml?style=flat-square)
+<a href="https://github.com/wimglenn/oyaml/commits/main"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/last-commit/wimglenn/oyaml.svg?variant=outline&font=geist-mono&size=xs&mode=dark"><img alt="Last Commit" src="https://shieldcn.dev/github/last-commit/wimglenn/oyaml.svg?variant=outline&font=geist-mono&size=xs&mode=light"></picture></a>
 
 `oyaml`
 is [Ordered YAML: drop-in replacement for PyYAML which preserves dict ordering](https://github.com/wimglenn/oyaml).
@@ -101,7 +101,7 @@ Because it is a fork of `PyYAML`, it has the same problems.
 
 #### [ryaml](https://pypi.org/project/ryaml)
 
-![GitHub last commit](https://img.shields.io/github/last-commit/emmatyping/ryaml?style=flat-square)
+<a href="https://github.com/emmatyping/ryaml/commits/main"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/last-commit/emmatyping/ryaml.svg?variant=outline&font=geist-mono&size=xs&mode=dark"><img alt="Last Commit" src="https://shieldcn.dev/github/last-commit/emmatyping/ryaml.svg?variant=outline&font=geist-mono&size=xs&mode=light"></picture></a>
 
 `ryaml` is a parser with a Rust core focused on compatibility with `PyYAML`.
 
@@ -117,7 +117,7 @@ However, it does [not pass](https://matrix.yaml.info) the [yaml-test-suite](http
 
 #### [strictyaml](https://pypi.org/project/strictyaml)
 
-![GitHub last commit](https://img.shields.io/github/last-commit/crdoconnor/strictyaml?style=flat-square)
+<a href="https://github.com/crdoconnor/strictyaml/commits/main"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/last-commit/crdoconnor/strictyaml.svg?variant=outline&font=geist-mono&size=xs&mode=dark"><img alt="Last Commit" src="https://shieldcn.dev/github/last-commit/crdoconnor/strictyaml.svg?variant=outline&font=geist-mono&size=xs&mode=light"></picture></a>
 
 `strictyaml` is a [Type-safe YAML parser and validator](https://github.com/crdoconnor/strictyaml).
 
