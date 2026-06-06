@@ -4,11 +4,36 @@
 
 *A High-Performance YAML v1.2 parser for Python written in Rust*
 
-<a href="https://github.com/lava-sh/yaml-rs/actions?query=branch%3Amain"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/ci/lava-sh/yaml-rs.svg?variant=outline&font=geist-mono&size=xs&animate=pulse&mode=dark"><img alt="CI" src="https://shieldcn.dev/github/ci/lava-sh/yaml-rs.svg?variant=outline&font=geist-mono&size=xs&animate=pulse&mode=light"></picture></a>
-<a href="https://github.com/lava-sh/yaml-rs/commits/main"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/last-commit/lava-sh/yaml-rs.svg?variant=outline&font=geist-mono&size=xs&mode=dark"><img alt="Last Commit" src="https://shieldcn.dev/github/last-commit/lava-sh/yaml-rs.svg?variant=outline&font=geist-mono&size=xs&mode=light"></picture></a>
-<a href="https://github.com/lava-sh/yaml-rs/blob/main/UNLICENSE"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/lava-sh/yaml-rs/license.svg?variant=outline&font=geist-mono&size=xs&mode=dark"><img alt="License" src="https://shieldcn.dev/github/lava-sh/yaml-rs/license.svg?variant=outline&font=geist-mono&size=xs&mode=light"></picture></a>
-<a href="https://pypi.org/project/yaml-rs"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/pypi/dm/yaml-rs.svg?variant=outline&font=geist-mono&size=xs&mode=dark"><img alt="Monthly downloads" src="https://shieldcn.dev/pypi/dm/yaml-rs.svg?variant=outline&font=geist-mono&size=xs&mode=light"></picture></a>
-<a href="https://pypi.org/project/yaml-rs"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/pypi/python/yaml-rs.svg?variant=outline&font=geist-mono&size=xs&mode=dark"><img alt="Python version" src="https://shieldcn.dev/pypi/python/yaml-rs.svg?variant=outline&font=geist-mono&size=xs&mode=light"></picture></a>
+<a href="https://github.com/lava-sh/yaml-rs/actions?query=branch%3Amain">
+    <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/ci/lava-sh/yaml-rs.svg?variant=outline&font=geist-mono&size=xs&animate=pulse&mode=dark">
+        <img alt="CI" src="https://shieldcn.dev/github/ci/lava-sh/yaml-rs.svg?variant=outline&font=geist-mono&size=xs&animate=pulse&mode=light">
+    </picture>
+</a>
+<a href="https://github.com/lava-sh/yaml-rs/commits/main">
+    <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/last-commit/lava-sh/yaml-rs.svg?variant=outline&font=geist-mono&size=xs&mode=dark">
+        <img alt="Last Commit" src="https://shieldcn.dev/github/last-commit/lava-sh/yaml-rs.svg?variant=outline&font=geist-mono&size=xs&mode=light">
+    </picture>
+</a>
+<a href="https://github.com/lava-sh/yaml-rs/blob/main/UNLICENSE">
+    <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/lava-sh/yaml-rs/license.svg?variant=outline&font=geist-mono&size=xs&mode=dark">
+        <img alt="License" src="https://shieldcn.dev/github/lava-sh/yaml-rs/license.svg?variant=outline&font=geist-mono&size=xs&mode=light">
+    </picture>
+</a>
+<a href="https://pypi.org/project/yaml-rs">
+    <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/pypi/dm/yaml-rs.svg?variant=outline&font=geist-mono&size=xs&mode=dark">
+        <img alt="Monthly downloads" src="https://shieldcn.dev/pypi/dm/yaml-rs.svg?variant=outline&font=geist-mono&size=xs&mode=light">
+    </picture>
+</a>
+<a href="https://pypi.org/project/yaml-rs">
+    <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/pypi/python/yaml-rs.svg?variant=outline&font=geist-mono&size=xs&mode=dark">
+        <img alt="Python version" src="https://shieldcn.dev/pypi/python/yaml-rs.svg?variant=outline&font=geist-mono&size=xs&mode=light">
+    </picture>
+</a>
 
 </div>
 
