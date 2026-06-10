@@ -7,7 +7,7 @@ import pytest
 import yaml_rs
 from yaml_rs import AliasLimits, DuplicateKeyPolicy, YAMLDecodeError
 
-from .helpers import UTC, dt, is_nan, tzinfo
+from .helpers import UTC, dt, is_nan
 
 
 @pytest.mark.parametrize(
