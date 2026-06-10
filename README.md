@@ -27,7 +27,7 @@
 </p>
 
 ```bash
-pip install uuid7-rs
+pip install yaml-rs
 ```
 
 <p>
@@ -36,7 +36,7 @@ pip install uuid7-rs
 </p>
 
 ```bash
-uv pip install uuid7-rs
+uv pip install yaml-rs
 ```
 
 ## [Playground](https://lava-sh.github.io/yaml-rs-online)
