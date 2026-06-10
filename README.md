@@ -21,21 +21,27 @@
 
 ## Installation
 
-Using pip:
+<p>
+  <img src=".assets/python.svg" alt="pip" width="14" height="14">
+  Using <a href="https://github.com/pypa/pip">pip</a>:
+</p>
 
 ```bash
 pip install yaml-rs
 ```
 
-Using uv:
+<p>
+  <img src=".assets/uv.svg" alt="uv" width="14" height="14">
+  Using <a href="https://github.com/astral-sh/uv">uv</a>:
+</p>
 
 ```bash
 uv pip install yaml-rs
 ```
 
-## [Playground](https://lava-sh.github.io/yaml-rs-online/)
+## [Playground](https://lava-sh.github.io/yaml-rs-online)
 
-Link: <https://lava-sh.github.io/yaml-rs-online/>
+Link: <https://lava-sh.github.io/yaml-rs-online>
 
 ## Example
 
