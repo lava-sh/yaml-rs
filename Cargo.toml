@@ -18,7 +18,6 @@ pyo3 = {
         "num-bigint",
         "generate-import-lib",
         "jiff-02",
-        "nightly",
     ]
 }
 jiff = "=0.2.28"

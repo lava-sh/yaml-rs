@@ -17,7 +17,7 @@ create_exception!(yaml_rs, YAMLEncodeError, exceptions::PyTypeError);
 mod yaml_rs {
     use std::borrow::Cow;
 
-    use pyo3::{exceptions::PyFileNotFoundError, prelude::*, types::PyString};
+    use pyo3::{prelude::*, types::PyString};
 
     #[pymodule_export]
     use super::{YAMLDecodeError, YAMLEncodeError};
@@ -60,7 +60,7 @@ mod yaml_rs {
     ) -> PyResult<Bound<'py, PyAny>> {
         let data: Cow<[u8]> = if let Ok(string) = obj.cast::<PyString>() {
             let path = string.to_str()?;
-            Cow::Owned(py.detach(|| std::fs::read(path).map_err(PyFileNotFoundError::new_err))?)
+            Cow::Owned(py.detach(|| std::fs::read(path))?)
         } else {
             obj.extract().or_else(|_| {
                 obj.call_method0("read")?
@@ -69,10 +69,9 @@ mod yaml_rs {
             })?
         };
 
-        let encoded_string = py.detach(|| {
-            decoder::encode(&data, encoding, encoder_errors)
-                .map_err(|err| YAMLDecodeError::new_err(format!("{err}")))
-        })?;
+        let encoded_string = py
+            .detach(|| decoder::encode(&data, encoding, encoder_errors))
+            .map_err(YAMLDecodeError::new_err)?;
 
         load_yaml_from_string(
             py,
