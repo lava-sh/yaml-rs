@@ -263,14 +263,15 @@ pub fn build_from_events(input: &'_ str) -> Result<(Arena<'_>, Vec<NodeId>), Bui
 }
 
 #[derive(Debug)]
-struct AliasReplayState {
+struct Limits {
+    #[expect(clippy::struct_field_names)]
     limits: AliasLimits,
     total_replayed_events: usize,
     expansions_per_anchor: FxHashMap<usize, usize>,
     replayed_event_counts: FxHashMap<NodeId, usize>,
 }
 
-impl AliasReplayState {
+impl Limits {
     #[inline]
     fn new(limits: AliasLimits) -> Self {
         Self {
@@ -388,7 +389,7 @@ impl<'py> PyConverter<'py, '_> {
     fn convert_node(
         &mut self,
         id: NodeId,
-        alias_state: &mut AliasReplayState,
+        alias_state: &mut Limits,
         alias_depth: usize,
     ) -> PyResult<Bound<'py, PyAny>> {
         match self.arena.get(id) {
@@ -422,7 +423,7 @@ impl<'py> PyConverter<'py, '_> {
     fn convert_seq(
         &mut self,
         items: &[NodeId],
-        alias_state: &mut AliasReplayState,
+        alias_state: &mut Limits,
         alias_depth: usize,
     ) -> PyResult<Bound<'py, PyAny>> {
         let py_list = PyList::empty(self.py);
@@ -436,7 +437,7 @@ impl<'py> PyConverter<'py, '_> {
         &mut self,
         pairs: &[(NodeId, NodeId)],
         is_tagged_set: bool,
-        alias_state: &mut AliasReplayState,
+        alias_state: &mut Limits,
         alias_depth: usize,
     ) -> PyResult<Bound<'py, PyAny>> {
         if is_tagged_set {
@@ -449,7 +450,7 @@ impl<'py> PyConverter<'py, '_> {
     fn convert_to_set(
         &mut self,
         pairs: &[(NodeId, NodeId)],
-        alias_state: &mut AliasReplayState,
+        alias_state: &mut Limits,
         alias_depth: usize,
     ) -> PyResult<Bound<'py, PyAny>> {
         let py_set = PySet::empty(self.py)?;
@@ -468,7 +469,7 @@ impl<'py> PyConverter<'py, '_> {
     fn convert_to_dict(
         &mut self,
         pairs: &[(NodeId, NodeId)],
-        alias_state: &mut AliasReplayState,
+        alias_state: &mut Limits,
         alias_depth: usize,
     ) -> PyResult<Bound<'py, PyAny>> {
         let py_dict = PyDict::new(self.py);
@@ -493,7 +494,7 @@ impl<'py> PyConverter<'py, '_> {
     fn convert_to_hashable(
         &mut self,
         id: NodeId,
-        alias_state: &mut AliasReplayState,
+        alias_state: &mut Limits,
         alias_depth: usize,
     ) -> PyResult<Bound<'py, PyAny>> {
         match self.arena.get(id) {
@@ -541,7 +542,7 @@ pub fn to_python<'py>(
     alias_limits: AliasLimits,
     duplicate_key_policy: DuplicateKeyPolicy,
 ) -> PyResult<Bound<'py, PyAny>> {
-    let mut alias_state = AliasReplayState::new(alias_limits);
+    let mut alias_state = Limits::new(alias_limits);
     let mut converter = PyConverter {
         py,
         arena,
