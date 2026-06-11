@@ -49,47 +49,62 @@ impl From<ScanError> for BuildError {
     }
 }
 
-fn resolve_scalar<'a>(
-    arena: &mut Arena<'a>,
-    value: Cow<'a, str>,
-    style: ScalarStyle,
-    tag: Option<&Tag>,
-) -> Result<NodeId, String> {
-    if let Some(tag) = tag {
-        if tag.is_yaml_core_schema() {
-            let v = match tag.suffix.as_str() {
-                "int" => parse_int(value.as_ref())
-                    .ok_or_else(|| format!("Invalid value '{value}' for '!!int' tag"))?,
-                "float" => parse_float(value.as_ref())
-                    .map(Value::Float)
-                    .ok_or_else(|| format!("Invalid value '{value}' for '!!float' tag"))?,
-                "bool" => is_bool(value.as_ref())
-                    .map(Value::Boolean)
-                    .ok_or_else(|| format!("Invalid value '{value}' for '!!bool' tag"))?,
-                "null" => {
-                    if value.is_empty() || is_null(value.as_ref()) {
-                        Value::Null
-                    } else {
-                        return Err(format!("Invalid value '{value}' for '!!null' tag"));
-                    }
-                }
-                "binary" => return Ok(arena.push_intern(value, Value::String)),
-                "str" => return Ok(arena.push_intern(value, Value::TaggedString)),
-                _ => return Err(format!("Invalid tag: '!!{}'", tag.suffix)),
-            };
-            return Ok(arena.push(v));
+struct ScalarResolver<'a, 'arena> {
+    arena: &'a mut Arena<'arena>,
+}
+
+impl<'arena> ScalarResolver<'_, 'arena> {
+    fn resolve(
+        &mut self,
+        value: Cow<'arena, str>,
+        style: ScalarStyle,
+        tag: Option<&Tag>,
+    ) -> Result<NodeId, String> {
+        if let Some(tag) = tag {
+            if tag.is_yaml_core_schema() {
+                return self.resolve_with_tag(value, tag);
+            }
+            return Ok(self.arena.push_intern(value, Value::String));
         }
 
-        return Ok(arena.push_intern(value, Value::String));
+        Ok(self.resolve_plain(value, style))
     }
 
-    if style == ScalarStyle::Plain {
+    fn resolve_with_tag(&mut self, value: Cow<'arena, str>, tag: &Tag) -> Result<NodeId, String> {
+        let value = match tag.suffix.as_str() {
+            "int" => parse_int(value.as_ref())
+                .ok_or_else(|| format!("Invalid value '{value}' for '!!int' tag"))?,
+            "float" => parse_float(value.as_ref())
+                .map(Value::Float)
+                .ok_or_else(|| format!("Invalid value '{value}' for '!!float' tag"))?,
+            "bool" => is_bool(value.as_ref())
+                .map(Value::Boolean)
+                .ok_or_else(|| format!("Invalid value '{value}' for '!!bool' tag"))?,
+            "null" => {
+                if value.is_empty() || is_null(value.as_ref()) {
+                    Value::Null
+                } else {
+                    return Err(format!("Invalid value '{value}' for '!!null' tag"));
+                }
+            }
+            "binary" => return Ok(self.arena.push_intern(value, Value::String)),
+            "str" => return Ok(self.arena.push_intern(value, Value::TaggedString)),
+            _ => return Err(format!("Invalid tag: '!!{}'", tag.suffix)),
+        };
+        Ok(self.arena.push(value))
+    }
+
+    fn resolve_plain(&mut self, value: Cow<'arena, str>, style: ScalarStyle) -> NodeId {
+        if style != ScalarStyle::Plain {
+            return self.arena.push_intern(value, Value::String);
+        }
+
         if value.is_empty() || is_null(value.as_ref()) {
-            return Ok(arena.push(Value::Null));
+            return self.arena.push(Value::Null);
         }
 
         if let Some(bool) = is_bool(value.as_ref()) {
-            return Ok(arena.push(Value::Boolean(bool)));
+            return self.arena.push(Value::Boolean(bool));
         }
 
         let bytes = value.as_bytes();
@@ -98,80 +113,108 @@ fn resolve_scalar<'a>(
             && is_float(bytes)
             && let Some(float) = parse_float(value.as_ref())
         {
-            return Ok(arena.push(Value::Float(float)));
+            return self.arena.push(Value::Float(float));
         }
 
         if is_int(bytes)
             && let Some(int) = parse_int(value.as_ref())
         {
-            return Ok(arena.push(int));
+            return self.arena.push(int);
+        }
+
+        self.arena.push_intern(value, Value::String)
+    }
+}
+
+struct Builder<'arena> {
+    arena: Arena<'arena>,
+    stack: Vec<Frame>,
+    docs: Vec<NodeId>,
+    anchors: FxHashMap<usize, NodeId>,
+    current_root: Option<NodeId>,
+}
+
+impl<'arena> Builder<'arena> {
+    fn new(input: &str) -> Self {
+        Self {
+            arena: Arena::with_capacity((input.len() / 8).max(64)),
+            stack: Vec::new(),
+            docs: Vec::new(),
+            anchors: FxHashMap::default(),
+            current_root: None,
         }
     }
 
-    Ok(arena.push_intern(value, Value::String))
-}
+    fn push_value(&mut self, value: NodeId) {
+        if let Some(top) = self.stack.last_mut() {
+            match top {
+                Frame::Seq { items, .. } => items.push(value),
+                Frame::Map {
+                    items, pending_key, ..
+                } => {
+                    if let Some(key) = pending_key.take() {
+                        items.push((key, value));
+                    } else {
+                        *pending_key = Some(value);
+                    }
+                }
+            }
+        } else {
+            self.current_root = Some(value);
+        }
+    }
 
-pub fn build_from_events(input: &'_ str) -> Result<(Arena<'_>, Vec<NodeId>), BuildError> {
-    let parser = Parser::new_from_str(input);
-
-    let mut arena = Arena::with_capacity((input.len() / 8).max(64));
-
-    let mut stack: Vec<Frame> = Vec::new();
-    let mut docs: Vec<NodeId> = Vec::new();
-    let mut anchors: FxHashMap<usize, NodeId> = FxHashMap::default();
-    let mut current_root: Option<NodeId> = None;
-
-    for event_res in parser {
-        let (event, _) = event_res?;
-
+    fn handle_event<'event: 'arena>(&mut self, event: Event<'event>) -> Result<(), BuildError> {
         match event {
             Event::DocumentStart(_) => {
-                current_root = None;
-                stack.clear();
+                self.current_root = None;
+                self.stack.clear();
             }
             Event::DocumentEnd => {
-                let root = current_root
+                let root = self
+                    .current_root
                     .take()
-                    .unwrap_or_else(|| arena.push(Value::Null));
-                docs.push(root);
+                    .unwrap_or_else(|| self.arena.push(Value::Null));
+                self.docs.push(root);
             }
             Event::Alias(id) => {
-                let node = if let Some(target) = anchors.get(&id).copied() {
-                    arena.push(Value::Alias {
+                let node = if let Some(target) = self.anchors.get(&id).copied() {
+                    self.arena.push(Value::Alias {
                         target,
                         anchor_id: id,
                     })
                 } else {
-                    arena.push(Value::Null)
+                    self.arena.push(Value::Null)
                 };
 
-                push_value(node, &mut stack, &mut current_root);
+                self.push_value(node);
             }
             Event::Scalar(val, style, anchor_id, tag) => {
-                let node = resolve_scalar(&mut arena, val, style, tag.as_deref())
+                let mut resolver = ScalarResolver {
+                    arena: &mut self.arena,
+                };
+                let node = resolver
+                    .resolve(val, style, tag.as_deref())
                     .map_err(BuildError::Decode)?;
 
                 if anchor_id != 0 {
-                    anchors.insert(anchor_id, node);
+                    self.anchors.insert(anchor_id, node);
                 }
-
-                push_value(node, &mut stack, &mut current_root);
+                self.push_value(node);
             }
             Event::SequenceStart(anchor_id, _) => {
-                stack.push(Frame::Seq {
+                self.stack.push(Frame::Seq {
                     anchor: anchor_id,
                     items: Vec::new(),
                 });
             }
             Event::SequenceEnd => {
-                if let Some(Frame::Seq { anchor, items }) = stack.pop() {
-                    let node = arena.push(Value::Seq(items));
-
+                if let Some(Frame::Seq { anchor, items }) = self.stack.pop() {
+                    let node = self.arena.push(Value::Seq(items));
                     if anchor != 0 {
-                        anchors.insert(anchor, node);
+                        self.anchors.insert(anchor, node);
                     }
-
-                    push_value(node, &mut stack, &mut current_root);
+                    self.push_value(node);
                 }
             }
             Event::MappingStart(anchor_id, tag) => {
@@ -179,7 +222,7 @@ pub fn build_from_events(input: &'_ str) -> Result<(Arena<'_>, Vec<NodeId>), Bui
                     .as_deref()
                     .is_some_and(|t| t.is_yaml_core_schema_tag("set"));
 
-                stack.push(Frame::Map {
+                self.stack.push(Frame::Map {
                     anchor: anchor_id,
                     items: Vec::new(),
                     pending_key: None,
@@ -192,42 +235,31 @@ pub fn build_from_events(input: &'_ str) -> Result<(Arena<'_>, Vec<NodeId>), Bui
                     items,
                     is_tagged_set,
                     ..
-                }) = stack.pop()
+                }) = self.stack.pop()
                 {
-                    let node = arena.push(Value::Map(items, is_tagged_set));
-
+                    let node = self.arena.push(Value::Map(items, is_tagged_set));
                     if anchor != 0 {
-                        anchors.insert(anchor, node);
+                        self.anchors.insert(anchor, node);
                     }
-
-                    push_value(node, &mut stack, &mut current_root);
+                    self.push_value(node);
                 }
             }
             Event::StreamStart | Event::StreamEnd | Event::Nothing => {}
         }
+        Ok(())
     }
-
-    Ok((arena, docs))
 }
 
-#[inline]
-fn push_value(value: NodeId, stack: &mut [Frame], root: &mut Option<NodeId>) {
-    if let Some(top) = stack.last_mut() {
-        match top {
-            Frame::Seq { items, .. } => items.push(value),
-            Frame::Map {
-                items, pending_key, ..
-            } => {
-                if let Some(key) = pending_key.take() {
-                    items.push((key, value));
-                } else {
-                    *pending_key = Some(value);
-                }
-            }
-        }
-    } else {
-        *root = Some(value);
+pub fn build_from_events(input: &'_ str) -> Result<(Arena<'_>, Vec<NodeId>), BuildError> {
+    let parser = Parser::new_from_str(input);
+    let mut builder = Builder::new(input);
+
+    for events in parser {
+        let (event, _) = events?;
+        builder.handle_event(event)?;
     }
+
+    Ok((builder.arena, builder.docs))
 }
 
 #[derive(Debug)]
@@ -256,7 +288,10 @@ impl AliasReplayState {
         anchor_id: usize,
         depth: usize,
     ) -> PyResult<usize> {
-        let next_depth = depth + 1;
+        let next_depth = depth
+            .checked_add(1)
+            .ok_or_else(|| YAMLDecodeError::new_err("alias depth overflow"))?;
+
         if next_depth > self.limits.max_replay_stack_depth {
             return Err(YAMLDecodeError::new_err(format!(
                 "alias replay stack depth exceeded: depth {next_depth}, max {}",
@@ -268,6 +303,7 @@ impl AliasReplayState {
         *expansions = expansions
             .checked_add(1)
             .ok_or_else(|| YAMLDecodeError::new_err("alias expansion counter overflow"))?;
+
         if *expansions > self.limits.max_alias_expansions_per_anchor {
             return Err(YAMLDecodeError::new_err(format!(
                 "alias expansion limit exceeded for anchor {anchor_id}: expansions {}, max {}",
@@ -275,11 +311,12 @@ impl AliasReplayState {
             )));
         }
 
-        let replayed_events = self.replayed_event_count(arena, target)?;
+        let replayed_events = self.count_replayed_events(arena, target)?;
         self.total_replayed_events = self
             .total_replayed_events
             .checked_add(replayed_events)
             .ok_or_else(|| YAMLDecodeError::new_err("alias replay counter overflow"))?;
+
         if self.total_replayed_events > self.limits.max_total_replayed_events {
             return Err(YAMLDecodeError::new_err(format!(
                 "alias replay limit exceeded: replayed {}, max {}",
@@ -290,7 +327,7 @@ impl AliasReplayState {
         Ok(next_depth)
     }
 
-    fn replayed_event_count(&mut self, arena: &Arena<'_>, id: NodeId) -> PyResult<usize> {
+    fn count_replayed_events(&mut self, arena: &Arena<'_>, id: NodeId) -> PyResult<usize> {
         if let Some(&count) = self.replayed_event_counts.get(&id) {
             return Ok(count);
         }
@@ -303,24 +340,24 @@ impl AliasReplayState {
             | Value::Float(_)
             | Value::String(_)
             | Value::TaggedString(_)
-            | Value::Alias { .. } => 1_usize,
+            | Value::Alias { .. } => 1,
             Value::Seq(items) => {
-                let mut count = 2_usize;
+                let mut count: usize = 2;
                 for &child in items {
                     count = count
-                        .checked_add(self.replayed_event_count(arena, child)?)
+                        .checked_add(self.count_replayed_events(arena, child)?)
                         .ok_or_else(|| YAMLDecodeError::new_err("alias replay counter overflow"))?;
                 }
                 count
             }
             Value::Map(pairs, _) => {
-                let mut count = 2_usize;
+                let mut count: usize = 2;
                 for (key, value) in pairs {
                     count = count
-                        .checked_add(self.replayed_event_count(arena, *key)?)
+                        .checked_add(self.count_replayed_events(arena, *key)?)
                         .ok_or_else(|| YAMLDecodeError::new_err("alias replay counter overflow"))?;
                     count = count
-                        .checked_add(self.replayed_event_count(arena, *value)?)
+                        .checked_add(self.count_replayed_events(arena, *value)?)
                         .ok_or_else(|| YAMLDecodeError::new_err("alias replay counter overflow"))?;
                 }
                 count
@@ -340,216 +377,160 @@ fn duplicate_error(key: &Bound<'_, PyAny>) -> PyErr {
     }
 }
 
-fn value_to_py<'py>(
+struct PyConverter<'py, 'arena> {
     py: Python<'py>,
-    arena: &Arena<'_>,
-    id: NodeId,
+    arena: &'arena Arena<'arena>,
     parse_datetime: bool,
-    alias_state: &mut AliasReplayState,
-    alias_depth: usize,
     duplicate_key_policy: DuplicateKeyPolicy,
-) -> PyResult<Bound<'py, PyAny>> {
-    match arena.get(id) {
-        Value::Null => Ok(py.None().into_bound(py)),
-        Value::Boolean(bool) => bool.into_bound_py_any(py),
-        Value::Integer64(int_64) => int_64.into_bound_py_any(py),
-        Value::BigInteger(big_int) => big_int.into_bound_py_any(py),
-        Value::Float(float) => float.into_bound_py_any(py),
-        Value::TaggedString(string_tagged) => (*string_tagged).into_bound_py_any(py),
-        Value::Alias { target, anchor_id } => {
-            let next_depth = alias_state.enter_alias(arena, *target, *anchor_id, alias_depth)?;
-            value_to_py(
-                py,
-                arena,
-                *target,
-                parse_datetime,
-                alias_state,
-                next_depth,
-                duplicate_key_policy,
-            )
-        }
-        Value::String(string) => {
-            if parse_datetime
-                && is_datetime(string.as_bytes())
-                && let Ok(Some(dt)) = parse_py_datetime(py, string)
-            {
-                return Ok(dt);
+}
+
+impl<'py> PyConverter<'py, '_> {
+    fn convert_node(
+        &mut self,
+        id: NodeId,
+        alias_state: &mut AliasReplayState,
+        alias_depth: usize,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        match self.arena.get(id) {
+            Value::Null => Ok(self.py.None().into_bound(self.py)),
+            Value::Boolean(bool) => bool.into_bound_py_any(self.py),
+            Value::Integer64(int_64) => int_64.into_bound_py_any(self.py),
+            Value::BigInteger(big_int) => big_int.into_bound_py_any(self.py),
+            Value::Float(float) => float.into_bound_py_any(self.py),
+            Value::TaggedString(tagged_string) => (*tagged_string).into_bound_py_any(self.py),
+            Value::Alias { target, anchor_id } => {
+                let next_depth =
+                    alias_state.enter_alias(self.arena, *target, *anchor_id, alias_depth)?;
+                self.convert_node(*target, alias_state, next_depth)
             }
-            (*string).into_bound_py_any(py)
-        }
-        Value::Seq(items) => to_py_list(py, items, |child| {
-            value_to_py(
-                py,
-                arena,
-                child,
-                parse_datetime,
-                alias_state,
-                alias_depth,
-                duplicate_key_policy,
-            )
-        }),
-        Value::Map(pairs, is_tagged_set) => {
-            if *is_tagged_set {
-                let py_set = PySet::empty(py)?;
-                for (k, _) in pairs {
-                    let py_key = value_to_hashable(
-                        py,
-                        arena,
-                        *k,
-                        parse_datetime,
-                        alias_state,
-                        alias_depth,
-                        duplicate_key_policy,
-                    )?;
-
-                    if matches!(duplicate_key_policy, DuplicateKeyPolicy::Error)
-                        && py_set.contains(&py_key)?
-                    {
-                        return Err(duplicate_error(&py_key));
-                    }
-
-                    py_set.add(py_key)?;
+            Value::String(string) => {
+                if self.parse_datetime
+                    && is_datetime(string.as_bytes())
+                    && let Ok(Some(dt)) = parse_py_datetime(self.py, string)
+                {
+                    return Ok(dt);
                 }
-                Ok(py_set.into_any())
-            } else {
-                let py_dict = PyDict::new(py);
-                for (k, v) in pairs {
-                    let py_key = value_to_hashable(
-                        py,
-                        arena,
-                        *k,
-                        parse_datetime,
-                        alias_state,
-                        alias_depth,
-                        duplicate_key_policy,
-                    )?;
+                (*string).into_bound_py_any(self.py)
+            }
+            Value::Seq(items) => self.convert_seq(items, alias_state, alias_depth),
+            Value::Map(pairs, is_tagged_set) => {
+                self.convert_map(pairs, *is_tagged_set, alias_state, alias_depth)
+            }
+        }
+    }
 
-                    if !matches!(duplicate_key_policy, DuplicateKeyPolicy::LastWins)
+    fn convert_seq(
+        &mut self,
+        items: &[NodeId],
+        alias_state: &mut AliasReplayState,
+        alias_depth: usize,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let py_list = PyList::empty(self.py);
+        for &item in items {
+            py_list.append(self.convert_node(item, alias_state, alias_depth)?)?;
+        }
+        Ok(py_list.into_any())
+    }
+
+    fn convert_map(
+        &mut self,
+        pairs: &[(NodeId, NodeId)],
+        is_tagged_set: bool,
+        alias_state: &mut AliasReplayState,
+        alias_depth: usize,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        if is_tagged_set {
+            self.convert_to_set(pairs, alias_state, alias_depth)
+        } else {
+            self.convert_to_dict(pairs, alias_state, alias_depth)
+        }
+    }
+
+    fn convert_to_set(
+        &mut self,
+        pairs: &[(NodeId, NodeId)],
+        alias_state: &mut AliasReplayState,
+        alias_depth: usize,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let py_set = PySet::empty(self.py)?;
+        for (k, _) in pairs {
+            let py_key = self.convert_to_hashable(*k, alias_state, alias_depth)?;
+            if matches!(self.duplicate_key_policy, DuplicateKeyPolicy::Error)
+                && py_set.contains(&py_key)?
+            {
+                return Err(duplicate_error(&py_key));
+            }
+            py_set.add(py_key)?;
+        }
+        Ok(py_set.into_any())
+    }
+
+    fn convert_to_dict(
+        &mut self,
+        pairs: &[(NodeId, NodeId)],
+        alias_state: &mut AliasReplayState,
+        alias_depth: usize,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let py_dict = PyDict::new(self.py);
+        for (k, v) in pairs {
+            let py_key = self.convert_to_hashable(*k, alias_state, alias_depth)?;
+
+            if !matches!(self.duplicate_key_policy, DuplicateKeyPolicy::LastWins)
+                && py_dict.contains(&py_key)?
+            {
+                match self.duplicate_key_policy {
+                    DuplicateKeyPolicy::Error => return Err(duplicate_error(&py_key)),
+                    DuplicateKeyPolicy::FirstWins => continue,
+                    DuplicateKeyPolicy::LastWins => {}
+                }
+            }
+
+            py_dict.set_item(py_key, self.convert_node(*v, alias_state, alias_depth)?)?;
+        }
+        Ok(py_dict.into_any())
+    }
+
+    fn convert_to_hashable(
+        &mut self,
+        id: NodeId,
+        alias_state: &mut AliasReplayState,
+        alias_depth: usize,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        match self.arena.get(id) {
+            Value::Alias { target, anchor_id } => {
+                let next_depth =
+                    alias_state.enter_alias(self.arena, *target, *anchor_id, alias_depth)?;
+                self.convert_to_hashable(*target, alias_state, next_depth)
+            }
+            Value::Seq(items) => {
+                let mut vec = Vec::with_capacity(items.len());
+                for &child in items {
+                    vec.push(self.convert_to_hashable(child, alias_state, alias_depth)?);
+                }
+                PyTuple::new(self.py, &vec)?.into_bound_py_any(self.py)
+            }
+            Value::Map(pairs, _) => {
+                let py_dict = PyDict::new(self.py);
+                for (k, v) in pairs {
+                    let py_key = self.convert_to_hashable(*k, alias_state, alias_depth)?;
+
+                    if !matches!(self.duplicate_key_policy, DuplicateKeyPolicy::LastWins)
                         && py_dict.contains(&py_key)?
                     {
-                        match duplicate_key_policy {
+                        match self.duplicate_key_policy {
                             DuplicateKeyPolicy::Error => return Err(duplicate_error(&py_key)),
                             DuplicateKeyPolicy::FirstWins => continue,
                             DuplicateKeyPolicy::LastWins => {}
                         }
                     }
 
-                    py_dict.set_item(
-                        py_key,
-                        value_to_py(
-                            py,
-                            arena,
-                            *v,
-                            parse_datetime,
-                            alias_state,
-                            alias_depth,
-                            duplicate_key_policy,
-                        )?,
-                    )?;
+                    py_dict.set_item(py_key, self.convert_node(*v, alias_state, alias_depth)?)?;
                 }
-                Ok(py_dict.into_any())
+                PyFrozenSet::new(self.py, py_dict.items())?.into_bound_py_any(self.py)
             }
+            _ => self.convert_node(id, alias_state, alias_depth),
         }
     }
-}
-
-fn value_to_hashable<'py>(
-    py: Python<'py>,
-    arena: &Arena<'_>,
-    id: NodeId,
-    parse_datetime: bool,
-    alias_state: &mut AliasReplayState,
-    alias_depth: usize,
-    duplicate_key_policy: DuplicateKeyPolicy,
-) -> PyResult<Bound<'py, PyAny>> {
-    match arena.get(id) {
-        Value::Alias { target, anchor_id } => {
-            let next_depth = alias_state.enter_alias(arena, *target, *anchor_id, alias_depth)?;
-            value_to_hashable(
-                py,
-                arena,
-                *target,
-                parse_datetime,
-                alias_state,
-                next_depth,
-                duplicate_key_policy,
-            )
-        }
-        Value::Seq(items) => {
-            let mut vec = Vec::with_capacity(items.len());
-            for &child in items {
-                vec.push(value_to_hashable(
-                    py,
-                    arena,
-                    child,
-                    parse_datetime,
-                    alias_state,
-                    alias_depth,
-                    duplicate_key_policy,
-                )?);
-            }
-            PyTuple::new(py, &vec)?.into_bound_py_any(py)
-        }
-        Value::Map(pairs, _) => {
-            let py_dict = PyDict::new(py);
-            for (k, v) in pairs {
-                let py_key = value_to_hashable(
-                    py,
-                    arena,
-                    *k,
-                    parse_datetime,
-                    alias_state,
-                    alias_depth,
-                    duplicate_key_policy,
-                )?;
-
-                if !matches!(duplicate_key_policy, DuplicateKeyPolicy::LastWins)
-                    && py_dict.contains(&py_key)?
-                {
-                    match duplicate_key_policy {
-                        DuplicateKeyPolicy::Error => return Err(duplicate_error(&py_key)),
-                        DuplicateKeyPolicy::FirstWins => continue,
-                        DuplicateKeyPolicy::LastWins => {}
-                    }
-                }
-
-                py_dict.set_item(
-                    py_key,
-                    value_to_py(
-                        py,
-                        arena,
-                        *v,
-                        parse_datetime,
-                        alias_state,
-                        alias_depth,
-                        duplicate_key_policy,
-                    )?,
-                )?;
-            }
-            PyFrozenSet::new(py, py_dict.items())?.into_bound_py_any(py)
-        }
-        _ => value_to_py(
-            py,
-            arena,
-            id,
-            parse_datetime,
-            alias_state,
-            alias_depth,
-            duplicate_key_policy,
-        ),
-    }
-}
-
-fn to_py_list<'py, T, F>(py: Python<'py>, items: &[T], mut f: F) -> PyResult<Bound<'py, PyAny>>
-where
-    T: Copy,
-    F: FnMut(T) -> PyResult<Bound<'py, PyAny>>,
-{
-    let py_list = PyList::empty(py);
-    for &item in items {
-        py_list.append(f(item)?)?;
-    }
-    Ok(py_list.into_any())
 }
 
 pub fn to_python<'py>(
@@ -561,28 +542,22 @@ pub fn to_python<'py>(
     duplicate_key_policy: DuplicateKeyPolicy,
 ) -> PyResult<Bound<'py, PyAny>> {
     let mut alias_state = AliasReplayState::new(alias_limits);
+    let mut converter = PyConverter {
+        py,
+        arena,
+        parse_datetime,
+        duplicate_key_policy,
+    };
 
     match docs.len() {
         0 => Ok(py.None().into_bound(py)),
-        1 => value_to_py(
-            py,
-            arena,
-            docs[0],
-            parse_datetime,
-            &mut alias_state,
-            0,
-            duplicate_key_policy,
-        ),
-        _ => to_py_list(py, docs, |doc| {
-            value_to_py(
-                py,
-                arena,
-                doc,
-                parse_datetime,
-                &mut alias_state,
-                0,
-                duplicate_key_policy,
-            )
-        }),
+        1 => converter.convert_node(docs[0], &mut alias_state, 0),
+        _ => {
+            let py_list = PyList::empty(py);
+            for &doc in docs {
+                py_list.append(converter.convert_node(doc, &mut alias_state, 0)?)?;
+            }
+            Ok(py_list.into_any())
+        }
     }
 }
