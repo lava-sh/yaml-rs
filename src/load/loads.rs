@@ -466,6 +466,18 @@ impl<'py> PyConverter<'py, '_> {
         Ok(py_set.into_any())
     }
 
+    #[inline]
+    fn apply_duplicate_key_policy<F>(&self, f: F, py_key: &Bound<'_, PyAny>) -> PyResult<bool>
+    where
+        F: FnOnce(&Bound<'_, PyAny>) -> PyResult<bool>,
+    {
+        match self.duplicate_key_policy {
+            DuplicateKeyPolicy::FirstWins => Ok(!f(py_key)?),
+            DuplicateKeyPolicy::Error if f(py_key)? => Err(duplicate_error(py_key)),
+            DuplicateKeyPolicy::LastWins | DuplicateKeyPolicy::Error => Ok(true),
+        }
+    }
+
     fn convert_to_dict(
         &mut self,
         pairs: &[(NodeId, NodeId)],
@@ -476,17 +488,9 @@ impl<'py> PyConverter<'py, '_> {
         for (k, v) in pairs {
             let py_key = self.convert_to_hashable(*k, alias_state, alias_depth)?;
 
-            if !matches!(self.duplicate_key_policy, DuplicateKeyPolicy::LastWins)
-                && py_dict.contains(&py_key)?
-            {
-                match self.duplicate_key_policy {
-                    DuplicateKeyPolicy::Error => return Err(duplicate_error(&py_key)),
-                    DuplicateKeyPolicy::FirstWins => continue,
-                    DuplicateKeyPolicy::LastWins => {}
-                }
+            if self.apply_duplicate_key_policy(|k| py_dict.contains(k), &py_key)? {
+                py_dict.set_item(py_key, self.convert_node(*v, alias_state, alias_depth)?)?;
             }
-
-            py_dict.set_item(py_key, self.convert_node(*v, alias_state, alias_depth)?)?;
         }
         Ok(py_dict.into_any())
     }
@@ -515,17 +519,10 @@ impl<'py> PyConverter<'py, '_> {
                 for (k, v) in pairs {
                     let py_key = self.convert_to_hashable(*k, alias_state, alias_depth)?;
 
-                    if !matches!(self.duplicate_key_policy, DuplicateKeyPolicy::LastWins)
-                        && py_dict.contains(&py_key)?
-                    {
-                        match self.duplicate_key_policy {
-                            DuplicateKeyPolicy::Error => return Err(duplicate_error(&py_key)),
-                            DuplicateKeyPolicy::FirstWins => continue,
-                            DuplicateKeyPolicy::LastWins => {}
-                        }
+                    if self.apply_duplicate_key_policy(|k| py_dict.contains(k), &py_key)? {
+                        py_dict
+                            .set_item(py_key, self.convert_node(*v, alias_state, alias_depth)?)?;
                     }
-
-                    py_dict.set_item(py_key, self.convert_node(*v, alias_state, alias_depth)?)?;
                 }
                 PyFrozenSet::new(self.py, py_dict.items())?.into_bound_py_any(self.py)
             }
@@ -542,7 +539,7 @@ pub fn to_python<'py>(
     alias_limits: AliasLimits,
     duplicate_key_policy: DuplicateKeyPolicy,
 ) -> PyResult<Bound<'py, PyAny>> {
-    let mut alias_state = Limits::new(alias_limits);
+    let mut limits = Limits::new(alias_limits);
     let mut converter = PyConverter {
         py,
         arena,
@@ -552,11 +549,11 @@ pub fn to_python<'py>(
 
     match docs.len() {
         0 => Ok(py.None().into_bound(py)),
-        1 => converter.convert_node(docs[0], &mut alias_state, 0),
+        1 => converter.convert_node(docs[0], &mut limits, 0),
         _ => {
             let py_list = PyList::empty(py);
             for &doc in docs {
-                py_list.append(converter.convert_node(doc, &mut alias_state, 0)?)?;
+                py_list.append(converter.convert_node(doc, &mut limits, 0)?)?;
             }
             Ok(py_list.into_any())
         }
