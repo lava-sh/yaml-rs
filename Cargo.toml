@@ -11,9 +11,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 pyo3 = {
-    # version = "=0.28.3",
-    git = "https://github.com/PyO3/pyo3",
-    rev = "cd128ed50e6fffc4e49a08c149599a3b8bd21d5b",
+    version = "=0.28.3",
     features = [
         "num-bigint",
         "generate-import-lib",
