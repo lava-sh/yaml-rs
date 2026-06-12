@@ -14,21 +14,21 @@ jobs:
           - {
             # Intel Mac
             target: x86_64,
-            interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
+            interpreter: "3.10 3.11 3.12 3.13 3.14 3.14t 3.15 3.15t pypy3.11",
             maturin-build-args: "--features mimalloc",
             use-pgo: true,
           }
           - {
             # Apple Silicon M1-M4
             target: aarch64,
-            interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
+            interpreter: "3.10 3.11 3.12 3.13 3.14 3.14t 3.15 3.15t pypy3.11",
             maturin-build-args: "--features mimalloc",
             use-pgo: true,
           }
           - {
             # Universal binary (Intel + Apple Silicon)
             target: universal2,
-            interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
+            interpreter: "3.10 3.11 3.12 3.13 3.14 3.14t 3.15 3.15t pypy3.11",
             maturin-build-args: "--features mimalloc",
             use-pgo: false,
           }
