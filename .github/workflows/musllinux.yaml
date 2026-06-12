@@ -3,6 +3,10 @@ name: "musllinux"
 on:
   workflow_call:
 
+env:
+  # A small hack to use anchors as GitHub doesn't allow it to be top level
+  ○_○: &interpreters "3.10 3.11 3.12 3.13 3.14 3.14t 3.15 3.15t pypy3.11"
+
 jobs:
   musllinux:
     name: "ubuntu-latest / ${{ matrix.platform.target }}"
@@ -17,37 +21,37 @@ jobs:
           - {
             # AMD64
             target: x86_64,
-            interpreter: "3.10 3.11 3.12 3.13 3.14 3.14t 3.15 3.15t pypy3.11",
+            interpreter: *interpreters,
             maturin-build-args: "--features mimalloc"
           }
           - {
             # x86 (32-bit)
             target: x86,
-            interpreter: "3.10 3.11 3.12 3.13 3.14 3.14t 3.15 3.15t pypy3.11",
+            interpreter: *interpreters,
             maturin-build-args: "--features mimalloc"
           }
           - {
             # ARM64
             target: aarch64,
-            interpreter: "3.10 3.11 3.12 3.13 3.14 3.14t 3.15 3.15t pypy3.11",
+            interpreter: *interpreters,
             maturin-build-args: "--features mimalloc"
           }
           - {
             # ARMv7 (32-bit)
             target: armv7,
-            interpreter: "3.10 3.11 3.12 3.13 3.14 3.14t 3.15 3.15t pypy3.11",
+            interpreter: *interpreters,
             maturin-build-args: "--features mimalloc"
           }
           - {
             # PowerPC64 Little Endian
             target: ppc64le,
-            interpreter: "3.10 3.11 3.12 3.13 3.14 3.14t 3.15 3.15t pypy3.11",
+            interpreter: *interpreters,
             maturin-build-args: "--features mimalloc"
           }
           - {
             # RISC-V 64-bit
             target: riscv64,
-            interpreter: "3.10 3.11 3.12 3.13 3.14 3.14t 3.15 3.15t pypy3.11",
+            interpreter: *interpreters,
             maturin-build-args: "--features mimalloc"
           }
 

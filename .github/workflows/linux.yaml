@@ -3,6 +3,10 @@ name: "linux"
 on:
   workflow_call:
 
+env:
+  # A small hack to use anchors as GitHub doesn't allow it to be top level
+  ○_○: &interpreters "3.10 3.11 3.12 3.13 3.14 3.14t 3.15 3.15t pypy3.11"
+
 jobs:
   linux:
     name: "${{ matrix.platform.runner }} / ${{ matrix.platform.target }}"
@@ -16,7 +20,7 @@ jobs:
             # AMD64
             runner: ubuntu-latest,
             target: x86_64,
-            interpreter: "3.10 3.11 3.12 3.13 3.14 3.14t 3.15 3.15t pypy3.11",
+            interpreter: *interpreters,
             maturin-build-args: "--features mimalloc",
             use-pgo: true,
           }
@@ -24,7 +28,7 @@ jobs:
             # x86 (32-bit)
             runner: ubuntu-latest,
             target: x86,
-            interpreter: "3.10 3.11 3.12 3.13 3.14 3.14t 3.15 3.15t pypy3.11",
+            interpreter: *interpreters,
             maturin-build-args: "--features mimalloc",
             use-pgo: false,
           }
@@ -32,7 +36,7 @@ jobs:
             # ARM64
             runner: ubuntu-24.04-arm,
             target: aarch64,
-            interpreter: "3.10 3.11 3.12 3.13 3.14 3.14t 3.15 3.15t pypy3.11",
+            interpreter: *interpreters,
             maturin-build-args: "--features mimalloc",
             use-pgo: true,
           }
@@ -40,7 +44,7 @@ jobs:
             # ARMv7 (32-bit)
             runner: ubuntu-latest,
             target: armv7,
-            interpreter: "3.10 3.11 3.12 3.13 3.14 3.14t 3.15 3.15t pypy3.11",
+            interpreter: *interpreters,
             maturin-build-args: "",
             use-pgo: false,
           }
@@ -48,7 +52,7 @@ jobs:
             # IBM System z (s390x)
             runner: ubuntu-latest,
             target: s390x,
-            interpreter: "3.10 3.11 3.12 3.13 3.14 3.14t 3.15 3.15t pypy3.11",
+            interpreter: *interpreters,
             maturin-build-args: "",
             use-pgo: false,
           }
@@ -56,7 +60,7 @@ jobs:
             # PowerPC64 Little Endian
             runner: ubuntu-latest,
             target: ppc64le,
-            interpreter: "3.10 3.11 3.12 3.13 3.14 3.14t 3.15 3.15t pypy3.11",
+            interpreter: *interpreters,
             maturin-build-args: "",
             use-pgo: false,
           }
@@ -64,7 +68,7 @@ jobs:
             # RISC-V 64-bit
             runner: ubuntu-latest,
             target: riscv64,
-            interpreter: "3.10 3.11 3.12 3.13 3.14 3.14t 3.15 3.15t pypy3.11",
+            interpreter: *interpreters,
             maturin-build-args: "--features mimalloc",
             use-pgo: false,
           }

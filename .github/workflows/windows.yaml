@@ -5,6 +5,8 @@ on:
 
 env:
   UV_LINK_MODE: copy
+  # A small hack to use anchors as GitHub doesn't allow it to be top level
+  ○_○: &interpreters "3.10 3.11 3.12 3.13 3.14 3.14t 3.15 3.15t pypy3.11"
 
 jobs:
   windows:
@@ -19,7 +21,7 @@ jobs:
             runner: windows-latest,
             target: x64,
             python-arch: x64,
-            interpreter: "3.10 3.11 3.12 3.13 3.14 3.14t 3.15 3.15t pypy3.11",
+            interpreter: *interpreters,
             maturin-build-args: "--features mimalloc",
             use-pgo: true,
           }

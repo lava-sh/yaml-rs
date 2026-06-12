@@ -3,6 +3,10 @@ name: "macOS"
 on:
   workflow_call:
 
+env:
+  # A small hack to use anchors as GitHub doesn't allow it to be top level
+  ○_○: &interpreters "3.10 3.11 3.12 3.13 3.14 3.14t 3.15 3.15t pypy3.11"
+
 jobs:
   macos:
     name: "macos-latest / ${{ matrix.platform.target }}"
@@ -14,21 +18,21 @@ jobs:
           - {
             # Intel Mac
             target: x86_64,
-            interpreter: "3.10 3.11 3.12 3.13 3.14 3.14t 3.15 3.15t pypy3.11",
+            interpreter: *interpreters,
             maturin-build-args: "--features mimalloc",
             use-pgo: true,
           }
           - {
             # Apple Silicon M1-M4
             target: aarch64,
-            interpreter: "3.10 3.11 3.12 3.13 3.14 3.14t 3.15 3.15t pypy3.11",
+            interpreter: *interpreters,
             maturin-build-args: "--features mimalloc",
             use-pgo: true,
           }
           - {
             # Universal binary (Intel + Apple Silicon)
             target: universal2,
-            interpreter: "3.10 3.11 3.12 3.13 3.14 3.14t 3.15 3.15t pypy3.11",
+            interpreter: *interpreters,
             maturin-build-args: "--features mimalloc",
             use-pgo: false,
           }
