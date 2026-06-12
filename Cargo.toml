@@ -24,7 +24,7 @@ rustc-hash = {
     version = "=2.1.2",
     features = ["nightly"],
 }
-memchr = "=2.8.1"
+memchr = "=2.8.2"
 encoding_rs = "=0.8.35"
 simdutf8 = {
     version = "=0.1.5",

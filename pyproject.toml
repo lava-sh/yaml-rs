@@ -1,5 +1,5 @@
 [build-system]
-requires = ["maturin == 1.13.3"]
+requires = ["maturin == 1.14.0"]
 build-backend = "maturin"
 
 [tool.maturin]
@@ -39,8 +39,8 @@ classifiers = [
 [dependency-groups]
 typos = ["typos == 1.47.2"]
 zizmor = ["zizmor == 1.25.2"]
-rumdl = ["rumdl == 0.2.10"]
-maturin = ["maturin == 1.13.3"]
+rumdl = ["rumdl == 0.2.14"]
+maturin = ["maturin == 1.14.0"]
 wasm-test = [
     "pytest-pyodide == 0.59.2",
     "pytest-httpserver == 1.1.5",
@@ -48,7 +48,7 @@ wasm-test = [
 ci = [
     "pytest == 9.0.3",
     "dirty-equals == 0.11",
-    "ruff == 0.15.16",
+    "ruff == 0.15.17",
     "pyyaml == 6.0.3",
     { include-group = "maturin" },
 ]
