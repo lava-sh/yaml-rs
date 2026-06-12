@@ -9,32 +9,41 @@ module-name = "yaml_rs._yaml_rs"
 [project]
 name = "yaml-rs"
 dynamic = ["version"]
-requires-python = ">=3.10"
+requires-python = ">= 3.10"
 description = "A High-Performance YAML Parser for Python written in Rust"
-readme = "README.md"
+readme = { file = "README.md", content-type = "text/markdown" }
 license = "Unlicense"
 license-files = ["UNLICENSE"]
 authors = [
     { name = "chirizxc", email = "chirizxc@proton.me" }
 ]
-urls.Source = "https://github.com/lava-sh/yaml-rs"
-urls.Homepage = "https://github.com/lava-sh/yaml-rs"
-urls."Bug Tracker" = "https://github.com/lava-sh/yaml-rs/issues"
+keywords = [
+    "yaml",
+    "parser",
+]
 classifiers = [
     "Typing :: Typed",
     "Programming Language :: Rust",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Programming Language :: Python :: Implementation :: PyPy",
     "Programming Language :: Python :: Implementation :: CPython",
     "Topic :: Software Development :: Libraries",
-    "License :: OSI Approved :: The Unlicense (Unlicense)",
+    "Development Status :: 5 - Production/Stable",
 ]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/lava-sh/yaml-rs"
+Repository = "https://github.com/lava-sh/yaml-rs"
+Issues = "https://github.com/lava-sh/yaml-rs/issues"
 
 [dependency-groups]
 typos = ["typos == 1.47.2"]
