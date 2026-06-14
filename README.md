@@ -22,7 +22,11 @@
 ## Installation
 
 <p>
-  <img src="https://thesvg.org/icons/python/default.svg" alt="Python" style="height:14px;">
+  <img
+    src="https://thesvg.org/icons/python/default.svg"
+    alt="Python"
+    height="14"
+  />
   Using <a href="https://github.com/pypa/pip">pip</a>:
 </p>
 
@@ -31,7 +35,11 @@ pip install yaml-rs
 ```
 
 <p>
-  <img src="https://thesvg.org/icons/uv/default.svg" alt="uv" style="height:14px;">
+  <img
+    src="https://thesvg.org/icons/uv/default.svg"
+    alt="uv"
+    height="14"
+  />
   Using <a href="https://github.com/astral-sh/uv">uv</a>:
 </p>
 
