@@ -61,7 +61,7 @@ jobs:
             ${{ matrix.platform.maturin-build-args }}
             --compatibility pypi
 
-      - name: "Install rust stable + llvm-tools"
+      - name: "Install rust nightly + llvm-tools"
         if: matrix.platform.use-pgo == true
         id: rust-toolchain
         uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
