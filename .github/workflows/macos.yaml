@@ -9,14 +9,15 @@ env:
 
 jobs:
   macos:
-    name: "macos-latest / ${{ matrix.platform.target }}"
-    runs-on: macos-latest
+    name: "${{ matrix.platform.runner }} / ${{ matrix.platform.target }}"
+    runs-on: ${{ matrix.platform.runner }}
     strategy:
       fail-fast: false
       matrix:
         platform:
           - {
             # Intel Mac
+            runner: macos-26-intel,
             target: x86_64,
             interpreter: *interpreters,
             maturin-build-args: "--features mimalloc",
@@ -24,6 +25,7 @@ jobs:
           }
           - {
             # Apple Silicon M1-M4
+            runner: macos-latest,
             target: aarch64,
             interpreter: *interpreters,
             maturin-build-args: "--features mimalloc",
@@ -31,6 +33,7 @@ jobs:
           }
           - {
             # Universal binary (Intel + Apple Silicon)
+            runner: macos-latest,
             target: universal2,
             interpreter: *interpreters,
             maturin-build-args: "--features mimalloc",

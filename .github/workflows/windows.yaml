@@ -36,7 +36,7 @@ jobs:
           }
           - {
             # ARM64
-            runner: windows-11-arm,
+            runner: windows-11-vs2026-arm,
             target: aarch64,
             python-arch: arm64,
             interpreter: "3.10 3.11 3.12 3.13 3.14 3.14t 3.15 3.15t",

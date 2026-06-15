@@ -34,7 +34,7 @@ jobs:
           }
           - {
             # ARM64
-            runner: ubuntu-24.04-arm,
+            runner: ubuntu-26.04-arm,
             target: aarch64,
             interpreter: *interpreters,
             maturin-build-args: "--features mimalloc",
