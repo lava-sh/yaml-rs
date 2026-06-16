@@ -37,7 +37,6 @@ jobs:
             target: universal2,
             interpreter: *interpreters,
             maturin-build-args: "--features mimalloc",
-            use-pgo: false,
           }
 
     steps:
@@ -52,7 +51,7 @@ jobs:
           enable-cache: ${{ github.event_name == 'pull_request' }}
 
       - name: "Build wheels"
-        if: matrix.platform.use-pgo == false
+        if: matrix.platform.use-pgo != true
         uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
         with:
           target: ${{ matrix.platform.target }}
@@ -61,7 +60,7 @@ jobs:
             --release
             --out dist
             --interpreter ${{ matrix.platform.interpreter }}
-            ${{ matrix.platform.maturin-build-args }}
+            ${{ matrix.platform.maturin-build-args || '' }}
             --compatibility pypi
 
       - name: "Install rust nightly + llvm-tools"
@@ -79,7 +78,7 @@ jobs:
           target: ${{ matrix.platform.target }}
           interpreter: ${{ matrix.platform.interpreter }}
           rust-toolchain: ${{ steps.rust-toolchain.outputs.name }}
-          maturin-build-args: ${{ matrix.platform.maturin-build-args }}
+          maturin-build-args: ${{ matrix.platform.maturin-build-args || '' }}
 
       - name: "Upload wheels"
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

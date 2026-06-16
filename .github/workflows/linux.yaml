@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # PyPI does not support Rust target `loongarch64-unknown-linux-gnu`
+        # Rust target `loongarch64-unknown-linux-gnu` is not supported by PyPI
         platform:
           - {
             # AMD64
@@ -30,7 +30,6 @@ jobs:
             target: x86,
             interpreter: *interpreters,
             maturin-build-args: "--features mimalloc",
-            use-pgo: false,
           }
           - {
             # ARM64
@@ -45,24 +44,24 @@ jobs:
             runner: ubuntu-latest,
             target: armv7,
             interpreter: *interpreters,
-            maturin-build-args: "",
-            use-pgo: false,
           }
           - {
             # IBM System z (s390x)
             runner: ubuntu-latest,
             target: s390x,
             interpreter: *interpreters,
-            maturin-build-args: "",
-            use-pgo: false,
           }
           - {
             # PowerPC64 Little Endian
             runner: ubuntu-latest,
             target: ppc64le,
             interpreter: *interpreters,
-            maturin-build-args: "",
-            use-pgo: false,
+          }
+          - {
+            # PowerPC64 Big Endian
+            runner: ubuntu-latest,
+            target: ppc64,
+            interpreter: *interpreters,
           }
           - {
             # RISC-V 64-bit
@@ -70,7 +69,6 @@ jobs:
             target: riscv64,
             interpreter: *interpreters,
             maturin-build-args: "--features mimalloc",
-            use-pgo: false,
           }
 
     steps:
@@ -85,7 +83,7 @@ jobs:
           enable-cache: ${{ github.event_name == 'pull_request' }}
 
       - name: "Build wheels"
-        if: matrix.platform.use-pgo == false
+        if: matrix.platform.use-pgo != true
         uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
         with:
           target: ${{ matrix.platform.target }}
@@ -95,7 +93,7 @@ jobs:
             --release
             --out dist
             --interpreter ${{ matrix.platform.interpreter }}
-            ${{ matrix.platform.maturin-build-args }}
+            ${{ matrix.platform.maturin-build-args || '' }}
             --compatibility pypi
 
       - name: "Install rust nightly + llvm-tools"
@@ -113,7 +111,7 @@ jobs:
           target: ${{ matrix.platform.target }}
           interpreter: ${{ matrix.platform.interpreter }}
           rust-toolchain: ${{ steps.rust-toolchain.outputs.name }}
-          maturin-build-args: ${{ matrix.platform.maturin-build-args }}
+          maturin-build-args: ${{ matrix.platform.maturin-build-args || '' }}
 
       - name: "Upload wheels"
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

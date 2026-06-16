@@ -1,4 +1,4 @@
-name: "wasm"
+name: "WebAssembly"
 
 on:
   workflow_call:
@@ -14,8 +14,6 @@ jobs:
         platform:
           - python-version: "3.13"
             # pyodide:
-            # 0.28.0a1 (emscripten 4.0.6)
-            # 0.28.0a2 (emscripten 4.0.8)
             # 0.28.0a3 - 0.29.4 (emscripten 4.0.9)
             pyodide-version: "0.29.4"
             pyemscripten-version: "2025_0"
