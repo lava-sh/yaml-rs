@@ -4,11 +4,6 @@ name: "Build PGO wheel"
 description: "Builds a PGO-optimized wheel"
 
 inputs:
-  python-arch:
-    description: "Python architecture for interpreter resolution on Windows"
-    required: false
-    default: ""
-
   target:
     description: "Rust target to build the wheel for"
     required: true
@@ -41,72 +36,104 @@ runs:
   steps:
     - name: "Prepare profiling directory"
       shell: bash
-      # making this ahead of the compile ensures that the local user can write to this
-      # directory; the maturin action (on linux) runs in docker so would create as root
-      run: mkdir -p ${{ github.workspace }}/profdata
+      run: >-
+        echo "📁 Creating profiling directory"
+        mkdir -p ${{ github.workspace }}/profdata
 
     - name: "Install uv"
       uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
       with:
-        # zizmor: ignore[cache-poisoning]
         enable-cache: ${{ github.event_name == 'pull_request' }}
+
+    - name: ""
+      shell: bash
+      run: >-
+        echo "📊 Phase 1/4: Building instrumented wheel..."
 
     - name: "Build initial wheel"
       uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
       with:
-        working-directory: ${{ inputs.working-directory }}
         target: ${{ inputs.target }}
+        rust-toolchain: ${{ inputs.rust-toolchain }}
         manylinux: auto
-        sccache: ${{ github.event_name == 'pull_request' }}
-        args: >
+        working-directory: ${{ inputs.working-directory }}
+        args: >-
           --release
           --out initial-wheel
           --interpreter ${{ inputs.interpreter }}
-          --compatibility pypi
           ${{ inputs.maturin-build-args }}
-        rust-toolchain: ${{ inputs.rust-toolchain }}
-        docker-options: -e CI
+          --compatibility pypi
+        docker-options: >-
+          -e CI
+          -e RUSTFLAGS
       env:
         RUSTFLAGS: "-Cprofile-generate=${{ github.workspace }}/profdata"
 
+    - name: ""
+      shell: bash
+      run: >-
+        echo "🔬 Phase 2/4: Generate PGO data..."
+
     - name: "Generate pgo data"
       working-directory: ${{ inputs.working-directory }}
-      run: bash "$GITHUB_ACTION_PATH/pgo.sh"
+      run: python "$GITHUB_ACTION_PATH/pgo.py"
       shell: bash
       env:
-        INPUTS_INTERPRETER: ${{ inputs.interpreter }}
-        INPUTS_PYTHON_ARCH: ${{ inputs.python-arch }}
         INPUTS_TARGET: ${{ inputs.target }}
+        INPUTS_INTERPRETER: ${{ inputs.interpreter }}
+        INPUTS_WORKING_DIRECTORY: ${{ inputs.working-directory }}
+
+    - name: ""
+      shell: bash
+      run: >-
+        echo "🧬 Phase 3/4: Merging profile data..."
 
     - name: "Merge pgo data"
-      run: ${{ env.LLVM_PROFDATA }} merge -o ${{ github.workspace }}/merged.profdata ${{ github.workspace }}/profdata # zizmor: ignore[template-injection]
-      shell: pwsh # because it handles paths on windows better, and works well enough on unix for this step
+      shell: pwsh
+      env:
+        LLVM_PROFDATA: ${{ env.LLVM_PROFDATA }}
+        GITHUB_WORKSPACE: ${{ github.workspace }}
+      run: |
+        & $env:LLVM_PROFDATA merge `
+          -o "$env:GITHUB_WORKSPACE/merged.profdata" `
+          "$env:GITHUB_WORKSPACE/profdata"
 
-    - name: "Build pgo-optimized wheel"
+    - name: ""
+      shell: bash
+      run: >-
+        echo "⚡ Phase 4/4: Building PGO-optimized wheel..."
+
+    - name: ""
       uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
       with:
         working-directory: ${{ inputs.working-directory }}
         target: ${{ inputs.target }}
         manylinux: auto
-        sccache: ${{ github.event_name == 'pull_request' }}
-        args: >
+        args: >-
           --release
           --out dist
           --interpreter ${{ inputs.interpreter }}
-          --compatibility pypi
           ${{ inputs.maturin-build-args }}
-        rust-toolchain: ${{inputs.rust-toolchain}}
-        docker-options: -e CI
+          --compatibility pypi
+        rust-toolchain: ${{ inputs.rust-toolchain }}
+        docker-options: >-
+          -e CI
+          -e RUSTFLAGS
       env:
         RUSTFLAGS: "-Cprofile-use=${{ github.workspace }}/merged.profdata"
 
-    - name: "Find built wheel"
+    - name: ""
       id: find_wheel
       working-directory: ${{ inputs.working-directory }}
+      shell: bash
       run: |
+        echo "📦 Found wheels:"
+        for wheel in dist/*.whl; do
+          echo "  • $(basename "$wheel")"
+        done
+
         {
           echo "path<<EOF"
-          ls dist/*.whl
+          printf '%s\n' dist/*.whl
           echo "EOF"
-        } | tee -a "$GITHUB_OUTPUT"
-      shell: bash
+        } >> "$GITHUB_OUTPUT"

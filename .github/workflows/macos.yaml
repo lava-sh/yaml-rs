@@ -18,7 +18,7 @@ jobs:
           - {
             # Intel Mac
             runner: macos-26-intel,
-            target: x86_64,
+            target: x86_64-apple-darwin,
             interpreter: *interpreters,
             maturin-build-args: "--features mimalloc",
             use-pgo: true,
@@ -26,7 +26,7 @@ jobs:
           - {
             # Apple Silicon M1-M4
             runner: macos-latest,
-            target: aarch64,
+            target: aarch64-apple-darwin,
             interpreter: *interpreters,
             maturin-build-args: "--features mimalloc",
             use-pgo: true,
@@ -34,7 +34,7 @@ jobs:
           - {
             # Universal binary (Intel + Apple Silicon)
             runner: macos-latest,
-            target: universal2,
+            target: universal2-apple-darwin,
             interpreter: *interpreters,
             maturin-build-args: "--features mimalloc",
           }
@@ -47,7 +47,6 @@ jobs:
       - name: "Install uv"
         uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
         with:
-          # zizmor: ignore[cache-poisoning]
           enable-cache: ${{ github.event_name == 'pull_request' }}
 
       - name: "Build wheels"
