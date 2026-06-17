@@ -179,6 +179,8 @@ jobs:
     uses: ./.github/workflows/wasm.yaml
 
   build-sdist:
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-tests') }}
+
     name: "build-sdist"
     runs-on: ubuntu-latest
     steps:
