@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import glob
 import os
 import shutil
@@ -20,9 +18,12 @@ class Context:
 ctx = Context(
     target=os.environ["INPUTS_TARGET"],
     interpreters=os.environ["INPUTS_INTERPRETER"].split(),
-    workdir=Path(os.environ.get("INPUTS_WORKING_DIRECTORY", "../actions/build-pgo-wheel")),
+    workdir=Path(os.environ.get("INPUTS_WORKING_DIRECTORY", ".")),
     runner_os=os.environ["RUNNER_OS"],
-    rust_host=subprocess.check_output("rustc", "--print", "host-tuple", text=True),
+    rust_host=subprocess.check_output(
+        ["rustc", "--print", "host-tuple"],
+        text=True,
+    ).strip(),
 )
 
 
@@ -103,15 +104,11 @@ def uv_python(request: str) -> Path:
     path = result.stdout.strip()
 
     if not path:
-        subprocess.run("uv", "python", "install", request, check=True)
+        subprocess.run(["uv", "python", "install", request], check=True)
         path = subprocess.check_output(
-            "uv",
-            "python",
-            "find",
-            "--no-project",
-            request,
+            ["uv", "python", "find", "--no-project", request],
             text=True,
-        )
+        ).strip()
 
     return Path(path)
 
@@ -125,32 +122,37 @@ def venv_python(venv: Path) -> Path:
 
 def run_profile(version: str) -> None:
     python = uv_python(python_request(version))
-
     venv = Path(".pgo-venv") / version.replace(".", "_")
     shutil.rmtree(venv, ignore_errors=True)
-
-    subprocess.run("uv", "venv", str(venv), "--python", str(python), check=True)
+    subprocess.run(["uv", "venv", str(venv), "--python", str(python)], check=True)
     executable = venv_python(venv)
 
     subprocess.run(
-        "uv",
-        "pip",
-        "install",
-        "--python",
-        str(executable),
-        "--force-reinstall",
-        "--no-deps",
-        str(find_wheel(version)),
+        [
+            "uv",
+            "pip",
+            "install",
+            "--python",
+            str(executable),
+            "--force-reinstall",
+            "--no-deps",
+            str(find_wheel(version)),
+        ],
         check=True,
     )
-    subprocess.run(str(executable), str(ctx.workdir / "benchmark" / "pgo.py"), check=True)
+    subprocess.run(
+        [str(executable), str(ctx.workdir / "benchmark" / "pgo.py")],
+        check=True,
+    )
 
 
 for interpreter in ctx.interpreters:
     run_profile(interpreter)
 
 
-sysroot = Path(subprocess.check_output("rustc", "--print", "sysroot", text=True))
+sysroot = Path(
+    subprocess.check_output(["rustc", "--print", "sysroot"], text=True).strip(),
+)
 
 llvm = sysroot / "lib" / "rustlib" / ctx.rust_host / "bin" / "llvm-profdata"
 
