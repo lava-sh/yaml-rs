@@ -21,8 +21,6 @@ concurrency:
 
 jobs:
   cargo-fmt:
-    if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-tests') }}
-
     name: "cargo fmt (nightly)"
     runs-on: ubuntu-latest
     steps:
@@ -41,8 +39,6 @@ jobs:
       - run: cargo fmt-nightly --check
 
   cargo-clippy:
-    if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-tests') }}
-
     name: "cargo clippy (nightly)"
     runs-on: ubuntu-latest
     steps:
@@ -61,8 +57,6 @@ jobs:
       - run: cargo clippy --all-targets
 
   tools:
-    if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-tests') }}
-
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
 
@@ -100,13 +94,9 @@ jobs:
         run: ${{ matrix.command }}
 
   tests:
-    if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-tests') }}
-
     uses: ./.github/workflows/tests.yaml
 
   tests-alpine:
-    if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-tests') }}
-
     name: "tests / alpine / python 3.14"
     runs-on: ubuntu-latest
     steps:
@@ -134,53 +124,26 @@ jobs:
           "
 
   linux:
-    if: |
-      always() &&
-      !contains(needs.*.result, 'failure') &&
-      !contains(needs.*.result, 'cancelled')
-
     needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, tools ]
     uses: ./.github/workflows/linux.yaml
 
   musllinux:
-    if: |
-      always() &&
-      !contains(needs.*.result, 'failure') &&
-      !contains(needs.*.result, 'cancelled')
-
     needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, tools ]
     uses: ./.github/workflows/musllinux.yaml
 
   windows:
-    if: |
-      always() &&
-      !contains(needs.*.result, 'failure') &&
-      !contains(needs.*.result, 'cancelled')
-
     needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, tools ]
     uses: ./.github/workflows/windows.yaml
 
   macos:
-    if: |
-      always() &&
-      !contains(needs.*.result, 'failure') &&
-      !contains(needs.*.result, 'cancelled')
-
     needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, tools ]
     uses: ./.github/workflows/macos.yaml
 
   wasm:
-    if: |
-      always() &&
-      !contains(needs.*.result, 'failure') &&
-      !contains(needs.*.result, 'cancelled')
-
     needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, tools ]
     uses: ./.github/workflows/wasm.yaml
 
   build-sdist:
-    if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-tests') }}
-
     name: "build-sdist"
     runs-on: ubuntu-latest
     steps:
