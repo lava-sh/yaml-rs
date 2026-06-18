@@ -76,10 +76,10 @@ codegen-units = 1
 warnings = "deny"
 
 [lints.clippy]
-perf = { level = "deny", priority = 1 }
-style = { level = "deny", priority = -1 }
-pedantic = { level = "deny", priority = -1 }
-nursery = { level = "deny", priority = -1 }
+perf       = { level = "deny", priority = 1 }
+style      = { level = "deny", priority = -1 }
+pedantic   = { level = "deny", priority = -1 }
+nursery    = { level = "deny", priority = -1 }
 complexity = { level = "deny", priority = -1 }
 suspicious = { level = "deny", priority = -1 }
 
