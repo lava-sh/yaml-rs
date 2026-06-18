@@ -24,7 +24,7 @@ jobs:
     name: "cargo fmt (nightly)"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
 
@@ -42,7 +42,7 @@ jobs:
     name: "cargo clippy (nightly)"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
 
@@ -73,7 +73,7 @@ jobs:
             command: rumdl check .
 
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
 
@@ -100,7 +100,7 @@ jobs:
     name: "tests / alpine / python 3.14"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
 
@@ -147,7 +147,7 @@ jobs:
     name: "build-sdist"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
 
@@ -164,11 +164,48 @@ jobs:
           name: wheels-sdist
           path: dist
 
-  release:
-    name: "Release"
+  release-pypi:
+    name: "Publish to PyPI"
     runs-on: ubuntu-latest
-    if: ${{ github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' }}
+    needs: [
+      build-sdist,
+      manylinux,
+      musllinux,
+      windows,
+      macos,
+      wasm,
+    ]
     environment: pypi
+    permissions:
+      # Used to sign the release's artifacts and upload to PyPI using trusted publisher
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+
+      - name: "Install uv"
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          enable-cache: false
+
+      - name: "Validate PyPI publication"
+        run: uv publish 'wheels-*/*' --dry-run
+
+      - name: "Generate PyPI publish attestations"
+        if: github.ref_type == 'tag'
+        uses: astral-sh/attest-action@f589a42a7efb6fe400b4f400de60b4bc90390027 # v0.0.6
+        with:
+          paths: |
+            wheels-*/*.whl
+            wheels-*/*.tar.gz
+
+      - name: "Publish to PyPI"
+        if: github.ref_type == 'tag'
+        run: uv publish --trusted-publishing=always 'wheels-*/*'
+
+  release-github:
+    if: github.ref_type == 'tag'
+    name: "Publish to GitHub Release"
+    runs-on: ubuntu-latest
     needs: [
       build-sdist,
       manylinux,
@@ -190,22 +227,9 @@ jobs:
       - name: "Generate artifact attestation"
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
         with:
-          subject-path: "wheels-*/*"
+          subject-path: "wheels-wasm-*/*.whl"
 
-      - name: "Install uv"
-        if: ${{ github.ref_type == 'tag' }}
-        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
-        with:
-          enable-cache: false
-
-      - name: "Publish to PyPI"
-        if: ${{ github.ref_type == 'tag' }}
-        run: uv publish 'wheels-*/*'
-        env:
-          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
-
-      - name: "Upload wasm wheels to GitHub Release"
-        if: ${{ github.ref_type == 'tag' }}
+      - name: "Publish WASM wheels to GitHub Release"
         run: |
           tag="${GITHUB_REF#refs/tags/}"
           gh release view "$tag" >/dev/null 2>&1 || \
