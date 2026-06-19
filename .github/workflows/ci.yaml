@@ -21,40 +21,38 @@ concurrency:
 
 jobs:
   cargo-fmt:
-    name: "cargo fmt (nightly)"
+    name: "cargo fmt"
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
 
-      - name: "Install Rust nightly + rustfmt"
-        run: rustup toolchain install nightly --component rustfmt
-
-      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
-        if: github.event_name == 'pull_request' && github.run_attempt == 1
-        with:
-          lookup-only: false # zizmor: ignore[cache-poisoning]
-
-      - run: cargo fmt-nightly --check
+      - name: "Install Rust nightly & run rustfmt"
+        run: |
+          rustup toolchain install nightly --profile minimal --component rustfmt
+          cargo fmt-nightly --check
 
   cargo-clippy:
-    name: "cargo clippy (nightly)"
+    name: "cargo clippy"
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
 
-      - name: "Install Rust nightly + clippy"
-        run: rustup toolchain install nightly --component clippy
-
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
-        if: github.event_name == 'pull_request' && github.run_attempt == 1
+        if: github.ref_type != 'pull_request'
         with:
-          lookup-only: false # zizmor: ignore[cache-poisoning]
+           # zizmor: ignore[cache-poisoning]
+          lookup-only: false
 
-      - run: cargo clippy --all-targets
+      - name: "Install Rust nightly & run clippy"
+        run: |
+          rustup toolchain install nightly --profile minimal --component clippy
+          cargo clippy --all-targets
 
   tools:
     name: ${{ matrix.name }}
@@ -93,35 +91,22 @@ jobs:
       - name: "Run ${{ matrix.name }}"
         run: ${{ matrix.command }}
 
-  tests:
-    uses: ./.github/workflows/tests.yaml
-
   tests-alpine:
     name: "tests / alpine / python 3.14"
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
 
-      - name: "latest"
+      - name: "Run build on alpine"
         run: |
-          mkdir -p /tmp/__build__
-          cp -r py-src src Cargo.toml pyproject.toml README.md /tmp/__build__/
+          docker build -t alpine-test .github/scripts/alpine
+          docker run --rm -v "$PWD":/app -w /app alpine-test
 
-          docker run --rm \
-            -v /tmp/__build__:/parser \
-            -w /parser \
-            ghcr.io/astral-sh/uv:python3.14-alpine sh -c "
-              apk add --no-cache curl build-base musl-dev openssl-dev && \
-              curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly && \
-              . \$HOME/.cargo/env && \
-              rustc --version && \
-              uv pip install maturin[patchelf] -U --system && \
-              maturin build --release --out /parser/dist --features mimalloc && \
-              uv pip install /parser/dist/*.whl --system && \
-              python -c 'import yaml_rs; print(yaml_rs.__version__)'
-          "
+  tests:
+    uses: ./.github/workflows/tests.yaml
 
   manylinux:
     needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, tools ]
