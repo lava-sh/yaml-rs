@@ -55,20 +55,19 @@ jobs:
         with:
           target: ${{ matrix.platform.target }}
           sccache: ${{ github.event_name == 'pull_request' }}
-          args: >
+          args: >-
             --release
             --out dist
             --interpreter ${{ matrix.platform.interpreter }}
             ${{ matrix.platform.maturin-build-args || '' }}
             --compatibility pypi
 
-      - name: "Install rust nightly + llvm-tools"
+      - name: "Install Rust nightly + llvm-tools-preview"
         if: matrix.platform.use-pgo == true
         id: rust-toolchain
-        uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
+        uses: dtolnay/rust-toolchain@nightly # zizmor: ignore[unpinned-uses]
         with:
-          components: llvm-tools
-          toolchain: nightly
+          components: llvm-tools-preview
 
       - name: "Build PGO wheel"
         if: matrix.platform.use-pgo == true

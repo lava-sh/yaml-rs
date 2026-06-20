@@ -78,7 +78,7 @@ jobs:
           target: ${{ matrix.platform.target }}
           sccache: ${{ github.event_name == 'pull_request' }}
           manylinux: musllinux_1_2
-          args: >
+          args: >-
             --release
             --out dist
             --interpreter ${{ matrix.platform.interpreter }}

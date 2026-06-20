@@ -48,7 +48,7 @@ Issues = "https://github.com/lava-sh/yaml-rs/issues"
 [dependency-groups]
 typos = ["typos == 1.47.2"]
 zizmor = ["zizmor == 1.25.2"]
-rumdl = ["rumdl == 0.2.19"]
+rumdl = ["rumdl == 0.2.20"]
 maturin = [
     "maturin == 1.14.1 ; sys_platform != 'linux'",
     "maturin[patchelf] == 1.14.1 ; sys_platform == 'linux'",

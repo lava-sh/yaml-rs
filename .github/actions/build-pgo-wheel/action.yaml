@@ -36,7 +36,8 @@ runs:
   steps:
     - name: "Prepare profiling directory"
       shell: bash
-      run: >-
+      run: |
+        : Creating profiling directory
         echo "📁 Creating profiling directory"
         mkdir -p ${{ github.workspace }}/profdata
 
@@ -45,13 +46,12 @@ runs:
       with:
         enable-cache: ${{ github.event_name == 'pull_request' }}
 
-    - name: ""
-      shell: bash
-      run: >-
+    - shell: bash
+      run: |
+        : Building instrumented wheel
         echo "📊 Phase 1/4: Building instrumented wheel..."
 
-    - name: "Build initial wheel"
-      uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
+    - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
       with:
         target: ${{ inputs.target }}
         rust-toolchain: ${{ inputs.rust-toolchain }}
@@ -63,30 +63,21 @@ runs:
           --interpreter ${{ inputs.interpreter }}
           ${{ inputs.maturin-build-args }}
           --compatibility pypi
-        docker-options: >-
-          -e CI
-          -e RUSTFLAGS
+        docker-options: -e CI -e RUSTFLAGS
       env:
         RUSTFLAGS: "-Cprofile-generate=${{ github.workspace }}/profdata"
 
-    - name: ""
-      shell: bash
-      run: >-
-        echo "🔬 Phase 2/4: Generate PGO data..."
-
     - name: "Generate pgo data"
       working-directory: ${{ inputs.working-directory }}
-      run: python "$GITHUB_ACTION_PATH/pgo.py"
-      shell: bash
       env:
         INPUTS_TARGET: ${{ inputs.target }}
         INPUTS_INTERPRETER: ${{ inputs.interpreter }}
         INPUTS_WORKING_DIRECTORY: ${{ inputs.working-directory }}
-
-    - name: ""
       shell: bash
-      run: >-
-        echo "🧬 Phase 3/4: Merging profile data..."
+      run: |
+        : Generate PGO data
+        echo "🔬 Phase 2/4: Generate PGO data..."
+        python "$GITHUB_ACTION_PATH/pgo.py"
 
     - name: "Merge pgo data"
       shell: pwsh
@@ -94,17 +85,17 @@ runs:
         LLVM_PROFDATA: ${{ env.LLVM_PROFDATA }}
         GITHUB_WORKSPACE: ${{ github.workspace }}
       run: |
+        echo "🧬 Phase 3/4: Merging profile data..."
         & $env:LLVM_PROFDATA merge `
           -o "$env:GITHUB_WORKSPACE/merged.profdata" `
           "$env:GITHUB_WORKSPACE/profdata"
 
-    - name: ""
-      shell: bash
-      run: >-
+    - shell: bash
+      run: |
+        : Building PGO-optimized wheel
         echo "⚡ Phase 4/4: Building PGO-optimized wheel..."
 
-    - name: ""
-      uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
+    - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
       with:
         working-directory: ${{ inputs.working-directory }}
         target: ${{ inputs.target }}
@@ -116,14 +107,11 @@ runs:
           ${{ inputs.maturin-build-args }}
           --compatibility pypi
         rust-toolchain: ${{ inputs.rust-toolchain }}
-        docker-options: >-
-          -e CI
-          -e RUSTFLAGS
+        docker-options: -e CI -e RUSTFLAGS
       env:
         RUSTFLAGS: "-Cprofile-use=${{ github.workspace }}/merged.profdata"
 
-    - name: ""
-      id: find_wheel
+    - id: find_wheel
       working-directory: ${{ inputs.working-directory }}
       shell: bash
       run: |

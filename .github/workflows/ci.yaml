@@ -29,10 +29,11 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: "Install Rust nightly & run rustfmt"
-        run: |
-          rustup toolchain install nightly --profile minimal --component rustfmt
-          cargo fmt-nightly --check
+      - uses: dtolnay/rust-toolchain@nightly # zizmor: ignore[unpinned-uses]
+        with:
+          components: rustfmt
+
+      - run: cargo fmt-nightly --check
 
   cargo-clippy:
     name: "cargo clippy"
@@ -44,15 +45,15 @@ jobs:
           persist-credentials: false
 
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
-        if: github.ref_type != 'pull_request'
+        if: github.event_name == 'pull_request'
         with:
-           # zizmor: ignore[cache-poisoning]
-          lookup-only: false
+          lookup-only: false # zizmor: ignore[cache-poisoning]
 
-      - name: "Install Rust nightly & run clippy"
-        run: |
-          rustup toolchain install nightly --profile minimal --component clippy
-          cargo clippy --all-targets
+      - uses: dtolnay/rust-toolchain@nightly # zizmor: ignore[unpinned-uses]
+        with:
+          components: clippy
+
+      - run: cargo clippy --all-targets
 
   tools:
     name: ${{ matrix.name }}

@@ -47,6 +47,19 @@ pip install yaml-rs
 uv pip install yaml-rs
 ```
 
+<p>
+  <img
+    src="https://thesvg.org/icons/poetry/default.svg"
+    alt="Poetry"
+    height="14"
+  />
+  Using <a href="https://github.com/python-poetry/poetry">poetry</a>:
+</p>
+
+```bash
+poetry add yaml-rs
+```
+
 ## [Playground](https://lava-sh.github.io/yaml-rs-online)
 
 Link: <https://lava-sh.github.io/yaml-rs-online>
