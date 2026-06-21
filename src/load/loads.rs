@@ -49,14 +49,14 @@ impl From<ScanError> for BuildError {
     }
 }
 
-struct ScalarResolver<'a, 'arena> {
-    arena: &'a mut Arena<'arena>,
+struct ScalarResolver<'resolver, 'input> {
+    arena: &'resolver mut Arena<'input>,
 }
 
-impl<'arena> ScalarResolver<'_, 'arena> {
+impl<'input> ScalarResolver<'_, 'input> {
     fn resolve(
         &mut self,
-        value: Cow<'arena, str>,
+        value: Cow<'input, str>,
         style: ScalarStyle,
         tag: Option<&Tag>,
     ) -> Result<NodeId, String> {
@@ -70,7 +70,7 @@ impl<'arena> ScalarResolver<'_, 'arena> {
         Ok(self.resolve_plain(value, style))
     }
 
-    fn resolve_core_tag(&mut self, value: Cow<'arena, str>, tag: &Tag) -> Result<NodeId, String> {
+    fn resolve_core_tag(&mut self, value: Cow<'input, str>, tag: &Tag) -> Result<NodeId, String> {
         let value = match tag.suffix.as_str() {
             "int" => parse_int(value.as_ref())
                 .ok_or_else(|| format!("Invalid value '{value}' for '!!int' tag"))?,
@@ -94,7 +94,7 @@ impl<'arena> ScalarResolver<'_, 'arena> {
         Ok(self.arena.push(value))
     }
 
-    fn resolve_plain(&mut self, value: Cow<'arena, str>, style: ScalarStyle) -> NodeId {
+    fn resolve_plain(&mut self, value: Cow<'input, str>, style: ScalarStyle) -> NodeId {
         if style != ScalarStyle::Plain {
             return self.arena.push_intern(value, Value::String);
         }
