@@ -64,7 +64,6 @@ mimalloc = {
 [features]
 default = []
 mimalloc = ["dep:mimalloc"]
-pyo3-nightly = ["pyo3/nightly"]
 
 [profile.release]
 opt-level = 3
