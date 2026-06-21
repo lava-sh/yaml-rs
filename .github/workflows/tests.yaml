@@ -16,9 +16,8 @@ jobs:
           "3.11",
           "3.12",
           "3.13",
-          "3.13t",
-          "3.14",
-          "3.14t",
+          "3.14", "3.14t",
+          "3.15", "3.15t",
           "pypy3.11",
         ]
         os: [
@@ -27,7 +26,7 @@ jobs:
         ]
 
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
 

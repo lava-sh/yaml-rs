@@ -3,67 +3,71 @@ name: "macOS"
 on:
   workflow_call:
 
+env:
+  # A small hack to use anchors as GitHub doesn't allow it to be top level
+  ○_○: &interpreters "3.10 3.11 3.12 3.13 3.14 3.14t 3.15 3.15t pypy3.11"
+
 jobs:
   macos:
-    name: "macos-latest / ${{ matrix.platform.target }}"
-    runs-on: macos-latest
+    name: "${{ matrix.platform.runner }} / ${{ matrix.platform.target }}"
+    runs-on: ${{ matrix.platform.runner }}
     strategy:
       fail-fast: false
       matrix:
         platform:
           - {
             # Intel Mac
-            target: x86_64,
-            interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
+            runner: macos-26-intel,
+            target: x86_64-apple-darwin,
+            interpreter: *interpreters,
             maturin-build-args: "--features mimalloc",
             use-pgo: true,
           }
           - {
             # Apple Silicon M1-M4
-            target: aarch64,
-            interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
+            runner: macos-latest,
+            target: aarch64-apple-darwin,
+            interpreter: *interpreters,
             maturin-build-args: "--features mimalloc",
             use-pgo: true,
           }
           - {
             # Universal binary (Intel + Apple Silicon)
-            target: universal2,
-            interpreter: "3.10 3.11 3.12 3.13 3.13t 3.14 3.14t pypy3.11",
+            runner: macos-latest,
+            target: universal2-apple-darwin,
+            interpreter: *interpreters,
             maturin-build-args: "--features mimalloc",
-            use-pgo: false,
           }
 
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
 
       - name: "Install uv"
         uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
         with:
-          # zizmor: ignore[cache-poisoning]
           enable-cache: ${{ github.event_name == 'pull_request' }}
 
       - name: "Build wheels"
-        if: matrix.platform.use-pgo == false
+        if: matrix.platform.use-pgo != true
         uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
         with:
           target: ${{ matrix.platform.target }}
           sccache: ${{ github.event_name == 'pull_request' }}
-          args: >
+          args: >-
             --release
             --out dist
             --interpreter ${{ matrix.platform.interpreter }}
-            ${{ matrix.platform.maturin-build-args }}
+            ${{ matrix.platform.maturin-build-args || '' }}
             --compatibility pypi
 
-      - name: "Install rust stable + llvm-tools"
+      - name: "Install Rust nightly + llvm-tools-preview"
         if: matrix.platform.use-pgo == true
         id: rust-toolchain
-        uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
+        uses: dtolnay/rust-toolchain@nightly # zizmor: ignore[unpinned-uses]
         with:
-          components: llvm-tools
-          toolchain: nightly
+          components: llvm-tools-preview
 
       - name: "Build PGO wheel"
         if: matrix.platform.use-pgo == true
@@ -72,7 +76,7 @@ jobs:
           target: ${{ matrix.platform.target }}
           interpreter: ${{ matrix.platform.interpreter }}
           rust-toolchain: ${{ steps.rust-toolchain.outputs.name }}
-          maturin-build-args: ${{ matrix.platform.maturin-build-args }}
+          maturin-build-args: ${{ matrix.platform.maturin-build-args || '' }}
 
       - name: "Upload wheels"
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

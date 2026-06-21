@@ -15,7 +15,7 @@ create_exception!(yaml_rs, YAMLEncodeError, exceptions::PyTypeError);
 
 #[pyo3::pymodule(name = "_yaml_rs")]
 mod yaml_rs {
-    use std::borrow::Cow;
+    use std::{borrow::Cow, io::Error};
 
     use pyo3::{prelude::*, types::PyString};
 
@@ -59,8 +59,13 @@ mod yaml_rs {
         duplicate_key_policy: Option<&str>,
     ) -> PyResult<Bound<'py, PyAny>> {
         let data: Cow<[u8]> = if let Ok(string) = obj.cast::<PyString>() {
-            let path = string.to_str()?;
-            Cow::Owned(py.detach(|| std::fs::read(path))?)
+            let path = string.to_str()?.to_owned();
+            Cow::Owned(
+                py.detach(move || {
+                    std::fs::read(&path).map_err(|err| (err.kind(), err.to_string()))
+                })
+                .map_err(|(kind, message)| Error::new(kind, message))?,
+            )
         } else {
             obj.extract().or_else(|_| {
                 obj.call_method0("read")?
@@ -70,8 +75,11 @@ mod yaml_rs {
         };
 
         let encoded_string = py
-            .detach(|| decoder::encode(&data, encoding, encoder_errors))
-            .map_err(YAMLDecodeError::new_err)?;
+            .detach(|| {
+                decoder::encode(&data, encoding, encoder_errors)
+                    .map_err(|err| (err.kind(), err.to_string()))
+            })
+            .map_err(|(kind, message)| YAMLDecodeError::new_err(Error::new(kind, message)))?;
 
         load_yaml_from_string(
             py,
