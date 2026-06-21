@@ -15,9 +15,10 @@ pyo3 = {
     features = [
         "jiff-02",
         "num-bigint",
+        "nightly",
     ]
 }
-jiff = "=0.2.28"
+jiff = "=0.2.29"
 itoa = "=1.0.18"
 num-bigint = "=0.4.6"
 rustc-hash = "=2.1.2"
