@@ -86,8 +86,8 @@ python benchmark/run.py
 Linux
 </summary>
 
-<img src="https://github.com/lava-sh/benchmarks/yaml-rs/ubuntu-loads.svg">
-<img src="https://github.com/lava-sh/benchmarks/yaml-rs/ubuntu-dumps.svg">
+<img src="https://github.com/lava-sh/benchmarks/blob/main/yaml-rs/ubuntu-loads.svg">
+<img src="https://github.com/lava-sh/benchmarks/blob/main/yaml-rs/ubuntu-dumps.svg">
 
 </details>
 
@@ -106,8 +106,8 @@ Linux
 macOS
 </summary>
 
-<img src="https://github.com/lava-sh/benchmarks/yaml-rs/macos-loads.svg">
-<img src="https://github.com/lava-sh/benchmarks/yaml-rs/macos-dumps.svg">
+<img src="https://github.com/lava-sh/benchmarks/blob/main/yaml-rs/macos-loads.svg">
+<img src="https://github.com/lava-sh/benchmarks/blob/main/yaml-rs/macos-loads.svg">
 
 </details>
 
@@ -117,7 +117,7 @@ macOS
 Windows
 </summary>
 
-<img src="https://github.com/lava-sh/benchmarks/yaml-rs/windows-loads.svg">
-<img src="https://github.com/lava-sh/benchmarks/yaml-rs/windows-dumps.svg">
+<img src="https://github.com/lava-sh/benchmarks/blob/main/yaml-rs/windows-loads.svg">
+<img src="https://github.com/lava-sh/benchmarks/blob/main/yaml-rs/windows-dumps.svg">
 
 </details>
