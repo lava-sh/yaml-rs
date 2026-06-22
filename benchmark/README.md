@@ -80,10 +80,44 @@ python benchmark/run.py
 
 ## Results
 
-### loads
+<details>
+<summary>
+<img src="https://thesvg.org/icons/linux/default.svg" height="16" />
+Linux
+</summary>
 
-![YAML loads benchmark](loads.svg)
+<img src="https://github.com/lava-sh/benchmarks/yaml-rs/ubuntu-loads.svg">
+<img src="https://github.com/lava-sh/benchmarks/yaml-rs/ubuntu-dumps.svg">
 
-### dumps
+</details>
 
-![YAML dumps benchmark](dumps.svg)
+<details>
+<summary>
+<picture>
+  <source
+    media="(prefers-color-scheme: dark)"
+    srcset="https://thesvg.org/icons/apple/default.svg"
+  />
+  <img
+    src="https://thesvg.org/icons/apple/mono.svg"
+    height="16"
+  />
+</picture>
+macOS
+</summary>
+
+<img src="https://github.com/lava-sh/benchmarks/yaml-rs/macos-loads.svg">
+<img src="https://github.com/lava-sh/benchmarks/yaml-rs/macos-dumps.svg">
+
+</details>
+
+<details>
+<summary>
+<img src="https://thesvg.org/icons/windows/default.svg" height="16" />
+Windows
+</summary>
+
+<img src="https://github.com/lava-sh/benchmarks/yaml-rs/windows-loads.svg">
+<img src="https://github.com/lava-sh/benchmarks/yaml-rs/windows-dumps.svg">
+
+</details>
