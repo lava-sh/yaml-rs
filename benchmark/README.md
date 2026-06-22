@@ -2,14 +2,42 @@
 
 ## Create and activate virtual environment
 
-Linux / MacOS:
+<p>
+  <span style="white-space: nowrap;">
+    <img
+      src="https://thesvg.org/icons/linux/default.svg"
+      alt="linux"
+      height="14"
+    />
+    Linux /
+    <picture>
+      <source
+        media="(prefers-color-scheme: dark)"
+        srcset="https://thesvg.org/icons/apple/default.svg"
+      />
+      <img
+        src="https://thesvg.org/icons/apple/mono.svg"
+        alt="macos"
+        height="14"
+      />
+    </picture>
+    MacOS:
+  </span>
+</p>
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-Windows:
+<p>
+  <img
+    src="https://thesvg.org/icons/windows11/default.svg"
+    alt="windows"
+    height="14"
+  />
+  Windows:
+</p>
 
 ```bash
 py -m venv .venv
@@ -18,13 +46,27 @@ py -m venv .venv
 
 ## Install benchmark dependencies
 
-Using [pip](https://github.com/pypa/pip):
+<p>
+  <img
+    src="https://thesvg.org/icons/python/default.svg"
+    alt="Python"
+    height="14"
+  />
+  Using <a href="https://github.com/pypa/pip">pip</a>:
+</p>
 
 ```bash
 pip install . --group bench
 ```
 
-Using [uv](https://github.com/astral-sh/uv):
+<p>
+  <img
+    src="https://thesvg.org/icons/uv/default.svg"
+    alt="uv"
+    height="14"
+  />
+  Using <a href="https://github.com/astral-sh/uv">uv</a>:
+</p>
 
 ```bash
 uv pip install . --group bench

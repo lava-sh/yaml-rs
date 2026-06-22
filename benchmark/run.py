@@ -13,6 +13,7 @@ import ruamel.yaml
 import ryaml
 import yaml as pyyaml
 import yaml_rs
+import yamlrocks
 
 N = 25
 
@@ -137,15 +138,13 @@ def run(run_count: int) -> None:
                 parse_datetime=False,
             ),
             "ryaml": lambda d=data: ryaml.loads_all(d),
+            "yamlrocks": lambda d=data: yamlrocks.loads_all(d),
             "PyYAML": lambda d=data: list(pyyaml.safe_load_all(d)),
             "PyYAML (CLoader)": lambda d=data: list(
                 pyyaml.load_all(
                     d,
                     Loader=pyyaml.CLoader,
                 ),
-            ),
-            "PyYAML (CSafeLoader)": lambda d=data: list(
-                pyyaml.load_all(d, Loader=pyyaml.CSafeLoader),
             ),
             "ruamel.yaml": lambda d=data: list(ruamel.yaml.YAML(typ="safe").load_all(d)),
             "oyaml": lambda d=data: list(oyaml.safe_load_all(d)),
@@ -155,11 +154,8 @@ def run(run_count: int) -> None:
             "yaml_rs": lambda d=data: yaml_rs.dumps(d),
             "ryaml": lambda d=data: ryaml.dumps(d),
             "PyYAML": lambda d=data: pyyaml.dump(d),
+            "yamlrocks": lambda d=data: yamlrocks.dumps(d),
             "PyYAML (CDumper)": lambda d=data: pyyaml.dump(d, Dumper=pyyaml.CDumper),
-            "PyYAML (CSafeDumper)": lambda d=data: pyyaml.dump(
-                d,
-                Dumper=pyyaml.CSafeDumper,
-            ),
             "ruamel.yaml": lambda d=data: ruamel_dump(d),
             "oyaml": lambda d=data: oyaml.dump(d),
         }
