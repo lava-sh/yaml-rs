@@ -85,4 +85,6 @@ bench = [
 ]
 
 [tool.uv.dependency-groups]
+# yamlrocks (requires-python = ">=3.12")
+bench = { requires-python = ">= 3.12" }
 wasm-test = { requires-python = ">= 3.13" }
