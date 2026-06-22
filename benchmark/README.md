@@ -3,18 +3,26 @@
 ## Create and activate virtual environment
 
 <p>
-  <img
-    src="https://thesvg.org/icons/linux/default.svg"
-    alt="linux"
-    height="14"
-  />
-  Linux /
-  <img
-    src="https://thesvg.org/icons/apple/default.svg"
-    alt="macos"
-    height="14"
-  />
-  MacOS:
+  <span style="white-space: nowrap;">
+    <img
+      src="https://thesvg.org/icons/linux/default.svg"
+      alt="linux"
+      height="14"
+    />
+    Linux /
+    <picture>
+      <source
+        media="(prefers-color-scheme: dark)"
+        srcset="https://thesvg.org/icons/apple/default.svg"
+      />
+      <img
+        src="https://thesvg.org/icons/apple/mono.svg"
+        alt="macos"
+        height="14"
+      />
+    </picture>
+    MacOS:
+  </span>
 </p>
 
 ```bash
