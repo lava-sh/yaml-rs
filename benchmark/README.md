@@ -80,6 +80,8 @@ python benchmark/run.py
 
 ## Results
 
+Benchmarks are updated daily and stored in [this](https://github.com/lava-sh/benchmarks/tree/main/yaml-rs) repository.
+
 <details>
 <summary>
 <img src="https://thesvg.org/icons/linux/default.svg" height="16" />
