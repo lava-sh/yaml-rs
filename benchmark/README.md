@@ -32,7 +32,7 @@ source .venv/bin/activate
 
 <p>
   <img
-    src="https://thesvg.org/icons/windows11/default.svg"
+    src="https://thesvg.org/icons/windows/default.svg"
     alt="windows"
     height="14"
   />
@@ -83,7 +83,7 @@ python benchmark/run.py
 <details>
 <summary>
 <img src="https://thesvg.org/icons/linux/default.svg" height="16" />
-Linux
+Linux (click me)
 </summary>
 
 <img src="https://github.com/lava-sh/benchmarks/blob/main/yaml-rs/ubuntu-loads.svg">
@@ -103,7 +103,7 @@ Linux
     height="16"
   />
 </picture>
-macOS
+macOS (click me)
 </summary>
 
 <img src="https://github.com/lava-sh/benchmarks/blob/main/yaml-rs/macos-loads.svg">
@@ -114,7 +114,7 @@ macOS
 <details>
 <summary>
 <img src="https://thesvg.org/icons/windows/default.svg" height="16" />
-Windows
+Windows (click me)
 </summary>
 
 <img src="https://github.com/lava-sh/benchmarks/blob/main/yaml-rs/windows-loads.svg">
