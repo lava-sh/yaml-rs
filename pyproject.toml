@@ -48,7 +48,7 @@ Issues = "https://github.com/lava-sh/yaml-rs/issues"
 [dependency-groups]
 typos = ["typos == 1.47.2"]
 zizmor = ["zizmor == 1.26.1"]
-rumdl = ["rumdl == 0.2.20"]
+rumdl = ["rumdl == 0.2.23"]
 maturin = [
     "maturin == 1.14.1 ; sys_platform != 'linux'",
     "maturin[patchelf] == 1.14.1 ; sys_platform == 'linux'",
@@ -60,7 +60,7 @@ wasm-test = [
 ci = [
     "pytest == 9.1.1",
     "dirty-equals == 0.11",
-    "ruff == 0.15.18",
+    "ruff == 0.15.20",
     "pyyaml == 6.0.3",
     { include-group = "maturin" },
 ]
@@ -71,16 +71,15 @@ dev = [
     { include-group = "zizmor" },
 ]
 bench = [
-    "yamlrocks == 0.2.1",
+    "yamlrocks == 0.3.0",
     "oyaml == 1.0",
     "pyyaml == 6.0.3",
     "ryaml == 0.5.1",
     "ruamel-yaml == 0.19.1",
     "ruamel.yaml.clibz == 0.3.7",
-    ##################
-    "polars == 1.41.2",
-    "altair == 6.2.1 ",
-    "py-cpuinfo == 9.0.0",
+    #############################
+    "polars[plot] == 1.42.0",
+    "py-cpuinfo2 == 10.1.1",
     "vl-convert-python == 1.9.0.post1",
 ]
 

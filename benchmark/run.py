@@ -19,6 +19,7 @@ N = 25
 
 FILE_PATH = Path(__file__).resolve().parent
 YAMLS_FOR_BENCHMARK = FILE_PATH / "data"
+
 # Example of a config file for app
 FILE_1 = YAMLS_FOR_BENCHMARK / "config.yaml"
 # File from `https://github.com/yaml/yaml-test-suite`
@@ -27,9 +28,6 @@ FILE_2 = YAMLS_FOR_BENCHMARK / "UGM3.yaml"
 FILE_3 = YAMLS_FOR_BENCHMARK / "bench.yaml"
 
 FILES = [FILE_1, FILE_2, FILE_3]
-
-CPU = cpuinfo.get_cpu_info()["brand_raw"]
-PY_VERSION = f"{platform.python_version()} ({platform.system()} {platform.release()})"
 
 
 def benchmark(func: Callable, count: int) -> float:
@@ -51,15 +49,14 @@ def plot_benchmark(
     }).sort("exec_time")
 
     df = df.with_columns(
-        (pl.col("exec_time") / pl.col("exec_time").min()).alias("slowdown"),
-    )
-
-    df = df.with_columns(
-        pl.Series(
-            "parser_label",
-            [f"{p}\nv{get_lib_version(p.split()[0])}" for p in df["parser"]],
+        slowdown=(pl.col("exec_time") / pl.col("exec_time").min()),
+        parser_label=pl.col("parser").map_elements(
+            lambda parser: f"{parser}\n{get_lib_version(parser.split()[0])}",
+            return_dtype=pl.String,
         ),
     )
+
+    max_time = df.select(pl.max("exec_time")).item()
 
     chart = (
         alt
@@ -79,7 +76,7 @@ def plot_benchmark(
             y=alt.Y(
                 "exec_time:Q",
                 title="Execution Time (seconds, lower=better)",
-                scale=alt.Scale(domain=(0, df["exec_time"].max() * 1.04)),
+                scale=alt.Scale(domain=(0, max_time * 1.05)),
                 axis=alt.Axis(grid=False),
             ),
             color=alt.Color("parser:N", legend=None, scale=alt.Scale(scheme="dark2")),
@@ -107,12 +104,16 @@ def plot_benchmark(
         .encode(text="label:N")
     )
 
+    cpu_info = cpuinfo.get_cpu_info()
+    cpu_brand = cpu_info.get("brand_raw", "Unknown")
+    py_version = f"{platform.python_version()} ({platform.system()} {platform.release()})"
+
     (chart + text).properties(
         width=800,
         height=600,
         title={
             "text": f"YAML parsers benchmark ({run_type})",
-            "subtitle": f"Python: {PY_VERSION} | CPU: {CPU}",
+            "subtitle": f"Python: {py_version} | CPU: {cpu_brand}",
         },
     ).save(save_path)
 
