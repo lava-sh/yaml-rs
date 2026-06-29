@@ -1,0 +1,25 @@
+name: "Event Notifier"
+
+on:
+  issues:
+    types: [opened, reopened]
+  pull_request_target:
+    # zizmor: ignore[dangerous-triggers]
+    types: [opened, reopened]
+
+permissions:
+  issues: read
+  pull-requests: read
+
+jobs:
+  notify:
+    name: "Telegram notification"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Send Telegram notification for new issue or pull request"
+        uses: reagento/relator@4b1531359edba1228db0906e8931b0da2aef69cd # v1.7.0
+        with:
+          tg-bot-token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          # https://t.me/gh_lava_sh
+          tg-chat-id: 3895051033
+          github-token: ${{ secrets.GITHUB_TOKEN }}
