@@ -10,6 +10,20 @@ enum ParsedTimestamp {
     Time(TimeParts),
 }
 
+impl ParsedTimestamp {
+    fn into_py(self, py: Python<'_>) -> Option<Bound<'_, PyAny>> {
+        match self {
+            Self::Date(date) => Some(
+                PyDate::new(py, date.year, date.month, date.day)
+                    .ok()?
+                    .into_any(),
+            ),
+            Self::DateTime(parts) => parts.into_py(py),
+            Self::Time(time) => time.into_py(py),
+        }
+    }
+}
+
 #[derive(Copy, Clone)]
 struct DateParts {
     year: i32,
@@ -24,6 +38,35 @@ struct DateTimeParts {
     offset_seconds: Option<i32>,
 }
 
+impl DateTimeParts {
+    fn into_py(self, py: Python<'_>) -> Option<Bound<'_, PyAny>> {
+        let py_tz_info = self.offset_seconds.and_then(|offset_seconds| {
+            const SECS_IN_DAY: i32 = 86_400;
+
+            let days = offset_seconds.div_euclid(SECS_IN_DAY);
+            let seconds = offset_seconds.rem_euclid(SECS_IN_DAY);
+            let py_delta = PyDelta::new(py, days, seconds, 0, false).ok()?;
+            PyTzInfo::fixed_offset(py, py_delta).ok()
+        });
+
+        Some(
+            PyDateTime::new(
+                py,
+                self.date.year,
+                self.date.month,
+                self.date.day,
+                self.time.hour,
+                self.time.minute,
+                self.time.second,
+                self.time.microsecond,
+                py_tz_info.as_ref(),
+            )
+            .ok()?
+            .into_any(),
+        )
+    }
+}
+
 #[derive(Copy, Clone)]
 struct TimeParts {
     hour: u8,
@@ -32,9 +75,21 @@ struct TimeParts {
     microsecond: u32,
 }
 
-#[inline]
-fn is_space(byte: u8) -> bool {
-    matches!(byte, b' ' | b'\t')
+impl TimeParts {
+    fn into_py(self, py: Python<'_>) -> Option<Bound<'_, PyAny>> {
+        Some(
+            PyTime::new(
+                py,
+                self.hour,
+                self.minute,
+                self.second,
+                self.microsecond,
+                None,
+            )
+            .ok()?
+            .into_any(),
+        )
+    }
 }
 
 #[inline]
@@ -114,7 +169,7 @@ fn parse_fraction(bytes: &[u8], mut index: usize) -> Option<(usize, u32)> {
     let mut microsecond = first * 100_000;
     index += 1;
 
-    for scale in [10_000_u32, 1_000, 100, 10, 1] {
+    for weight in [10_000_u32, 1_000, 100, 10, 1] {
         if index == bytes.len() {
             return Some((index, microsecond));
         }
@@ -124,7 +179,7 @@ fn parse_fraction(bytes: &[u8], mut index: usize) -> Option<(usize, u32)> {
             return Some((index, microsecond));
         }
 
-        microsecond += u32::from(digit) * scale;
+        microsecond += u32::from(digit) * weight;
         index += 1;
     }
 
@@ -203,14 +258,16 @@ fn parse_date_or_datetime_bytes(bytes: &[u8]) -> Option<ParsedTimestamp> {
     }
 
     if index == bytes.len() {
+        let time = TimeParts {
+            hour,
+            minute,
+            second,
+            microsecond,
+        };
+
         return Some(ParsedTimestamp::DateTime(DateTimeParts {
             date,
-            time: TimeParts {
-                hour,
-                minute,
-                second,
-                microsecond,
-            },
+            time,
             offset_seconds,
         }));
     }
@@ -221,7 +278,7 @@ fn parse_date_or_datetime_bytes(bytes: &[u8]) -> Option<ParsedTimestamp> {
         b'-' => -parse_tz_hm(&bytes[index + 1..])?,
         b' ' | b'\t' => {
             index += 1;
-            if index == bytes.len() || is_space(bytes[index]) {
+            if index == bytes.len() || matches!(bytes[index], b' ' | b'\t') {
                 return None;
             }
 
@@ -234,14 +291,16 @@ fn parse_date_or_datetime_bytes(bytes: &[u8]) -> Option<ParsedTimestamp> {
         _ => return None,
     };
 
+    let time = TimeParts {
+        hour,
+        minute,
+        second,
+        microsecond,
+    };
+
     Some(ParsedTimestamp::DateTime(DateTimeParts {
         date,
-        time: TimeParts {
-            hour,
-            minute,
-            second,
-            microsecond,
-        },
+        time,
         offset_seconds: Some(offset_seconds),
     }))
 }
@@ -262,82 +321,18 @@ fn parse_time_bytes(bytes: &[u8]) -> Option<ParsedTimestamp> {
     let second = parse_digits!(u8, 2, bytes, 6)?;
     let (index, microsecond) = parse_fraction(bytes, 8)?;
 
-    (index == bytes.len()).then_some(ParsedTimestamp::Time(TimeParts {
+    let time = TimeParts {
         hour,
         minute,
         second,
         microsecond,
-    }))
+    };
+
+    (index == bytes.len()).then_some(ParsedTimestamp::Time(time))
 }
 
 pub fn parse_py_datetime<'py>(py: Python<'py>, str: &str) -> Option<Bound<'py, PyAny>> {
-    const SECS_IN_DAY: i32 = 86_400;
-
-    match parse_date_or_datetime_bytes(str.as_bytes())
+    parse_date_or_datetime_bytes(str.as_bytes())
         .or_else(|| parse_time_bytes(str.as_bytes()))?
-    {
-        ParsedTimestamp::Date(date) => match PyDate::new(py, date.year, date.month, date.day) {
-            Ok(py_date) => Some(py_date.into_any()),
-            Err(_) => None,
-        },
-        ParsedTimestamp::DateTime(parts) => {
-            if let Some(offset_seconds) = parts.offset_seconds {
-                let days = offset_seconds.div_euclid(SECS_IN_DAY);
-                let seconds = offset_seconds.rem_euclid(SECS_IN_DAY);
-
-                let py_delta = match PyDelta::new(py, days, seconds, 0, false) {
-                    Ok(py_delta) => py_delta,
-                    Err(_) => return None,
-                };
-
-                let py_tz_info = match PyTzInfo::fixed_offset(py, py_delta) {
-                    Ok(py_tz_info) => py_tz_info,
-                    Err(_) => return None,
-                };
-
-                return make_py_datetime(py, parts.date, parts.time, Some(&py_tz_info));
-            }
-
-            make_py_datetime(py, parts.date, parts.time, None)
-        }
-        ParsedTimestamp::Time(time) => make_py_time(py, time),
-    }
-}
-
-fn make_py_datetime<'py>(
-    py: Python<'py>,
-    date: DateParts,
-    time: TimeParts,
-    tzinfo: Option<&Bound<'py, PyTzInfo>>,
-) -> Option<Bound<'py, PyAny>> {
-    Some(
-        PyDateTime::new(
-            py,
-            date.year,
-            date.month,
-            date.day,
-            time.hour,
-            time.minute,
-            time.second,
-            time.microsecond,
-            tzinfo,
-        )
-        .ok()?
-        .into_any(),
-    )
-}
-
-fn make_py_time(py: Python<'_>, time: TimeParts) -> Option<Bound<'_, PyAny>> {
-    Some(
-        PyTime::new(
-            py,
-            time.hour,
-            time.minute,
-            time.second,
-            time.microsecond,
-            None,
-        )
-        .ok()?
-        .into_any(),
-    )
+        .into_py(py)
 }
