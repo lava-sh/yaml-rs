@@ -93,6 +93,9 @@ fn parse_datetime_bytes(bytes: &[u8]) -> Option<DateTimeParts> {
         return None;
     }
 
+    // bytes: [Y][Y][Y][Y][-][M][M][-][D][D]
+    //                     ^        ^
+    // index:              4        7
     // SAFETY: `bytes.len() >= 10` verified above.
     if unsafe { *bytes.get_unchecked(4) != b'-' || *bytes.get_unchecked(7) != b'-' } {
         return None;
