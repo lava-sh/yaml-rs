@@ -406,7 +406,7 @@ impl<'py> PyConverter<'py, '_> {
             Value::String(string) => {
                 if self.parse_datetime
                     && is_datetime(string.as_bytes())
-                    && let Ok(Some(dt)) = parse_py_datetime(self.py, string)
+                    && let Some(dt) = parse_py_datetime(self.py, string)
                 {
                     return Ok(dt);
                 }

@@ -48,7 +48,7 @@ pub fn is_datetime(bytes: &[u8]) -> bool {
         return true;
     }
 
-    matches!(bytes[10], b'T' | b't' | b' ')
+    matches!(bytes[10], b'T' | b't' | b' ' | b'\t')
 }
 
 #[inline]
