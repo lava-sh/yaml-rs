@@ -25,5 +25,5 @@ jobs:
         with:
           tg-bot-token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           # https://t.me/gh_lava_sh
-          tg-chat-id: 3895051033
+          tg-chat-id: -1003895051033
           github-token: ${{ secrets.GITHUB_TOKEN }}
