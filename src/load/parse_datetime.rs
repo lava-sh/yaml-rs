@@ -175,18 +175,22 @@ fn parse_datetime_bytes(bytes: &[u8]) -> Option<DateTimeParts> {
         });
     }
 
-    while index < bytes.len() && is_space(bytes[index]) {
-        index += 1;
-    }
-
-    if index == bytes.len() {
-        return None;
-    }
-
     let offset_seconds = match bytes[index] {
         b'Z' => (index + 1 == bytes.len()).then_some(0)?,
         b'+' => parse_tz_hm(&bytes[index + 1..])?,
         b'-' => -parse_tz_hm(&bytes[index + 1..])?,
+        b' ' | b'\t' => {
+            index += 1;
+            if index == bytes.len() || is_space(bytes[index]) {
+                return None;
+            }
+
+            match bytes[index] {
+                b'+' => parse_tz_hm(&bytes[index + 1..])?,
+                b'-' => -parse_tz_hm(&bytes[index + 1..])?,
+                _ => return None,
+            }
+        }
         _ => return None,
     };
 
