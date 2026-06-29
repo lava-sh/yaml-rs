@@ -1,6 +1,6 @@
 import math
 import platform
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from typing import Any, Literal
 
 import pytest
@@ -211,7 +211,12 @@ def test_yaml_load_encoding_success(
             "2001-12-14T21:59:43+05:30",
             datetime(2001, 12, 14, 21, 59, 43, tzinfo=timezone(timedelta(seconds=19800))),
         ),
-        ("2001-12-15T02:59", "2001-12-15T02:59"),
+        ("2001-12-15T02:59", datetime(2001, 12, 15, 2, 59, 0, tzinfo=UTC)),
+        ("20:03:20", time(20, 3, 20)),
+        ("20:00:00.1", time(20, 0, 0, 100000)),
+        ("20:00:00.1000", time(20, 0, 0, 100000)),
+        ("20:20:00.12345", time(20, 20, 0, 123450)),
+        ("20:00:20.999999999999999999", time(20, 0, 20, 999999)),
         ("!!str 2002-04-28", "2002-04-28"),
         # https://github.com/yaml/yaml-spec/blob/1b1a1be4/spec/1.2/docbook/timestamp.dbk#L139
         # ([Tt]|[ \t]+)[0-9][0-9]? <lineannotation># (hour)</lineannotation>

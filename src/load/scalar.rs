@@ -28,27 +28,31 @@ pub fn is_bool(str: &str) -> Option<bool> {
 
 #[inline]
 pub fn is_datetime(bytes: &[u8]) -> bool {
-    if bytes.len() < 10 {
-        return false;
+    if bytes.len() >= 10 && bytes[4] == b'-' && bytes[7] == b'-' {
+        let digits = u64::from_le_bytes([
+            bytes[0], bytes[1], bytes[2], bytes[3], bytes[5], bytes[6], bytes[8], bytes[9],
+        ]);
+
+        if !is_8digits(digits) {
+            return false;
+        }
+
+        if bytes.len() == 10 {
+            return true;
+        }
+
+        return matches!(bytes[10], b'T' | b't' | b' ' | b'\t');
     }
 
-    if bytes[4] != b'-' || bytes[7] != b'-' {
-        return false;
-    }
-
-    let digits = u64::from_le_bytes([
-        bytes[0], bytes[1], bytes[2], bytes[3], bytes[5], bytes[6], bytes[8], bytes[9],
-    ]);
-
-    if !is_8digits(digits) {
-        return false;
-    }
-
-    if bytes.len() == 10 {
-        return true;
-    }
-
-    matches!(bytes[10], b'T' | b't' | b' ' | b'\t')
+    bytes.len() >= 8
+        && bytes[2] == b':'
+        && bytes[5] == b':'
+        && bytes[0].is_ascii_digit()
+        && bytes[1].is_ascii_digit()
+        && bytes[3].is_ascii_digit()
+        && bytes[4].is_ascii_digit()
+        && bytes[6].is_ascii_digit()
+        && bytes[7].is_ascii_digit()
 }
 
 #[inline]
