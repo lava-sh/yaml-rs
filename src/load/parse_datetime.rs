@@ -40,14 +40,17 @@ struct DateTimeParts {
 
 impl DateTimeParts {
     fn into_py(self, py: Python<'_>) -> Option<Bound<'_, PyAny>> {
-        let py_tz_info = self.offset_seconds.and_then(|offset_seconds| {
-            const SECS_IN_DAY: i32 = 86_400;
+        let py_tz_info = match self.offset_seconds {
+            Some(offset_seconds) => {
+                const SECS_IN_DAY: i32 = 86_400;
 
-            let days = offset_seconds.div_euclid(SECS_IN_DAY);
-            let seconds = offset_seconds.rem_euclid(SECS_IN_DAY);
-            let py_delta = PyDelta::new(py, days, seconds, 0, false).ok()?;
-            PyTzInfo::fixed_offset(py, py_delta).ok()
-        });
+                let days = offset_seconds.div_euclid(SECS_IN_DAY);
+                let seconds = offset_seconds.rem_euclid(SECS_IN_DAY);
+                let py_delta = PyDelta::new(py, days, seconds, 0, false).ok()?;
+                Some(PyTzInfo::fixed_offset(py, py_delta).ok()?)
+            }
+            None => None,
+        };
 
         Some(
             PyDateTime::new(
@@ -142,7 +145,7 @@ fn parse_tz_hm(offset_bytes: &[u8]) -> Option<i32> {
         [hour_0] => Some(i32::from(digit(*hour_0)?) * 3600),
         [hour_0, hour_1] => {
             let hour = i32::from(digit(*hour_0)?) * 10 + i32::from(digit(*hour_1)?);
-            Some(hour * 3600)
+            (hour <= 23).then_some(hour * 3600)
         }
         [hour_0, b':', minute_0, minute_1] => {
             let hour = i32::from(digit(*hour_0)?);
@@ -152,7 +155,7 @@ fn parse_tz_hm(offset_bytes: &[u8]) -> Option<i32> {
         [hour_0, hour_1, b':', minute_0, minute_1] => {
             let hour = i32::from(digit(*hour_0)?) * 10 + i32::from(digit(*hour_1)?);
             let minute = i32::from(digit(*minute_0)?) * 10 + i32::from(digit(*minute_1)?);
-            (minute <= 59).then_some(hour * 3600 + minute * 60)
+            (hour <= 23 && minute <= 59).then_some(hour * 3600 + minute * 60)
         }
         _ => None,
     }
