@@ -239,17 +239,9 @@ fn parse_date_or_datetime_bytes(bytes: &[u8]) -> Option<ParsedTimestamp> {
     let mut second = 0;
     let mut index = 16;
     let mut microsecond = 0;
-    let mut offset_seconds = None;
 
-    if index == bytes.len() {
-        offset_seconds = Some(0);
-    } else if bytes[index] == b':' {
+    if index < bytes.len() && bytes[index] == b':' {
         if bytes.len() < 19 {
-            return None;
-        }
-
-        // SAFETY: `bytes.len() >= 19` verified above.
-        if unsafe { *bytes.get_unchecked(16) != b':' } {
             return None;
         }
 
@@ -268,7 +260,7 @@ fn parse_date_or_datetime_bytes(bytes: &[u8]) -> Option<ParsedTimestamp> {
         return Some(ParsedTimestamp::DateTime(DateTimeParts {
             date,
             time,
-            offset_seconds,
+            offset_seconds: None,
         }));
     }
 
