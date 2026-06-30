@@ -18,7 +18,7 @@ jobs:
             pyodide-version: "0.29.4"
             pyemscripten-version: "2025_0"
             emsdk-version: "4.0.9"
-            rust-toolchain: "nightly-2026-06-19"
+            rust-toolchain: "nightly-2026-06-29"
             rustflags: >-
               -C link-arg=-sSIDE_MODULE=2
               -C link-arg=-sWASM_BIGINT
@@ -28,11 +28,11 @@ jobs:
 
           - python-version: "3.14"
             # pyodide:
-            # 314.0.0a1 - 314.0.0 (emscripten 5.0.3)
-            pyodide-version: "314.0.0"
+            # 314.0.0a1 - 314.0.2 (emscripten 5.0.3)
+            pyodide-version: "314.0.2"
             pyemscripten-version: "2026_0"
             emsdk-version: "5.0.3"
-            rust-toolchain: "nightly-2026-06-19"
+            rust-toolchain: "nightly-2026-06-29"
             rustflags: >-
               -C link-arg=-sSIDE_MODULE=2
               -C link-arg=-sWASM_BIGINT
