@@ -278,6 +278,7 @@ fn parse_date_or_datetime_bytes(bytes: &[u8]) -> Option<ParsedTimestamp> {
             }
 
             match bytes[index] {
+                b'Z' => (index + 1 == bytes.len()).then_some(0)?,
                 b'+' => parse_tz_hm(&bytes[index + 1..])?,
                 b'-' => -parse_tz_hm(&bytes[index + 1..])?,
                 _ => return None,
