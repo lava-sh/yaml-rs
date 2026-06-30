@@ -1,303 +1,334 @@
 use pyo3::{
-    Bound, PyAny, PyResult, Python,
-    types::{PyDate, PyDateTime, PyDelta, PyTzInfo},
+    Bound, PyAny, Python,
+    types::{PyDate, PyDateTime, PyDelta, PyTime, PyTzInfo},
 };
 
-use crate::from_rust::dec2flt::parse_digits;
-
-const SEP: u8 = b':';
-const WHITESPACE: u8 = b' ';
-const TAB: u8 = b'\t';
-const T: u8 = b'T';
-const LOWER_T: u8 = b't';
-const Z: u8 = b'Z';
-const LOWER_Z: u8 = b'z';
-const PLUS: u8 = b'+';
-const MINUS: u8 = b'-';
-
-static TABLE: [u8; 256] = {
-    let mut table = [255u8; 256];
-    let mut i = 0;
-    while i < 10 {
-        table[(b'0' + i) as usize] = i;
-        i += 1;
-    }
-    table
-};
-
-#[inline]
-fn trim_trailing_spaces(bytes: &[u8], min_exclusive: usize, mut end: usize) -> usize {
-    while end > min_exclusive && bytes[end - 1] == WHITESPACE {
-        end -= 1;
-    }
-    end
+#[derive(Copy, Clone)]
+enum ParsedTimestamp {
+    Date(DateParts),
+    DateTime(DateTimeParts),
+    Time(TimeParts),
 }
 
-#[inline]
-fn trim_leading_spaces(bytes: &[u8], mut start: usize) -> usize {
-    while start < bytes.len() && bytes[start] == WHITESPACE {
-        start += 1;
-    }
-    start
-}
-
-#[inline]
-fn parse_ascii_i32(bytes: &[u8]) -> Option<i32> {
-    if bytes.is_empty() {
-        return None;
-    }
-
-    let mut value = 0i32;
-
-    for &byte in bytes {
-        if !byte.is_ascii_digit() {
-            return None;
+impl ParsedTimestamp {
+    fn into_py(self, py: Python<'_>) -> Option<Bound<'_, PyAny>> {
+        match self {
+            Self::Date(date) => Some(
+                PyDate::new(py, date.year, date.month, date.day)
+                    .ok()?
+                    .into_any(),
+            ),
+            Self::DateTime(parts) => parts.into_py(py),
+            Self::Time(time) => time.into_py(py),
         }
-        value = value.checked_mul(10)?.checked_add(i32::from(byte - b'0'))?;
-    }
-    Some(value)
-}
-
-#[inline]
-fn parse_two_digits(a: u8, b: u8) -> Option<i32> {
-    let a_ = TABLE[a as usize];
-    let b_ = TABLE[b as usize];
-    if a_ < 10 && b_ < 10 {
-        Some(i32::from(a_) * 10 + i32::from(b_))
-    } else {
-        None
     }
 }
 
+#[derive(Copy, Clone)]
+struct DateParts {
+    year: i32,
+    month: u8,
+    day: u8,
+}
+
+#[derive(Copy, Clone)]
+struct DateTimeParts {
+    date: DateParts,
+    time: TimeParts,
+    offset_seconds: Option<i32>,
+}
+
+impl DateTimeParts {
+    fn into_py(self, py: Python<'_>) -> Option<Bound<'_, PyAny>> {
+        let py_tz_info = match self.offset_seconds {
+            Some(offset_seconds) => {
+                const SECS_IN_DAY: i32 = 86_400;
+
+                let days = offset_seconds.div_euclid(SECS_IN_DAY);
+                let seconds = offset_seconds.rem_euclid(SECS_IN_DAY);
+                let py_delta = PyDelta::new(py, days, seconds, 0, false).ok()?;
+                Some(PyTzInfo::fixed_offset(py, py_delta).ok()?)
+            }
+            None => None,
+        };
+
+        Some(
+            PyDateTime::new(
+                py,
+                self.date.year,
+                self.date.month,
+                self.date.day,
+                self.time.hour,
+                self.time.minute,
+                self.time.second,
+                self.time.microsecond,
+                py_tz_info.as_ref(),
+            )
+            .ok()?
+            .into_any(),
+        )
+    }
+}
+
+#[derive(Copy, Clone)]
+struct TimeParts {
+    hour: u8,
+    minute: u8,
+    second: u8,
+    microsecond: u32,
+}
+
+impl TimeParts {
+    fn into_py(self, py: Python<'_>) -> Option<Bound<'_, PyAny>> {
+        Some(
+            PyTime::new(
+                py,
+                self.hour,
+                self.minute,
+                self.second,
+                self.microsecond,
+                None,
+            )
+            .ok()?
+            .into_any(),
+        )
+    }
+}
+
 #[inline]
-fn parse_tz_hm(offset_bytes: &[u8]) -> Option<(i32, i32)> {
-    match offset_bytes.len() {
-        // -5
-        1 => parse_ascii_i32(offset_bytes).map(|h| (h, 0)),
-        // -05
-        2 => parse_two_digits(offset_bytes[0], offset_bytes[1]).map(|h| (h, 0)),
-        // -5:30
-        4 if offset_bytes[1] == b':' => {
-            let h = parse_ascii_i32(&offset_bytes[..1])?;
-            let m = parse_two_digits(offset_bytes[2], offset_bytes[3])?;
-            Some((h, m))
+fn digit(byte: u8) -> Option<u8> {
+    let digit = byte.wrapping_sub(b'0');
+    (digit < 10).then_some(digit)
+}
+
+macro_rules! parse_digits {
+    ($ty:ty, $len:literal, $bytes:expr, $start:expr) => {{
+        let bytes = $bytes;
+        let start: usize = $start;
+
+        debug_assert!(
+            start
+                .checked_add($len)
+                .is_some_and(|end| end <= bytes.len())
+        );
+
+        let mut index: usize = 0;
+        let mut value: $ty = 0;
+
+        'parse: {
+            while index < $len {
+                // SAFETY: Caller guarantees `start..start + $len` is in-bounds.
+                let digit = unsafe { (*bytes.get_unchecked(start + index)).wrapping_sub(b'0') };
+                if digit >= 10 {
+                    break 'parse None;
+                }
+
+                let digit = digit as $ty;
+                value = match value
+                    .checked_mul(10)
+                    .and_then(|value| value.checked_add(digit))
+                {
+                    Some(value) => value,
+                    None => break 'parse None,
+                };
+                index += 1;
+            }
+
+            Some(value)
         }
-        // -05:30
-        5 if offset_bytes[2] == b':' => {
-            let h = parse_two_digits(offset_bytes[0], offset_bytes[1])?;
-            let m = parse_two_digits(offset_bytes[3], offset_bytes[4])?;
-            Some((h, m))
+    }};
+}
+
+#[inline]
+fn parse_tz_hm(offset_bytes: &[u8]) -> Option<i32> {
+    match offset_bytes {
+        [hour_0] => Some(i32::from(digit(*hour_0)?) * 3600),
+        [hour_0, hour_1] => {
+            let hour = i32::from(digit(*hour_0)?) * 10 + i32::from(digit(*hour_1)?);
+            (hour <= 23).then_some(hour * 3600)
+        }
+        [hour_0, b':', minute_0, minute_1] => {
+            let hour = i32::from(digit(*hour_0)?);
+            let minute = i32::from(digit(*minute_0)?) * 10 + i32::from(digit(*minute_1)?);
+            (minute <= 59).then_some(hour * 3600 + minute * 60)
+        }
+        [hour_0, hour_1, b':', minute_0, minute_1] => {
+            let hour = i32::from(digit(*hour_0)?) * 10 + i32::from(digit(*hour_1)?);
+            let minute = i32::from(digit(*minute_0)?) * 10 + i32::from(digit(*minute_1)?);
+            (hour <= 23 && minute <= 59).then_some(hour * 3600 + minute * 60)
         }
         _ => None,
     }
 }
 
-pub fn parse_py_datetime<'py>(py: Python<'py>, str: &str) -> PyResult<Option<Bound<'py, PyAny>>> {
-    const SECS_IN_DAY: i32 = 86_400;
-
-    let bytes = str.as_bytes();
-
-    if bytes.len() < 10 {
-        return Ok(None);
+#[inline]
+fn parse_fraction(bytes: &[u8], mut index: usize) -> Option<(usize, u32)> {
+    if bytes.get(index).copied() != Some(b'.') {
+        return Some((index, 0));
     }
+
+    index += 1;
+    let first = u32::from(digit(*bytes.get(index)?)?);
+    let mut microsecond = first * 100_000;
+    index += 1;
+
+    for weight in [10_000_u32, 1_000, 100, 10, 1] {
+        if index == bytes.len() {
+            return Some((index, microsecond));
+        }
+
+        let digit = bytes[index].wrapping_sub(b'0');
+        if digit >= 10 {
+            return Some((index, microsecond));
+        }
+
+        microsecond += u32::from(digit) * weight;
+        index += 1;
+    }
+
+    while index < bytes.len() {
+        let digit = bytes[index].wrapping_sub(b'0');
+        if digit >= 10 {
+            break;
+        }
+        index += 1;
+    }
+
+    Some((index, microsecond))
+}
+
+#[inline]
+fn parse_date_or_datetime_bytes(bytes: &[u8]) -> Option<ParsedTimestamp> {
+    if bytes.len() < 10 {
+        return None;
+    }
+
     // bytes: [Y][Y][Y][Y][-][M][M][-][D][D]
     //                     ^        ^
     // index:              4        7
-    // SAFETY: `bytes.len()` >= 10 verified above, so indices 4 and 7 are valid.
-    if unsafe { !(*bytes.get_unchecked(4) == MINUS && *bytes.get_unchecked(7) == MINUS) } {
-        return Ok(None);
-    }
-    // SAFETY: `bytes.len()` >= 10 and date format verified above.
-    // Indices 0..4, 5..7, and 8..10 are all within bounds.
-    let day = parse_digits(bytes, 8, 2) as u8;
-    let month = parse_digits(bytes, 5, 2) as u8;
-    let year = parse_digits(bytes, 0, 4).cast_signed();
-
-    if bytes.len() == 10 {
-        return Ok(Some(PyDate::new(py, year, month, day)?.into_any()));
+    // SAFETY: `bytes.len() >= 10` verified above.
+    if unsafe { *bytes.get_unchecked(4) != b'-' || *bytes.get_unchecked(7) != b'-' } {
+        return None;
     }
 
-    let sep_pos = match bytes[10..]
-        .iter()
-        .position(|&byte| matches!(byte, T | LOWER_T | WHITESPACE | TAB))
-        .map(|pos| pos + 10)
-    {
-        Some(pos) => pos,
-        None => return Ok(None),
+    let date = DateParts {
+        year: parse_digits!(i32, 4, bytes, 0)?,
+        month: parse_digits!(u8, 2, bytes, 5)?,
+        day: parse_digits!(u8, 2, bytes, 8)?,
     };
 
-    let mut dt_end = bytes.len();
-    let mut tz_start = None;
-
-    for i in (sep_pos + 1..bytes.len()).rev() {
-        // SAFETY: i from range (`sep_pos + 1..bytes.len()`), so it's a valid index.
-        let b = unsafe { *bytes.get_unchecked(i) };
-
-        match b {
-            Z | PLUS => {
-                let actual_dt_end = trim_trailing_spaces(bytes, sep_pos + 1, i);
-                dt_end = actual_dt_end;
-                tz_start = Some(i);
-                break;
-            }
-            LOWER_Z => return Ok(None),
-            MINUS if i > 10 => {
-                let mut check_pos = i - 1;
-                // SAFETY: Loop condition ensures check_pos > sep_pos >= 0,
-                // making check_pos a valid index.
-                while check_pos > sep_pos
-                    && unsafe { *bytes.get_unchecked(check_pos) } == WHITESPACE
-                {
-                    check_pos -= 1;
-                }
-                // SAFETY: check_pos > sep_pos verified by loop condition above,
-                // so check_pos is a valid index.
-                if check_pos > sep_pos
-                    && unsafe { *bytes.get_unchecked(check_pos) }.is_ascii_digit()
-                {
-                    let actual_dt_end = trim_trailing_spaces(bytes, sep_pos + 1, i);
-                    dt_end = actual_dt_end;
-                    tz_start = Some(i);
-                    break;
-                }
-            }
-            _ => {}
-        }
+    if bytes.len() == 10 {
+        return Some(ParsedTimestamp::Date(date));
     }
 
-    let time_start = sep_pos + 1;
-    // SAFETY: time_start + 2 < dt_end verified by the condition,
-    // and dt_end <= `bytes.len()`, so time_start + 2 is a valid index.
-    if time_start + 5 > dt_end || unsafe { *bytes.get_unchecked(time_start + 2) } != SEP {
-        return Ok(None);
+    if bytes.len() < 16 {
+        return None;
     }
 
-    // SAFETY: All operations within this block are safe because:
-    // 1. Date indices (0..4, 5..7, 8..10) verified at function start
-    // 2. time_start derived from sep_pos which is a valid index
-    // 3. All subsequent indices are bounds-checked before use
-    unsafe {
-        let hour = parse_digits(bytes, time_start, 2) as u8;
-        let minute = parse_digits(bytes, time_start + 3, 2) as u8;
+    // SAFETY: `bytes.len() >= 16` verified above.
+    let sep = unsafe { *bytes.get_unchecked(10) };
+    if !matches!(sep, b'T' | b't' | b' ' | b'\t') {
+        return None;
+    }
 
-        let (second, microsecond) =
-            // SAFETY: time_start + 5 < dt_end verified by condition,
-            // and dt_end <= `bytes.len()`, so time_start + 5 is valid.
-            if time_start + 5 < dt_end && *bytes.get_unchecked(time_start + 5) == SEP {
-                let second = parse_digits(bytes, time_start + 6, 2) as u8;
-                // SAFETY: time_start + 8 < dt_end verified by condition,
-                // so time_start + 8 is a valid index.
-                let microsecond =
-                    if time_start + 8 < dt_end && *bytes.get_unchecked(time_start + 8) == b'.' {
-                        let frac_start = time_start + 9;
-                        let frac_len = (dt_end - frac_start).min(6);
+    // SAFETY: `bytes.len() >= 16` verified above.
+    if unsafe { *bytes.get_unchecked(13) != b':' } {
+        return None;
+    }
 
-                        if frac_len == 6 {
-                            parse_digits(bytes, frac_start, 6)
-                        } else {
-                            let mut result = 0u32;
-                            let mut multiplier = 100_000u32;
+    let hour = parse_digits!(u8, 2, bytes, 11)?;
+    let minute = parse_digits!(u8, 2, bytes, 14)?;
 
-                            for i in 0..frac_len {
-                                // SAFETY: i < frac_len and frac_len <= dt_end - frac_start,
-                                // so frac_start + i < dt_end <= `bytes.len()`.
-                                let byte = *bytes.get_unchecked(frac_start + i);
-                                if byte == WHITESPACE {
-                                    return Ok(None);
-                                }
-                                let digit = TABLE[byte as usize];
-                                if digit >= 10 {
-                                    break;
-                                }
-                                result += u32::from(digit) * multiplier;
-                                multiplier /= 10;
-                            }
-                            result
-                        }
-                    } else {
-                        0
-                    };
-                (second, microsecond)
-            } else {
-                (0, 0)
-            };
+    let mut second = 0;
+    let mut index = 16;
+    let mut microsecond = 0;
 
-        if let Some(tz_pos) = tz_start {
-            let tz_actual_start = trim_leading_spaces(bytes, tz_pos);
-
-            if tz_actual_start >= bytes.len() {
-                return Ok(None);
-            }
-
-            let tz_bytes = &bytes[tz_actual_start..];
-            // SAFETY: tz_actual_start < `bytes.len()` verified above,
-            // so tz_bytes is non-empty and index 0 is valid.
-            let first_byte = *tz_bytes.get_unchecked(0);
-
-            return match first_byte {
-                Z => {
-                    let py_tz_info = PyTzInfo::utc(py)?;
-                    make_py_datetime(
-                        py,
-                        (year, month, day),
-                        (hour, minute, second, microsecond),
-                        Some(&py_tz_info),
-                    )
-                }
-                PLUS | MINUS => {
-                    let sign = if first_byte == PLUS { 1 } else { -1 };
-                    let offset_bytes = &tz_bytes[1..];
-
-                    let (hours, minutes) = match parse_tz_hm(offset_bytes) {
-                        Some(hm) => hm,
-                        None => return Ok(None),
-                    };
-
-                    let total_seconds = sign * (hours * 3600 + minutes * 60);
-                    let days = total_seconds.div_euclid(SECS_IN_DAY);
-                    let seconds = total_seconds.rem_euclid(SECS_IN_DAY);
-                    let py_delta = PyDelta::new(py, days, seconds, 0, false)?;
-                    let py_tz_info = PyTzInfo::fixed_offset(py, py_delta)?;
-                    make_py_datetime(
-                        py,
-                        (year, month, day),
-                        (hour, minute, second, microsecond),
-                        Some(&py_tz_info),
-                    )
-                }
-                _ => Ok(None),
-            };
+    if index < bytes.len() && bytes[index] == b':' {
+        if bytes.len() < 19 {
+            return None;
         }
 
-        make_py_datetime(
-            py,
-            (year, month, day),
-            (hour, minute, second, microsecond),
-            None,
-        )
+        second = parse_digits!(u8, 2, bytes, 17)?;
+        (index, microsecond) = parse_fraction(bytes, 19)?;
     }
-}
 
-fn make_py_datetime<'py>(
-    py: Python<'py>,
-    date: (i32, u8, u8),
-    time: (u8, u8, u8, u32),
-    tzinfo: Option<&Bound<'py, PyTzInfo>>,
-) -> PyResult<Option<Bound<'py, PyAny>>> {
-    let (year, month, day) = date;
-    let (hour, minute, second, microsecond) = time;
-    Ok(Some(
-        PyDateTime::new(
-            py,
-            year,
-            month,
-            day,
+    if index == bytes.len() {
+        let time = TimeParts {
             hour,
             minute,
             second,
             microsecond,
-            tzinfo,
-        )?
-        .into_any(),
-    ))
+        };
+
+        return Some(ParsedTimestamp::DateTime(DateTimeParts {
+            date,
+            time,
+            offset_seconds: None,
+        }));
+    }
+
+    let offset_seconds = match bytes[index] {
+        b'Z' => (index + 1 == bytes.len()).then_some(0)?,
+        b'+' => parse_tz_hm(&bytes[index + 1..])?,
+        b'-' => -parse_tz_hm(&bytes[index + 1..])?,
+        b' ' | b'\t' => {
+            index += 1;
+            if index == bytes.len() || matches!(bytes[index], b' ' | b'\t') {
+                return None;
+            }
+
+            match bytes[index] {
+                b'Z' => (index + 1 == bytes.len()).then_some(0)?,
+                b'+' => parse_tz_hm(&bytes[index + 1..])?,
+                b'-' => -parse_tz_hm(&bytes[index + 1..])?,
+                _ => return None,
+            }
+        }
+        _ => return None,
+    };
+
+    let time = TimeParts {
+        hour,
+        minute,
+        second,
+        microsecond,
+    };
+
+    Some(ParsedTimestamp::DateTime(DateTimeParts {
+        date,
+        time,
+        offset_seconds: Some(offset_seconds),
+    }))
+}
+
+#[inline]
+fn parse_time_bytes(bytes: &[u8]) -> Option<ParsedTimestamp> {
+    if bytes.len() < 8 {
+        return None;
+    }
+
+    // SAFETY: `bytes.len() >= 8` verified above.
+    if unsafe { *bytes.get_unchecked(2) != b':' || *bytes.get_unchecked(5) != b':' } {
+        return None;
+    }
+
+    let hour = parse_digits!(u8, 2, bytes, 0)?;
+    let minute = parse_digits!(u8, 2, bytes, 3)?;
+    let second = parse_digits!(u8, 2, bytes, 6)?;
+    let (index, microsecond) = parse_fraction(bytes, 8)?;
+
+    let time = TimeParts {
+        hour,
+        minute,
+        second,
+        microsecond,
+    };
+
+    (index == bytes.len()).then_some(ParsedTimestamp::Time(time))
+}
+
+pub fn parse_py_datetime<'py>(py: Python<'py>, str: &str) -> Option<Bound<'py, PyAny>> {
+    parse_date_or_datetime_bytes(str.as_bytes())
+        .or_else(|| parse_time_bytes(str.as_bytes()))?
+        .into_py(py)
 }

@@ -28,27 +28,31 @@ pub fn is_bool(str: &str) -> Option<bool> {
 
 #[inline]
 pub fn is_datetime(bytes: &[u8]) -> bool {
-    if bytes.len() < 10 {
-        return false;
+    if bytes.len() >= 10 && bytes[4] == b'-' && bytes[7] == b'-' {
+        let digits = u64::from_le_bytes([
+            bytes[0], bytes[1], bytes[2], bytes[3], bytes[5], bytes[6], bytes[8], bytes[9],
+        ]);
+
+        if !is_8digits(digits) {
+            return false;
+        }
+
+        if bytes.len() == 10 {
+            return true;
+        }
+
+        return matches!(bytes[10], b'T' | b't' | b' ' | b'\t');
     }
 
-    if bytes[4] != b'-' || bytes[7] != b'-' {
-        return false;
-    }
-
-    let digits = u64::from_le_bytes([
-        bytes[0], bytes[1], bytes[2], bytes[3], bytes[5], bytes[6], bytes[8], bytes[9],
-    ]);
-
-    if !is_8digits(digits) {
-        return false;
-    }
-
-    if bytes.len() == 10 {
-        return true;
-    }
-
-    matches!(bytes[10], b'T' | b't' | b' ')
+    bytes.len() >= 8
+        && bytes[2] == b':'
+        && bytes[5] == b':'
+        && bytes[0].is_ascii_digit()
+        && bytes[1].is_ascii_digit()
+        && bytes[3].is_ascii_digit()
+        && bytes[4].is_ascii_digit()
+        && bytes[6].is_ascii_digit()
+        && bytes[7].is_ascii_digit()
 }
 
 #[inline]
@@ -126,8 +130,8 @@ pub fn is_float(bytes: &[u8]) -> bool {
         return true;
     }
 
-    let mut i = 0;
     let len = bytes.len();
+    let mut i = 0;
 
     if matches!(bytes[0], b'+' | b'-') {
         i = 1;
@@ -141,7 +145,7 @@ pub fn is_float(bytes: &[u8]) -> bool {
     let mut has_exp = false;
 
     while i < len {
-        // SAFETY: The loop invariant ensures `i < len` for each access.
+        // SAFETY: `i < len` is checked by the loop condition.
         let byte = unsafe { *bytes.get_unchecked(i) };
         match byte {
             b'0'..=b'9' => has_digit = true,
@@ -150,17 +154,27 @@ pub fn is_float(bytes: &[u8]) -> bool {
                 has_dot = true;
                 i += 1;
 
-                while i < len && matches!(bytes[i], b'0'..=b'9' | b'_') {
-                    if bytes[i] != b'_' {
+                while i < len {
+                    // SAFETY: `i < len` is checked by the loop condition.
+                    let byte = unsafe { *bytes.get_unchecked(i) };
+                    if byte.is_ascii_digit() {
                         has_digit = true;
+                        i += 1;
+                    } else if byte == b'_' {
+                        i += 1;
+                    } else {
+                        break;
                     }
-                    i += 1;
                 }
 
-                if has_digit && i < len && matches!(bytes[i], b'e' | b'E') {
-                    has_exp = true;
-                    i += 1;
-                    break;
+                if has_digit && i < len {
+                    // SAFETY: `i < len` is checked just above.
+                    let byte = unsafe { *bytes.get_unchecked(i) };
+                    if matches!(byte, b'e' | b'E') {
+                        has_exp = true;
+                        i += 1;
+                        break;
+                    }
                 }
                 return i >= len && has_digit;
             }
@@ -175,13 +189,18 @@ pub fn is_float(bytes: &[u8]) -> bool {
     }
 
     if has_exp {
-        if i < len && matches!(bytes[i], b'+' | b'-') {
-            i += 1;
+        if i < len {
+            // SAFETY: `i < len` is checked just above.
+            let byte = unsafe { *bytes.get_unchecked(i) };
+            if matches!(byte, b'+' | b'-') {
+                i += 1;
+            }
         }
 
         let mut exp_has_digit = false;
         while i < len {
-            match bytes[i] {
+            // SAFETY: `i < len` is checked by the loop condition.
+            match unsafe { *bytes.get_unchecked(i) } {
                 b'0'..=b'9' => exp_has_digit = true,
                 b'_' => {}
                 _ => return false,
