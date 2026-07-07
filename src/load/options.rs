@@ -8,9 +8,9 @@ macro_rules! validate_limit {
     };
 }
 
-#[pyclass(name = "_AliasLimits", frozen, eq, skip_from_py_object)]
+#[pyclass(name = "_AliasLimits", frozen, eq)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-#[allow(clippy::struct_field_names)]
+#[expect(clippy::struct_field_names)]
 pub struct AliasLimits {
     #[pyo3(get)]
     pub max_total_replayed_events: usize,

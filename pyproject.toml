@@ -46,9 +46,9 @@ Repository = "https://github.com/lava-sh/yaml-rs"
 Issues = "https://github.com/lava-sh/yaml-rs/issues"
 
 [dependency-groups]
-typos = ["typos == 1.47.2"]
+typos = ["typos == 1.48.0"]
 zizmor = ["zizmor == 1.26.1"]
-rumdl = ["rumdl == 0.2.26"]
+rumdl = ["rumdl == 0.2.28"]
 maturin = [
     "maturin == 1.14.1 ; sys_platform != 'linux'",
     "maturin[patchelf] == 1.14.1 ; sys_platform == 'linux'",
@@ -71,7 +71,7 @@ dev = [
     { include-group = "zizmor" },
 ]
 bench = [
-    "yamlrocks == 0.5.0",
+    "yamlrocks == 0.6.1",
     "oyaml == 1.0",
     "pyyaml == 6.0.3",
     "ryaml == 0.5.1",
