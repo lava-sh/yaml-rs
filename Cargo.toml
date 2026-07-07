@@ -1,6 +1,6 @@
 [package]
 name = "yaml-rs"
-version = "0.1.5"
+version = "0.1.6"
 edition = "2024"
 license = "Unlicense"
 repository = "https://github.com/lava-sh/yaml-rs"
@@ -52,8 +52,7 @@ lexical-core = {
 }
 
 # mimalloc v3
-# See: https://github.com/microsoft/mimalloc/tree/dev3?tab=readme-ov-file#branches
-[dependencies.mimalloc]
+[target.'cfg(not(any(target_os = "macos", target_os = "windows")))'.dependencies.mimalloc]
 optional = true
 version = "=0.1.52"
 features = [
