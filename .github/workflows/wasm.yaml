@@ -18,7 +18,7 @@ jobs:
             pyodide-version: "0.29.4"
             pyemscripten-version: "2025_0"
             emsdk-version: "4.0.9"
-            rust-toolchain: "nightly-2026-06-29"
+            rust-toolchain: "nightly-2026-07-06"
             rustflags: >-
               -C link-arg=-sSIDE_MODULE=2
               -C link-arg=-sWASM_BIGINT
@@ -32,7 +32,7 @@ jobs:
             pyodide-version: "314.0.2"
             pyemscripten-version: "2026_0"
             emsdk-version: "5.0.3"
-            rust-toolchain: "nightly-2026-06-29"
+            rust-toolchain: "nightly-2026-07-06"
             rustflags: >-
               -C link-arg=-sSIDE_MODULE=2
               -C link-arg=-sWASM_BIGINT
@@ -51,7 +51,7 @@ jobs:
           version: ${{ matrix.platform.emsdk-version }}
 
       - name: "Install uv"
-        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        uses: astral-sh/setup-uv@f98e06938123ccabd21905ea5d0069192241f9f1 # v8.3.1
         with:
           # zizmor: ignore[cache-poisoning]
           enable-cache: ${{ github.event_name == 'pull_request' }}

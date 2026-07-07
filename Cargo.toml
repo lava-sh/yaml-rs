@@ -1,6 +1,6 @@
 [package]
 name = "yaml-rs"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2024"
 license = "Unlicense"
 repository = "https://github.com/lava-sh/yaml-rs"
@@ -12,8 +12,8 @@ crate-type = ["cdylib"]
 [dependencies]
 pyo3 = {
     git = "https://github.com/PyO3/pyo3",
-    rev = "ff7c5e561db3c6f0326836ff10fe4b381820b444",
-    # version = "=0.29.0",
+    rev = "cfd9cec8aa98ff7bd2362ab5b348e9fd7db5e61a",
+    # version = "=0.29.1",
     features = [
         "jiff-02",
         "num-bigint",
@@ -50,16 +50,35 @@ lexical-core = {
         "parse-integers",
     ]
 }
-mimalloc = {
-    optional = true,
-    version = "=0.1.52",
-    features = [
-        # mimalloc v3
-        # See: https://github.com/microsoft/mimalloc/tree/dev3?tab=readme-ov-file#branches
-        "override",
-        "local_dynamic_tls",
-    ]
-}
+
+# mimalloc v3
+# See: https://github.com/microsoft/mimalloc/tree/dev3?tab=readme-ov-file#branches
+[dependencies.mimalloc]
+optional = true
+version = "=0.1.52"
+features = [
+    "override",
+    "local_dynamic_tls",
+]
+
+[target.'cfg(target_os = "macos")'.dependencies.mimalloc]
+optional = true
+version = "=0.1.52"
+# Do not enable mimalloc's "override" feature on macOS.
+#
+# It installs process-wide malloc interposition and replaces macOS malloc zone/fork
+# hooks when the extension is imported via dlopen. That breaks fork-based subprocess
+# spawning, e.g., asyncio/playwright can fail.
+features = [
+    "local_dynamic_tls",
+]
+
+[target.'cfg(target_os = "windows")'.dependencies.mimalloc]
+optional = true
+version = "=0.1.52"
+features = [
+    "win_direct_tls",
+]
 
 [features]
 default = []
