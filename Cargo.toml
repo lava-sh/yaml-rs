@@ -20,7 +20,7 @@ pyo3 = {
         "nightly",
     ]
 }
-jiff = "=0.2.32"
+jiff = "=0.2.33"
 itoa = "=1.0.18"
 num-bigint = "=0.4.8"
 rustc-hash = "=2.1.3"
