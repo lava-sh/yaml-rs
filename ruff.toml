@@ -36,6 +36,7 @@ ignore = [
     "ANN401",  # Check `typing.Any`
     "SIM105",  # Force `try-except-pass` -> `contextlib.suppress`
     "ISC004",  # Check for implicitly concatenated strings inside list, tuple, and set literals.
+    "RUF105",  # Force `noqa: ...` -> `ruff: ignore[...]`
     #######
     "PLR6201", # Check for membership tests on list and tuple literals.
     ########
