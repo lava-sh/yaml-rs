@@ -3,6 +3,10 @@ name: "WebAssembly"
 on:
   workflow_call:
 
+env:
+  # A small hack to use anchors as GitHub doesn't allow it to be top level
+  ○_○: &rust-nightly "nightly-2026-07-23"
+
 jobs:
   wasm:
     name: "wasm32-unknown-emscripten / python ${{ matrix.platform.python-version }}"
@@ -18,7 +22,7 @@ jobs:
             pyodide-version: "0.29.4"
             pyemscripten-version: "2025_0"
             emsdk-version: "4.0.9"
-            rust-toolchain: "nightly-2026-07-06"
+            rust-toolchain: *rust-nightly
             rustflags: >-
               -C link-arg=-sSIDE_MODULE=2
               -C link-arg=-sWASM_BIGINT
@@ -29,10 +33,10 @@ jobs:
           - python-version: "3.14"
             # pyodide:
             # 314.0.0a1 - 314.0.2 (emscripten 5.0.3)
-            pyodide-version: "314.0.2"
+            pyodide-version: "314.0.3"
             pyemscripten-version: "2026_0"
             emsdk-version: "5.0.3"
-            rust-toolchain: "nightly-2026-07-06"
+            rust-toolchain: *rust-nightly
             rustflags: >-
               -C link-arg=-sSIDE_MODULE=2
               -C link-arg=-sWASM_BIGINT
@@ -41,7 +45,7 @@ jobs:
               -C symbol-mangling-version=v0
 
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -51,7 +55,7 @@ jobs:
           version: ${{ matrix.platform.emsdk-version }}
 
       - name: "Install uv"
-        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
           # zizmor: ignore[cache-poisoning]
           enable-cache: ${{ github.event_name == 'pull_request' }}
