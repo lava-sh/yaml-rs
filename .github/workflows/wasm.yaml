@@ -5,7 +5,7 @@ on:
 
 env:
   # A small hack to use anchors as GitHub doesn't allow it to be top level
-  ○_○: &rust-nightly "nightly-2026-07-23"
+  ○_○: &rust-nightly "nightly-2026-07-29"
 
 jobs:
   wasm:

@@ -48,7 +48,7 @@ Issues = "https://github.com/lava-sh/yaml-rs/issues"
 [dependency-groups]
 typos = ["typos == 1.48.0"]
 zizmor = ["zizmor == 1.28.0"]
-rumdl = ["rumdl == 0.2.42"]
+rumdl = ["rumdl == 0.2.46"]
 maturin = [
     "maturin == 1.14.1 ; sys_platform != 'linux'",
     "maturin[patchelf] == 1.14.1 ; sys_platform == 'linux'",
@@ -60,7 +60,7 @@ wasm-test = [
 ci = [
     "pytest == 9.1.1",
     "dirty-equals == 0.11",
-    "ruff == 0.16.0",
+    "ruff == 0.16.1",
     "pyyaml == 6.0.3",
     { include-group = "maturin" },
 ]
