@@ -8,7 +8,7 @@ macro_rules! validate_limit {
     };
 }
 
-#[pyclass(name = "_AliasLimits", frozen, eq)]
+#[pyclass(name = "_AliasLimits", frozen, eq, from_py_object)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[expect(clippy::struct_field_names)]
 pub struct AliasLimits {

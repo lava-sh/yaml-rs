@@ -1,4 +1,4 @@
-// https://github.com/rust-lang/rust/blob/1.96.0/library/core/src/num/imp/dec2flt/common.rs#L56-L64
+// https://github.com/rust-lang/rust/blob/1.97.1/library/core/src/num/imp/dec2flt/common.rs#L56-L64
 #[inline]
 pub fn is_8digits(v: u64) -> bool {
     let a = v.wrapping_add(0x4646_4646_4646_4646);
