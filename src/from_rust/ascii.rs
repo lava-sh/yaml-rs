@@ -1,7 +1,7 @@
 use crate::from_rust::{memchr::contains_zero_byte, num::repeat_u8};
 
 // Adapted to search for '.' character
-// https://github.com/rust-lang/rust/blob/1.96.0/library/core/src/slice/ascii.rs#L428-L539
+// https://github.com/rust-lang/rust/blob/1.97.1/library/core/src/slice/ascii.rs#L440-L551
 #[inline]
 #[allow(clippy::ptr_as_ptr, clippy::cast_ptr_alignment)]
 pub fn is_dot(s: &[u8]) -> bool {
