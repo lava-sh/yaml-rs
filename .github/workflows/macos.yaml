@@ -22,7 +22,7 @@ jobs:
             runner: macos-26-intel,
             target: x86_64-apple-darwin,
             interpreter: *interpreters,
-            maturin-build-args: "--features mimalloc",
+            # maturin-build-args: "--features mimalloc",
             use-pgo: true,
           }
           - {
