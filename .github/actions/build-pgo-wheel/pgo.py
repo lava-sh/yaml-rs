@@ -8,6 +8,10 @@ from pathlib import Path
 from pprint import pformat
 
 logger = logging.getLogger(__name__)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(message)s",
+)
 
 
 def run_cmd(*args: str) -> str:
