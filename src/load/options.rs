@@ -11,8 +11,8 @@ macro_rules! validate_limit {
 #[pyclass(name = "_AliasLimits", frozen, eq, from_py_object)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 // TODO(chiri): remove after PyO3 0.29.3?
-#[allow(unfulfilled_lint_expectations)]
-#[expect(clippy::struct_field_names, clippy::clone_on_copy)]
+#[allow(unfulfilled_lint_expectations, clippy::clone_on_copy)]
+#[expect(clippy::struct_field_names)]
 pub struct AliasLimits {
     #[pyo3(get)]
     pub max_total_replayed_events: usize,
