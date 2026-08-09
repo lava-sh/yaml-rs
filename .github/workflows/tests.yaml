@@ -4,6 +4,7 @@ on:
   workflow_call:
 
 env:
+  FORCE_COLOR: "1"
   CARGO_TERM_COLOR: always
 
 jobs:
