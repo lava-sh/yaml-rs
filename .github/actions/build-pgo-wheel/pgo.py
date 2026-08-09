@@ -1,9 +1,17 @@
 import glob
+import logging
 import os
 import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
+from pprint import pformat
+
+logger = logging.getLogger(__name__)
+
+
+def run_cmd(*args: str) -> str:
+    return subprocess.check_output(args, text=True).strip()
 
 
 @dataclass(frozen=True)
@@ -20,11 +28,9 @@ ctx = Context(
     interpreters=os.environ["INPUTS_INTERPRETER"].split(),
     workdir=Path(os.environ.get("INPUTS_WORKING_DIRECTORY", ".")),
     runner_os=os.environ["RUNNER_OS"],
-    rust_host=subprocess.check_output(
-        ["rustc", "--print", "host-tuple"],
-        text=True,
-    ).strip(),
+    rust_host=run_cmd("rustc", "--print", "host-tuple"),
 )
+logger.info("Context:\n%s", pformat(ctx))
 
 
 def python_request(version: str) -> str:
@@ -64,7 +70,9 @@ def python_request(version: str) -> str:
     if version.endswith("t"):
         return f"cpython-{version[:-1]}+freethreaded-{os_name}-{arch}-{libc}"
 
-    return f"cpython-{version}-{os_name}-{arch}-{libc}"
+    pattern = f"cpython-{version}-{os_name}-{arch}-{libc}"
+    logger.info(" * Python request: %s", pattern)
+    return pattern
 
 
 def wheel_pattern(version: str) -> str:
@@ -80,7 +88,9 @@ def wheel_pattern(version: str) -> str:
         tag = tag[:-1]
         return str(base / f"*-cp{tag}-cp{tag}t-*.whl")
 
-    return str(base / f"*-cp{tag}-cp{tag}-*.whl")
+    pattern = str(base / f"*-cp{tag}-cp{tag}-*.whl")
+    logger.info(" * Wheel pattern: %s", pattern)
+    return pattern
 
 
 def find_wheel(version: str) -> Path:
@@ -90,7 +100,9 @@ def find_wheel(version: str) -> Path:
         msg = f"Expected one wheel, got {wheels}"
         raise RuntimeError(msg)
 
-    return Path(wheels[0])
+    wheel_path = Path(wheels[0])
+    logger.info(" * Found wheel: %s", wheel_path)
+    return wheel_path
 
 
 def uv_python(request: str) -> Path:
@@ -105,10 +117,7 @@ def uv_python(request: str) -> Path:
 
     if not path:
         subprocess.run(["uv", "python", "install", request], check=True)
-        path = subprocess.check_output(
-            ["uv", "python", "find", "--no-project", request],
-            text=True,
-        ).strip()
+        path = run_cmd("uv", "python", "find", "--no-project", request)
 
     return Path(path)
 
@@ -149,21 +158,19 @@ def run_profile(version: str) -> None:
 for interpreter in ctx.interpreters:
     run_profile(interpreter)
 
-
-sysroot = Path(
-    subprocess.check_output(["rustc", "--print", "sysroot"], text=True).strip(),
-)
+sysroot = Path(run_cmd("rustc", "--print", "sysroot"))
 
 llvm = sysroot / "lib" / "rustlib" / ctx.rust_host / "bin" / "llvm-profdata"
 
-if not llvm.exists():
-    fallback = shutil.which("llvm-profdata")
+if ctx.runner_os == "Windows":
+    llvm = llvm.with_suffix(".exe")
 
-    if fallback:
-        llvm = Path(fallback)
-    else:
-        msg = "llvm-profdata not found"
-        raise RuntimeError(msg)
+if not llvm.exists():
+    msg = f"llvm-profdata not found: {llvm}"
+    raise RuntimeError(msg)
+
+logger.info(" * llvm-profdata: %s", llvm)
+logger.info(" * %s", run_cmd(str(llvm), "--version"))
 
 
 with Path(os.environ["GITHUB_ENV"]).open("a", encoding="utf-8") as f:
