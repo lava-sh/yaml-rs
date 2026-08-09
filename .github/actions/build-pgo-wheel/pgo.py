@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from pprint import pformat
 
+from _colorize import ANSIColors, can_colorize
+
 logger = logging.getLogger(__name__)
 logging.basicConfig(
     level=logging.INFO,
@@ -19,7 +21,12 @@ def run_cmd(*args: str) -> str:
 
 
 def green(text: str) -> str:
-    return f"\033[32m{text}\033[0m"
+    if not can_colorize():
+        return text
+
+    return (f"{ANSIColors.BOLD}{ANSIColors.INTENSE_GREEN}"
+            f"{text}"
+            f"{ANSIColors.RESET}")
 
 
 @dataclass(frozen=True)
