@@ -1,4 +1,4 @@
-# https://github.com/pydantic/pydantic/blob/main/.github/actions/core-build-pgo-wheel/action.yml
+# Based on https://github.com/pydantic/pydantic/blob/main/.github/actions/core-build-pgo-wheel/action.yml
 
 name: "Build PGO wheel"
 description: "Builds a PGO-optimized wheel"
@@ -34,11 +34,9 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: "Prepare profiling directory"
+    - name: "📁 Creating profiling directory"
       shell: bash
       run: |
-        : Creating profiling directory
-        echo "📁 Creating profiling directory"
         mkdir -p ${{ github.workspace }}/profdata
 
     - name: "Install uv"
@@ -46,12 +44,8 @@ runs:
       with:
         enable-cache: ${{ github.event_name == 'pull_request' }}
 
-    - shell: bash
-      run: |
-        : Building instrumented wheel
-        echo "📊 Phase 1/4: Building instrumented wheel..."
-
-    - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
+    - name: "📊 Phase 1/4: Building instrumented wheel"
+      uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
       with:
         target: ${{ inputs.target }}
         rust-toolchain: ${{ inputs.rust-toolchain }}
@@ -67,7 +61,7 @@ runs:
       env:
         RUSTFLAGS: "-Cprofile-generate=${{ github.workspace }}/profdata"
 
-    - name: "Generate pgo data"
+    - name: "🔬 Phase 2/4: Generate PGO data"
       working-directory: ${{ inputs.working-directory }}
       env:
         INPUTS_TARGET: ${{ inputs.target }}
@@ -75,27 +69,20 @@ runs:
         INPUTS_WORKING_DIRECTORY: ${{ inputs.working-directory }}
       shell: bash
       run: |
-        : Generate PGO data
-        echo "🔬 Phase 2/4: Generate PGO data..."
         python "$GITHUB_ACTION_PATH/pgo.py"
 
-    - name: "Merge pgo data"
+    - name: "🧬 Phase 3/4: Merging profile data"
       shell: pwsh
       env:
         LLVM_PROFDATA: ${{ env.LLVM_PROFDATA }}
         GITHUB_WORKSPACE: ${{ github.workspace }}
       run: |
-        echo "🧬 Phase 3/4: Merging profile data..."
         & $env:LLVM_PROFDATA merge `
           -o "$env:GITHUB_WORKSPACE/merged.profdata" `
           "$env:GITHUB_WORKSPACE/profdata"
 
-    - shell: bash
-      run: |
-        : Building PGO-optimized wheel
-        echo "⚡ Phase 4/4: Building PGO-optimized wheel..."
-
-    - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
+    - name: "⚡ Phase 4/4: Building PGO-optimized wheel"
+      uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
       with:
         working-directory: ${{ inputs.working-directory }}
         target: ${{ inputs.target }}
@@ -111,7 +98,8 @@ runs:
       env:
         RUSTFLAGS: "-Cprofile-use=${{ github.workspace }}/merged.profdata"
 
-    - id: find_wheel
+    - name: "Show built wheels"
+      id: find_wheel
       working-directory: ${{ inputs.working-directory }}
       shell: bash
       run: |

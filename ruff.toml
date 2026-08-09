@@ -66,6 +66,9 @@ ignore = [
     "TD004",  # Check that a "TODO" tag is followed by a colon.
     "TD005",  # Check that a "TODO" tag contains a description of the issue following the tag itself.
 ]
+"tests/test_loads.py" = [
+    "RUF001",
+]
 "benchmark/**.py" = [
     "INP001",
     "PLC3002",

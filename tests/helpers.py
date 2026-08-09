@@ -12,12 +12,7 @@ from typing import Any
 
 from dirty_equals import IsFloatNan
 
-if sys.version_info >= (3, 11):
-    from datetime import UTC
-else:
-    import datetime
-
-    UTC = datetime.timezone.utc
+from datetime import UTC
 
 tzinfo = datetime.timezone(datetime.timedelta(days=-1, seconds=68400))
 dt = datetime.datetime(
