@@ -64,7 +64,6 @@ mimalloc = {
 
 [target.'cfg(target_os = "macos")'.dependencies]
 mimalloc = {
-    # mimalloc v3
     optional = true,
     version = "=0.1.52",
     # See: https://github.com/lava-sh/toml-rs/issues/229
