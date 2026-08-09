@@ -156,10 +156,10 @@ jobs:
     needs: [
 ##      build-sdist,
       manylinux,
-      musllinux,
+##      musllinux,
       windows,
       macos,
-      wasm,
+##      wasm,
     ]
     environment: pypi
     permissions:
@@ -195,10 +195,10 @@ jobs:
     needs: [
 ##      build-sdist,
       manylinux,
-      musllinux,
+##      musllinux,
       windows,
       macos,
-      wasm,
+##      wasm,
     ]
     permissions:
       # Use to sign the release artifacts
