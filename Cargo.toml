@@ -13,7 +13,7 @@ crate-type = ["cdylib"]
 pyo3 = {
     # version = "=0.29.2",
     git = "https://github.com/PyO3/pyo3",
-    rev = "d04d9cfdbb56e15a9ad24f400c80c086b7142f9f",
+    rev = "d1e3be6ef10f29f0b0a42551a1ed82973bd1289c",
     features = [
         "jiff-02",
         "num-bigint",
