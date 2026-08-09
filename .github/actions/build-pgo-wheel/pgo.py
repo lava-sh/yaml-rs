@@ -18,6 +18,10 @@ def run_cmd(*args: str) -> str:
     return subprocess.check_output(args, text=True).strip()
 
 
+def green(text: str) -> str:
+    return f"\033[32m{text}\033[0m"
+
+
 @dataclass(frozen=True)
 class Context:
     target: str
@@ -75,7 +79,7 @@ def python_request(version: str) -> str:
         return f"cpython-{version[:-1]}+freethreaded-{os_name}-{arch}-{libc}"
 
     pattern = f"cpython-{version}-{os_name}-{arch}-{libc}"
-    logger.info(" * Python request: %s", pattern)
+    logger.info("%s: %s", green("Python request"), pattern)
     return pattern
 
 
@@ -93,7 +97,7 @@ def wheel_pattern(version: str) -> str:
         return str(base / f"*-cp{tag}-cp{tag}t-*.whl")
 
     pattern = str(base / f"*-cp{tag}-cp{tag}-*.whl")
-    logger.info(" * Wheel pattern: %s", pattern)
+    logger.info("%s: %s", green("Wheel pattern"), pattern)
     return pattern
 
 
@@ -105,7 +109,7 @@ def find_wheel(version: str) -> Path:
         raise RuntimeError(msg)
 
     wheel_path = Path(wheels[0])
-    logger.info(" * Found wheel: %s", wheel_path)
+    logger.info("%s: %s", green("Found wheel"), wheel_path)
     return wheel_path
 
 
@@ -173,8 +177,8 @@ if not llvm.exists():
     msg = f"llvm-profdata not found: {llvm}"
     raise RuntimeError(msg)
 
-logger.info(" * llvm-profdata: %s", llvm)
-logger.info(" * %s", run_cmd(str(llvm), "--version"))
+logger.info("%s: %s", green("LLVM profdata"), llvm)
+logger.info("%s: %s", green("LLVM"), run_cmd(str(llvm), "--version"))
 
 
 with Path(os.environ["GITHUB_ENV"]).open("a", encoding="utf-8") as f:
