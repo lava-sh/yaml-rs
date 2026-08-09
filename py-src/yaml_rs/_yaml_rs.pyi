@@ -5,7 +5,7 @@ _VERSION: str
 
 @final
 @enum.unique
-class DuplicateKeyPolicy(str, enum.Enum):
+class DuplicateKeyPolicy(enum.StrEnum):
     Error = "error"
     FirstWins = "first_wins"
     LastWins = "last_wins"

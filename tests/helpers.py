@@ -7,12 +7,10 @@ __all__ = (
 
 import datetime
 import math
-import sys
+from datetime import UTC
 from typing import Any
 
 from dirty_equals import IsFloatNan
-
-from datetime import UTC
 
 tzinfo = datetime.timezone(datetime.timedelta(days=-1, seconds=68400))
 dt = datetime.datetime(
