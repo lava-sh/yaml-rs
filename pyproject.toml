@@ -60,7 +60,7 @@ wasm-test = [
 ci = [
     "pytest == 9.1.1",
     "dirty-equals == 0.11",
-    "ruff == 0.16.1",
+    "ruff == 0.16.2",
     "pyyaml == 6.0.3",
     { include-group = "maturin" },
 ]
