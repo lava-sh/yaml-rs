@@ -64,6 +64,7 @@ runs:
     - name: "🔬 Phase 2/4: Generate PGO data"
       working-directory: ${{ inputs.working-directory }}
       env:
+        CARGO_TERM_COLOR: always
         INPUTS_TARGET: ${{ inputs.target }}
         INPUTS_INTERPRETER: ${{ inputs.interpreter }}
         INPUTS_WORKING_DIRECTORY: ${{ inputs.working-directory }}
