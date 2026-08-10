@@ -3,12 +3,12 @@
 
 # yaml-rs
 
-*A High-Performance YAML v1.2 parser for Python written in Rust*
+_A High-Performance YAML v1.2 parser for Python written in Rust_
 <!-- rumdl-enable MD036 MD041-->
 
-<a href="https://pypi.org/project/yaml-rs"><img alt="PyPI Version" src="https://shieldcn.dev/pypi/yaml-rs.svg?variant=branded&font=geist-mono&size=xs"/></a>
-<a href="https://pypi.org/project/yaml-rs"><img alt="Monthly Downloads" src="https://shieldcn.dev/pypi/dm/yaml-rs.svg?variant=branded&font=geist-mono&size=xs"/></a>
-<a href="https://pypi.org/project/yaml-rs"><img alt="Python Version" src="https://shieldcn.dev/pypi/python/yaml-rs.svg?variant=branded&font=geist-mono&size=xs"/></a>
+![PyPI version](https://shieldcn.dev/badge/dynamic/json.svg?url=https%3A%2F%2Fpypi.org%2Fpypi%2Fyaml-rs%2Fjson&query=%24.info.version&variant=branded&size=xs&mode=light&logo=python&label=pypi+version)
+![PyPI downloads](https://shieldcn.dev/badge/dynamic/json.svg?url=https%3A%2F%2Fpypistats.org%2Fapi%2Fpackages%2Fyaml-rs%2Frecent&query=%24.data.last_month&suffix=%2Fmonth&size=xs&mode=light&logo=python&logoColor=ffffff&label=downloads&color=3775A9)
+![PyPI requires python](https://shieldcn.dev/badge/dynamic/json.svg?url=https%3A%2F%2Fpypi.org%2Fpypi%2Fyaml-rs%2Fjson&query=%24.info.requires_python&size=xs&mode=light&logo=python&logoColor=ffffff&label=requires+python&color=3775A9)
 
 <a href="https://github.com/lava-sh/yaml-rs/actions?query=branch%3Amain"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/ci/lava-sh/yaml-rs.svg?variant=outline&font=geist-mono&size=xs&animate=pulse&mode=dark"><img alt="CI" src="https://shieldcn.dev/github/ci/lava-sh/yaml-rs.svg?variant=outline&font=geist-mono&size=xs&animate=pulse&mode=light"></picture></a>
 <a href="https://github.com/lava-sh/yaml-rs/commits/main"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/last-commit/lava-sh/yaml-rs.svg?variant=outline&font=geist-mono&size=xs&mode=dark"><img alt="Last Commit" src="https://shieldcn.dev/github/last-commit/lava-sh/yaml-rs.svg?variant=outline&font=geist-mono&size=xs&mode=light"></picture></a>
@@ -152,5 +152,13 @@ However, it does [not pass](https://matrix.yaml.info) the [yaml-test-suite](http
 `strictyaml` is a [Type-safe YAML parser and validator](https://github.com/crdoconnor/strictyaml).
 
 It also does not pass the [yaml-test-suite](https://github.com/yaml/yaml-test-suite).
+
+<div align="center">
+
+## Contributors
+
+[![lava-sh/toml-rs contributors](https://shieldcn.dev/contributors/lava-sh/yaml-rs.svg?title=false&theme=slate&size=80&bots=true&titleAlign=center&mode=light&font=geist&border=false&image=https%3A%2F%2Fimages.wallpaperscraft.ru%2Fimage%2Fsingle%2Foblaka_nebo_ogni_1647475_3840x2400.jpg&overlay=0.3)](https://github.com/lava-sh/toml-rs/graphs/contributors)
+
+</div>
 
 [Playground]: https://lava-sh.github.io/yaml-rs-online
