@@ -1,4 +1,5 @@
 [package]
+
 name = "yaml-rs"
 version = "0.1.6"
 edition = "2024"
