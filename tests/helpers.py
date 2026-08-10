@@ -7,17 +7,10 @@ __all__ = (
 
 import datetime
 import math
-import sys
+from datetime import UTC
 from typing import Any
 
 from dirty_equals import IsFloatNan
-
-if sys.version_info >= (3, 11):
-    from datetime import UTC
-else:
-    import datetime
-
-    UTC = datetime.timezone.utc
 
 tzinfo = datetime.timezone(datetime.timedelta(days=-1, seconds=68400))
 dt = datetime.datetime(

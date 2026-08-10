@@ -19,6 +19,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
 
+env:
+  FORCE_COLOR: "1"
+  CARGO_TERM_COLOR: always
+
 jobs:
   cargo-fmt:
     name: "cargo fmt"
@@ -44,7 +48,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         if: github.event_name == 'pull_request'
         with:
           lookup-only: false # zizmor: ignore[cache-poisoning]
@@ -93,6 +97,8 @@ jobs:
         run: ${{ matrix.command }}
 
   tests-alpine:
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-tests') }}
+
     name: "tests / alpine / python 3.14"
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -107,25 +113,37 @@ jobs:
           docker run --rm -v "$PWD":/app -w /app alpine-test
 
   tests:
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-tests') }}
+
     uses: ./.github/workflows/tests.yaml
 
   manylinux:
+    if: ${{ always() && !failure() && !cancelled() }}
+
     needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, tools ]
     uses: ./.github/workflows/manylinux.yaml
 
   musllinux:
+    if: ${{ always() && !failure() && !cancelled() }}
+
     needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, tools ]
     uses: ./.github/workflows/musllinux.yaml
 
   windows:
+    if: ${{ always() && !failure() && !cancelled() }}
+
     needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, tools ]
     uses: ./.github/workflows/windows.yaml
 
   macos:
+    if: ${{ always() && !failure() && !cancelled() }}
+
     needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, tools ]
     uses: ./.github/workflows/macos.yaml
 
   wasm:
+    if: ${{ always() && !failure() && !cancelled() }}
+
     needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, tools ]
     uses: ./.github/workflows/wasm.yaml
 
@@ -151,6 +169,8 @@ jobs:
           path: dist
 
   release-pypi:
+    if: ${{ always() && !failure() && !cancelled() }}
+
     name: "Publish to PyPI"
     runs-on: ubuntu-latest
     needs: [
@@ -189,7 +209,8 @@ jobs:
         run: uv publish --trusted-publishing=always 'wheels-*/*'
 
   release-github:
-    if: github.ref_type == 'tag'
+    if: ${{ github.ref_type == 'tag' && always() && !failure() && !cancelled() }}
+
     name: "Publish to GitHub Release"
     runs-on: ubuntu-latest
     needs: [
@@ -211,7 +232,7 @@ jobs:
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
 
       - name: "Generate artifact attestation"
-        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: "wheels-wasm-*/*.whl"
 

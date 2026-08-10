@@ -3,6 +3,10 @@ name: "tests"
 on:
   workflow_call:
 
+env:
+  FORCE_COLOR: "1"
+  CARGO_TERM_COLOR: always
+
 jobs:
   tests:
     name: "${{ matrix.os }} / python ${{ matrix.python-version }}"
@@ -12,7 +16,6 @@ jobs:
       fail-fast: false
       matrix:
         python-version: [
-          "3.10",
           "3.11",
           "3.12",
           "3.13",
@@ -35,7 +38,7 @@ jobs:
         with:
           enable-cache: false
 
-      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         if: github.event_name == 'pull_request' && github.run_attempt == 1
         with:
           lookup-only: false # zizmor: ignore[cache-poisoning]

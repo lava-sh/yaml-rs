@@ -1,8 +1,10 @@
+<!-- rumdl-disable MD036 MD041-->
 <div align="center">
 
 # yaml-rs
 
 *A High-Performance YAML v1.2 parser for Python written in Rust*
+<!-- rumdl-enable MD036 MD041-->
 
 <a href="https://pypi.org/project/yaml-rs"><img alt="PyPI Version" src="https://shieldcn.dev/pypi/yaml-rs.svg?variant=branded&font=geist-mono&size=xs"/></a>
 <a href="https://pypi.org/project/yaml-rs"><img alt="Monthly Downloads" src="https://shieldcn.dev/pypi/dm/yaml-rs.svg?variant=branded&font=geist-mono&size=xs"/></a>
@@ -60,7 +62,7 @@ uv pip install yaml-rs
 poetry add yaml-rs
 ```
 
-## [Playground](https://lava-sh.github.io/yaml-rs-online)
+## [Playground]
 
 Link: <https://lava-sh.github.io/yaml-rs-online>
 
@@ -138,7 +140,8 @@ Because it is a fork of `PyYAML`, it has the same problems.
 
 `ruamel.yaml` is a [YAML 1.2 parser/emitter for Python](https://sourceforge.net/projects/ruamel-yaml).
 
-It supports round-trip preservation of comments, sequence and mapping flow style, and mapping key order.
+It supports round-trip preservation of comments, sequence and
+mapping flow style, and mapping key order.
 
 However, it does [not pass](https://matrix.yaml.info) the [yaml-test-suite](https://github.com/yaml/yaml-test-suite).
 
@@ -149,3 +152,5 @@ However, it does [not pass](https://matrix.yaml.info) the [yaml-test-suite](http
 `strictyaml` is a [Type-safe YAML parser and validator](https://github.com/crdoconnor/strictyaml).
 
 It also does not pass the [yaml-test-suite](https://github.com/yaml/yaml-test-suite).
+
+[Playground]: https://lava-sh.github.io/yaml-rs-online

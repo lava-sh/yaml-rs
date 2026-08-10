@@ -1,6 +1,6 @@
 [package]
 name = "yaml-rs"
-version = "0.1.6"
+version = "0.2.0"
 edition = "2024"
 license = "Unlicense"
 repository = "https://github.com/lava-sh/yaml-rs"
@@ -50,32 +50,36 @@ lexical-core = {
 }
 
 # mimalloc v3
-[target.'cfg(not(any(target_os = "macos", target_os = "windows")))'.dependencies.mimalloc]
-optional = true
-version = "=0.1.52"
-features = [
-    "override",
-    "local_dynamic_tls",
-]
+[target.'cfg(not(any(target_os = "macos", target_os = "windows")))'.dependencies]
+mimalloc = {
+    optional = true,
+    version = "=0.1.52",
+    features = [
+        "override",
+        "local_dynamic_tls",
+    ]
+}
 
-[target.'cfg(target_os = "macos")'.dependencies.mimalloc]
-optional = true
-version = "=0.1.52"
-# Do not enable mimalloc's "override" feature on macOS.
-#
-# It installs process-wide malloc interposition and replaces macOS malloc zone/fork
-# hooks when the extension is imported via dlopen. That breaks fork-based subprocess
-# spawning, e.g., asyncio/playwright can fail.
-features = [
-    "local_dynamic_tls",
-]
+[target.'cfg(target_os = "macos")'.dependencies]
+mimalloc = {
+    optional = true,
+    version = "=0.1.52",
+    # See: https://github.com/lava-sh/toml-rs/issues/229
+    #
+    # mimalloc "override" feature installs process-wide malloc interposition and
+    # replaces macOS malloc zone/fork hooks when the extension is imported via dlopen.
+    # That breaks fork-based subprocess spawning, e.g., asyncio/playwright can fail.
+    features = [
+        "local_dynamic_tls",
+    ]
+}
 
-[target.'cfg(target_os = "windows")'.dependencies.mimalloc]
-optional = true
-version = "=0.1.52"
-features = [
-    "win_direct_tls",
-]
+[target.'cfg(target_os = "windows")'.dependencies]
+mimalloc = {
+    optional = true,
+    version = "=0.1.52",
+    features = [],
+}
 
 [features]
 default = []
@@ -105,3 +109,7 @@ cast_possible_truncation = "allow"
 option_if_let_else = "allow"
 missing_const_for_fn = "allow"
 wrong_self_convention = "allow"
+
+# FIXME(chiri): remove after PyO3 0.29.3 is released
+# See: https://github.com/PyO3/pyo3/pull/6309
+clone_on_copy = "allow"

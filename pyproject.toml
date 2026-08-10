@@ -9,7 +9,7 @@ module-name = "yaml_rs._yaml_rs"
 [project]
 name = "yaml-rs"
 dynamic = ["version"]
-requires-python = ">= 3.10"
+requires-python = ">= 3.11"
 description = "A High-Performance YAML Parser for Python written in Rust"
 readme = { file = "README.md", content-type = "text/markdown" }
 license = "Unlicense"
@@ -27,7 +27,6 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -48,7 +47,7 @@ Issues = "https://github.com/lava-sh/yaml-rs/issues"
 [dependency-groups]
 typos = ["typos == 1.49.0"]
 zizmor = ["zizmor == 1.29.0"]
-rumdl = ["rumdl == 0.2.52"]
+rumdl = ["rumdl == 0.2.53"]
 maturin = [
     "maturin == 1.14.1 ; sys_platform != 'linux'",
     "maturin[patchelf] == 1.14.1 ; sys_platform == 'linux'",
@@ -60,11 +59,12 @@ wasm-test = [
 ci = [
     "pytest == 9.1.1",
     "dirty-equals == 0.11",
-    "ruff == 0.16.1",
+    "ruff == 0.16.2",
     "pyyaml == 6.0.3",
     { include-group = "maturin" },
 ]
 dev = [
+    "rust-just == 1.58.0",
     { include-group = "ci" },
     { include-group = "typos" },
     { include-group = "rumdl" },
