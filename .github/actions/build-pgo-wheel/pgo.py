@@ -29,6 +29,7 @@ class Context:
     workdir: Path
     runner_os: str
     rust_host: str
+    rust_version: str
 
 
 ctx = Context(
@@ -37,6 +38,7 @@ ctx = Context(
     workdir=Path(os.environ.get("INPUTS_WORKING_DIRECTORY", ".")),
     runner_os=os.environ["RUNNER_OS"],
     rust_host=run_cmd("rustc", "--print", "host-tuple"),
+    rust_version=run_cmd("rustc", "--version"),
 )
 logger.info("Context:\n%s", pformat(ctx))
 
