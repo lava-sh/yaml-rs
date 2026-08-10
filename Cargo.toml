@@ -1,5 +1,4 @@
 [package]
-
 name = "yaml-rs"
 version = "0.1.6"
 edition = "2024"
@@ -106,3 +105,7 @@ cast_possible_truncation = "allow"
 option_if_let_else = "allow"
 missing_const_for_fn = "allow"
 wrong_self_convention = "allow"
+
+# FIXME(chiri): remove after PyO3 0.29.3 is released
+# See: https://github.com/PyO3/pyo3/pull/6309
+clone_on_copy = "allow"
