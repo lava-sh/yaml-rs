@@ -67,6 +67,9 @@ jobs:
         id: rust-toolchain
         uses: dtolnay/rust-toolchain@nightly # zizmor: ignore[unpinned-uses]
         with:
+          # Last succsessful run
+          # See: https://github.com/lava-sh/yaml-rs/actions/runs/31053151646
+          toolchain: nightly-2026-08-06
           components: llvm-tools-preview
 
       - name: "Build PGO wheel"
