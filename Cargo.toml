@@ -11,9 +11,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 pyo3 = {
-    # version = "=0.29.2",
-    git = "https://github.com/PyO3/pyo3",
-    rev = "d1e3be6ef10f29f0b0a42551a1ed82973bd1289c",
+    version = "=0.29.2",
     features = [
         "jiff-02",
         "num-bigint",
@@ -111,3 +109,7 @@ cast_possible_truncation = "allow"
 option_if_let_else = "allow"
 missing_const_for_fn = "allow"
 wrong_self_convention = "allow"
+
+# FIXME(chiri): remove after PyO3 0.29.3 is released
+# See: https://github.com/PyO3/pyo3/pull/6309
+clone_on_copy = "allow"
