@@ -69,6 +69,7 @@ jobs:
         id: rust-toolchain
         uses: dtolnay/rust-toolchain@nightly # zizmor: ignore[unpinned-uses]
         with:
+          toolchain: nightly-2026-08-06
           components: llvm-tools-preview
 
       - name: "Build PGO wheel"
