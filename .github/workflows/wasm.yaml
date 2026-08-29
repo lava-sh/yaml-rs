@@ -5,7 +5,7 @@ on:
 
 env:
   # A small hack to use anchors as GitHub doesn't allow it to be top level
-  ○_○: &rust-nightly "nightly-2026-08-08"
+  ○_○: &rust-nightly "nightly-2026-08-28"
 
 jobs:
   wasm:
@@ -32,8 +32,8 @@ jobs:
 
           - python-version: "3.14"
             # pyodide:
-            # 314.0.0a1 - 314.0.4 (emscripten 5.0.3)
-            pyodide-version: "314.0.4"
+            # 314.0.0a1 - 314.0.6 (emscripten 5.0.3)
+            pyodide-version: "314.0.6"
             pyemscripten-version: "2026_0"
             emsdk-version: "5.0.3"
             rust-toolchain: *rust-nightly

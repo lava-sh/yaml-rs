@@ -98,19 +98,12 @@ jobs:
             ${{ matrix.platform.maturin-build-args || '' }}
             --compatibility pypi
 
-      - name: "Install Rust nightly + llvm-tools-preview"
-        if: matrix.platform.use-pgo == true
-        id: rust-toolchain
-        uses: dtolnay/rust-toolchain@nightly # zizmor: ignore[unpinned-uses]
-        with:
-          components: llvm-tools-preview
-
       - name: "Build PGO wheel"
         if: matrix.platform.use-pgo == true
         uses: lava-sh/build-pgo-wheel@main # zizmor: ignore[unpinned-uses]
         with:
           target: ${{ matrix.platform.target }}
-          rust-toolchain: ${{ steps.rust-toolchain.outputs.name }}
+          rust-toolchain: nightly
           maturin-build-args: ${{ matrix.platform.maturin-build-args || '' }}
           python-interpreter: ${{ matrix.platform.interpreter }}
           pgo-training-command: "{python} benchmark/pgo.py"
