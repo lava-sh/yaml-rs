@@ -5,11 +5,8 @@ line-length = 90
 output-prefer-rule-codes = true
 
 include = [
-    "py-src/**.py",
-    "py-src/**.pyi",
-    "tests/**.py",
-    "examples/**.py",
-    "benchmark/**.py",
+    "py-src/**/*.{py,pyi}",
+    "{tests,examples,benchmark}/**.py",
     "pyproject.toml",
     "README.md",
 ]
@@ -22,7 +19,6 @@ no-lines-before = ["local-folder"]
 [lint]
 preview = true
 
-
 select = ["ALL"]
 ignore = [
     # https://docs.astral.sh/ruff/rules/#flake8-unused-arguments-arg
@@ -34,10 +30,10 @@ ignore = [
     "S311",    # Force `random` -> `secrets`
     "ANN401",  # Check `typing.Any`
     "SIM105",  # Force `try-except-pass` -> `contextlib.suppress`
-    "ISC004",  # Check for implicitly concatenated strings inside list, tuple, and set literals.
+    "ISC004",  # Check for implicitly concatenated strings inside list, tuple, and set literals
     "RUF105",  # Force `noqa: ...` -> `ruff: ignore[...]`
     #######
-    "PLR6201", # Check for membership tests on list and tuple literals.
+    "PLR6201", # Check for membership tests on list and tuple literals
     ########
     "TC001",   # \
     "TC002",   #  ==> `typing.TYPE_CHECKING` block's
@@ -46,32 +42,30 @@ ignore = [
 ]
 
 [lint.extend-per-file-ignores]
-"examples/**.py" = [
-    "INP001",
-    "T201",
-    "T203",
-    "PLC3002",
+"{examples,benchmark}/*.py" = [
+    "INP001",  # Check for packages that are missing an `__init__.py` file
+    "PLC3002", # Check for unnecessary direct calls to lambda expressions
 ]
-"tests/**.py" = [
-    "S101",
-    "E501",
-    "ERA001",
+"examples/*.py" = [
+    "T201", # Check for `print` statements
+    "T203", # Check for `pprint` statements
+]
+"tests/*.py" = [
+    "S101",   # Check for uses of the `assert` keyword
+    "E501",   # Check for lines that exceed the specified maximum character length
+    "ERA001", # Check for commented-out Python code
 ]
 "tests/test_dumps*.py" = [
     "DTZ001", # Check for datetime instantiations that do not specify a timezone
     "FIX001", # Check for "FIXME" comments
     ########
-    "TD001",  # Check that a TODO comment is labelled with "TODO"
-    "TD003",  # Check that a TODO comment is associated with a link to a relevant issue or ticket
-    "TD004",  # Check that a "TODO" tag is followed by a colon.
-    "TD005",  # Check that a "TODO" tag contains a description of the issue following the tag itself.
+    "TD001",  # Check that a "TODO" comment is labelled with "TODO"
+    "TD003",  # Check that a "TODO" comment is associated with a link to a relevant issue or ticket
+    "TD004",  # Check that a "TODO" tag is followed by a colon
+    "TD005",  # Check that a "TODO" tag contains a description of the issue following the tag itself
 ]
 "tests/test_loads.py" = [
-    "RUF001",
-]
-"benchmark/**.py" = [
-    "INP001",
-    "PLC3002",
+    "RUF001", # Check for ambiguous Unicode characters in strings
 ]
 
 [lint.pylint]
