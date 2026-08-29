@@ -71,13 +71,13 @@ dev = [
     { include-group = "zizmor" },
 ]
 bench = [
-    "yamlrocks == 0.6.1",
-    "oyaml == 1.0",
-    "pyyaml == 6.0.3",
-    "ryaml == 0.5.1",
-    "ruamel-yaml == 0.19.1",
-    "ruamel.yaml.clibz == 0.3.7",
-    #############################
+    "yamlrocks",
+    "oyaml",
+    "pyyaml",
+    "ryaml",
+    "ruamel-yaml",
+    "ruamel.yaml.clibz",
+    ####################
     "polars[plot] == 1.42.0",
     "py-cpuinfo2 == 10.1.1",
     "vl-convert-python == 1.9.0.post1",
