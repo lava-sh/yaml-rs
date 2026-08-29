@@ -49,8 +49,8 @@ typos = ["typos == 1.50.0"]
 zizmor = ["zizmor == 1.29.0"]
 rumdl = ["rumdl == 0.2.62"]
 maturin = [
-    "maturin == 1.14.1 ; sys_platform != 'linux'",
-    "maturin[patchelf] == 1.14.1 ; sys_platform == 'linux'",
+    "maturin == 1.15.0 ; sys_platform != 'linux'",
+    "maturin[patchelf] == 1.15.0 ; sys_platform == 'linux'",
 ]
 wasm-test = [
     "pytest-pyodide == 0.59.2",
@@ -78,7 +78,7 @@ bench = [
     "ruamel-yaml == 0.19.1",
     "ruamel.yaml.clibz == 0.3.7",
     #############################
-    "polars[plot] == 1.42.0",
+    "polars[plot] == 1.44.1",
     "py-cpuinfo2 == 10.1.1",
     "vl-convert-python == 1.9.0.post1",
 ]
