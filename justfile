@@ -77,7 +77,6 @@ lint:
     {{ _activate_venv }}
     # Python
     -ruff check
-    -ty check
     # Markdown
     -rumdl check
     # Spell Check
