@@ -34,7 +34,8 @@ mod yaml_rs {
     };
 
     #[pymodule_export]
-    const _VERSION: &str = env!("CARGO_PKG_VERSION");
+    #[allow(non_upper_case_globals, clippy::allow_attributes)]
+    const __version__: &str = env!("CARGO_PKG_VERSION");
 
     #[pyfunction(
         name = "_load",

@@ -1,7 +1,7 @@
 import enum
 from typing import Any, BinaryIO, Literal, final
 
-_VERSION: str
+__version__: str
 
 @final
 @enum.unique
