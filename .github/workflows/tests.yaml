@@ -61,11 +61,10 @@ jobs:
         run: uv pip install --group ci
 
       - name: "Run maturin"
-        run: maturin build --out wheel --features mimalloc
+        run: maturin build --out wheels --features mimalloc
 
       - name: "Install built wheel"
-        shell: bash
-        run: uv pip install wheel/*.whl
+        run: uv pip install yaml-rs --no-index --find-links wheels --force-reinstall
 
       - name: "Run ruff"
         run: ruff check
