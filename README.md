@@ -132,6 +132,7 @@ is [Ordered YAML: drop-in replacement for PyYAML which preserves dict ordering](
 Because it is a fork of `PyYAML`, it has the same problems.
 
 #### [ryaml](https://pypi.org/project/ryaml)
+
 <a href="https://github.com/emmatyping/ryaml/commits/main"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/last-commit/emmatyping/ryaml.svg?variant=outline&font=geist&size=xs&logo=github&mode=dark"><img alt="Last Commit" src="https://shieldcn.dev/github/last-commit/emmatyping/ryaml.svg?variant=outline&font=geist&size=xs&mode=light&theme=zinc&logo=github"></picture></a>
 
 `ryaml` is a parser with a Rust core focused on compatibility with `PyYAML`.
