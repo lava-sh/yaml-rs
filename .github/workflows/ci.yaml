@@ -115,37 +115,37 @@ jobs:
   tests:
     if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-tests') }}
 
-    uses: ./.github/workflows/tests.yaml
+    uses: $/.github/workflows/tests.yaml
 
   manylinux:
     if: ${{ always() && !failure() && !cancelled() }}
 
     needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, tools ]
-    uses: ./.github/workflows/manylinux.yaml
+    uses: $/.github/workflows/manylinux.yaml
 
   musllinux:
     if: ${{ always() && !failure() && !cancelled() }}
 
     needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, tools ]
-    uses: ./.github/workflows/musllinux.yaml
+    uses: $/.github/workflows/musllinux.yaml
 
   windows:
     if: ${{ always() && !failure() && !cancelled() }}
 
     needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, tools ]
-    uses: ./.github/workflows/windows.yaml
+    uses: $/.github/workflows/windows.yaml
 
   macos:
     if: ${{ always() && !failure() && !cancelled() }}
 
     needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, tools ]
-    uses: ./.github/workflows/macos.yaml
+    uses: $/.github/workflows/macos.yaml
 
   wasm:
     if: ${{ always() && !failure() && !cancelled() }}
 
     needs: [ tests, tests-alpine, cargo-fmt, cargo-clippy, tools ]
-    uses: ./.github/workflows/wasm.yaml
+    uses: $/.github/workflows/wasm.yaml
 
   build-sdist:
     name: "build-sdist"
