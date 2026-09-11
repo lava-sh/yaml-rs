@@ -21,7 +21,7 @@ _A High-Performance YAML v1.2 parser for Python written in Rust_
 
 ## Features
 
-* The fastest YAML parser in Python (see [benchmarks](https://github.com/lava-sh/yaml-rs/tree/main/benchmark))
+* The second fastest YAML parser in Python (see [benchmarks](https://github.com/lava-sh/yaml-rs/tree/main/benchmark))
 * Full YAML v1.2 spec support
 
 ## Installation
