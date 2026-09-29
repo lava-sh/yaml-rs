@@ -250,7 +250,6 @@ impl<'arena> Builder<'arena> {
                     self.push_value(node);
                 }
             }
-            Event::StreamStart | Event::StreamEnd => {}
             _ => {}
         }
         Ok(())
