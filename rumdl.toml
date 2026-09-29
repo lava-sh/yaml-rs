@@ -1,15 +1,19 @@
 [global]
 respect-gitignore = true
-
-disable = [
-    "MD012",
-    "MD013",
-    "MD029",
-    "MD033",
-    "MD036",
-    "MD041",
-]
-
 include = [
     "README.md",
+    "benchmark/README.md"
+]
+exclude = [
+    ".git/",
+    ".github/",
+]
+disable = []
+
+[MD033]
+allowed-elements = [
+    "no-markdown-equivalent",
+    "img",
+    "p",
+    "a"
 ]

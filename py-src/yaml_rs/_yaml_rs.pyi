@@ -1,11 +1,11 @@
 import enum
 from typing import Any, BinaryIO, Literal, final
 
-_VERSION: str
+__version__: str
 
 @final
 @enum.unique
-class DuplicateKeyPolicy(str, enum.Enum):
+class DuplicateKeyPolicy(enum.StrEnum):
     Error = "error"
     FirstWins = "first_wins"
     LastWins = "last_wins"

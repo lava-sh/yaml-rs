@@ -3,7 +3,7 @@
 venv/
 build/
 dist/
-wheel/
+wheels/
 __pycache__/
 *.py[cod]
 *$py.class

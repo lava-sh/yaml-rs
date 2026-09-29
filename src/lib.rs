@@ -34,7 +34,8 @@ mod yaml_rs {
     };
 
     #[pymodule_export]
-    const _VERSION: &str = env!("CARGO_PKG_VERSION");
+    #[allow(non_upper_case_globals, clippy::allow_attributes)]
+    const __version__: &str = env!("CARGO_PKG_VERSION");
 
     #[pyfunction(
         name = "_load",
@@ -121,10 +122,7 @@ mod yaml_rs {
             &arena,
             &docs,
             parse_datetime,
-            alias_limits
-                .as_ref()
-                .map(|limits| **limits)
-                .unwrap_or_default(),
+            alias_limits.as_ref().map_or_default(|limits| **limits),
             DuplicateKeyPolicy::from_str(duplicate_key_policy)?,
         )
     }

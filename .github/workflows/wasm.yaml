@@ -5,7 +5,7 @@ on:
 
 env:
   # A small hack to use anchors as GitHub doesn't allow it to be top level
-  ○_○: &rust-nightly "nightly-2026-07-29"
+  ○_○: &rust-nightly "nightly-2026-08-28"
 
 jobs:
   wasm:
@@ -32,8 +32,8 @@ jobs:
 
           - python-version: "3.14"
             # pyodide:
-            # 314.0.0a1 - 314.0.2 (emscripten 5.0.3)
-            pyodide-version: "314.0.3"
+            # 314.0.0a1 - 314.0.6 (emscripten 5.0.3)
+            pyodide-version: "314.0.6"
             pyemscripten-version: "2026_0"
             emsdk-version: "5.0.3"
             rust-toolchain: *rust-nightly
@@ -55,7 +55,7 @@ jobs:
           version: ${{ matrix.platform.emsdk-version }}
 
       - name: "Install uv"
-        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           # zizmor: ignore[cache-poisoning]
           enable-cache: ${{ github.event_name == 'pull_request' }}
