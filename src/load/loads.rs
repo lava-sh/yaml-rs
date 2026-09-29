@@ -1,12 +1,14 @@
 use std::borrow::Cow;
 
-use granit_parser::{Event, Parser, ScalarStyle, ScanError, Tag};
+use granit_parser::{Event, Parser, ScalarStyle, ScanError, Tag, options};
 use pyo3::{
     IntoPyObjectExt,
     prelude::*,
     types::{PyDict, PyFrozenSet, PyList, PySet, PyTuple},
 };
 use rustc_hash::FxHashMap;
+
+const YAML_CORE_SCHEMA_PREFIX: &str = "tag:yaml.org,2002:";
 
 use crate::{
     YAMLDecodeError,
@@ -61,8 +63,8 @@ impl<'input> ScalarResolver<'_, 'input> {
         tag: Option<&Tag>,
     ) -> Result<NodeId, String> {
         if let Some(tag) = tag {
-            if tag.is_yaml_core_schema() {
-                return self.resolve_core_tag(value, tag);
+            if let Some(suffix) = tag.suffix_in_namespace(YAML_CORE_SCHEMA_PREFIX) {
+                return self.resolve_core_tag(value, &suffix);
             }
             return Ok(self.arena.push_intern(value, Value::String));
         }
@@ -70,8 +72,12 @@ impl<'input> ScalarResolver<'_, 'input> {
         Ok(self.resolve_plain(value, style))
     }
 
-    fn resolve_core_tag(&mut self, value: Cow<'input, str>, tag: &Tag) -> Result<NodeId, String> {
-        let value = match tag.suffix.as_str() {
+    fn resolve_core_tag(
+        &mut self,
+        value: Cow<'input, str>,
+        suffix: &str,
+    ) -> Result<NodeId, String> {
+        let value = match suffix {
             "int" => parse_int(value.as_ref())
                 .ok_or_else(|| format!("Invalid value '{value}' for '!!int' tag"))?,
             "float" => parse_float(value.as_ref())
@@ -89,7 +95,7 @@ impl<'input> ScalarResolver<'_, 'input> {
             }
             "binary" => return Ok(self.arena.push_intern(value, Value::String)),
             "str" => return Ok(self.arena.push_intern(value, Value::TaggedString)),
-            _ => return Err(format!("Invalid tag: '!!{}'", tag.suffix)),
+            _ => return Err(format!("Invalid tag: '!!{suffix}'")),
         };
         Ok(self.arena.push(value))
     }
@@ -166,7 +172,7 @@ impl<'arena> Builder<'arena> {
 
     fn handle_event<'event: 'arena>(&mut self, event: Event<'event>) -> Result<(), BuildError> {
         match event {
-            Event::DocumentStart(_) => {
+            Event::DocumentStart(..) => {
                 self.current_root = None;
                 self.stack.clear();
             }
@@ -202,7 +208,7 @@ impl<'arena> Builder<'arena> {
                 }
                 self.push_value(node);
             }
-            Event::SequenceStart(anchor_id, _) => {
+            Event::SequenceStart(_, anchor_id, _) => {
                 self.stack.push(Frame::Seq {
                     anchor: anchor_id,
                     items: Vec::new(),
@@ -217,10 +223,10 @@ impl<'arena> Builder<'arena> {
                     self.push_value(node);
                 }
             }
-            Event::MappingStart(anchor_id, tag) => {
-                let is_tagged_set = tag
-                    .as_deref()
-                    .is_some_and(|t| t.is_yaml_core_schema_tag("set"));
+            Event::MappingStart(_, anchor_id, tag) => {
+                let is_tagged_set = tag.as_deref().is_some_and(|t| {
+                    t.suffix_in_namespace(YAML_CORE_SCHEMA_PREFIX).as_deref() == Some("set")
+                });
 
                 self.stack.push(Frame::Map {
                     anchor: anchor_id,
@@ -244,14 +250,14 @@ impl<'arena> Builder<'arena> {
                     self.push_value(node);
                 }
             }
-            Event::StreamStart | Event::StreamEnd | Event::Nothing => {}
+            _ => {}
         }
         Ok(())
     }
 }
 
 pub fn build_from_events(input: &'_ str) -> Result<(Arena<'_>, Vec<NodeId>), BuildError> {
-    let parser = Parser::new_from_str(input);
+    let parser = Parser::new_from_str_with_options(input, options! { emit_comments: false });
     let mut builder = Builder::new(input);
 
     for events in parser {

@@ -55,6 +55,6 @@ pub fn format_error(source: &str, error: &ScanError) -> String {
         }
     }
 
-    err.push_str(error.info());
+    err.push_str(&error.info());
     err
 }
