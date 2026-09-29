@@ -122,9 +122,7 @@ mod yaml_rs {
             &arena,
             &docs,
             parse_datetime,
-            alias_limits
-                .as_ref()
-                .map_or_default(|limits| **limits),
+            alias_limits.as_ref().map_or_default(|limits| **limits),
             DuplicateKeyPolicy::from_str(duplicate_key_policy)?,
         )
     }
