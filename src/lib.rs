@@ -111,11 +111,13 @@ mod yaml_rs {
         duplicate_key_policy: Option<&str>,
     ) -> PyResult<Bound<'py, PyAny>> {
         let (arena, docs) = py
-            .detach(|| build_from_events(yaml_string))
-            .map_err(|error| match error {
-                BuildError::Scan(err) => YAMLDecodeError::new_err(format_error(yaml_string, &err)),
-                BuildError::Decode(msg) => YAMLDecodeError::new_err(msg),
-            })?;
+            .detach(|| {
+                build_from_events(yaml_string).map_err(|error| match error {
+                    BuildError::Scan(err) => format_error(yaml_string, &err),
+                    BuildError::Decode(msg) => msg,
+                })
+            })
+            .map_err(YAMLDecodeError::new_err)?;
 
         to_python(
             py,
